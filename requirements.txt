@@ -1,0 +1,10 @@
+# 本体（持仓分析）に必要なもの
+pandas>=2.2
+numpy>=1.26
+PyYAML>=6.0
+tabulate>=0.9        # pandas.to_markdown() が内部で使う
+yfinance>=1.5        # 株価・為替。個人の分析用途に限定すること
+
+# 任意: Jev 判断レイヤーを使う場合のみ
+httpx>=0.27
+python-dotenv>=1.0
