@@ -20,6 +20,7 @@
   --crit: #b3261e;
   --crit-soft: #fbe4e1;
   --k-stock: #2f6fb3; --k-idx: #0e8a6f; --k-bond: #b8860b; --k-gold: #c2702a; --k-crypto: #8a5cc4; --k-oetf: #6f8f9e; --k-debt: #a8445c; --k-unk: #b9c3be;
+  --fl-new: #1c5cab; --fl-add: #5598e7; --fl-trim: #ec6f6c; --fl-exit: #b8322f; --axis: #9aa6a0;
   --f-body: 'Noto Sans JP', system-ui, -apple-system, 'Hiragino Sans', 'Yu Gothic', sans-serif;
   --f-num: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 }
@@ -27,14 +28,14 @@
   :root:not([data-theme="light"]) {
     --bg: #0d1311; --surface: #151d1a; --input: #0f1613; --fg: #e5ece8; --muted: #93a49c;
     --line: #27332e; --accent: #52c2a6; --accent-fg: #0a1512; --accent-soft: #163a32;
-    --good: #5fcf85; --warn: #e0b34a; --warn-soft: #33290f; --crit: #ff8a80; --crit-soft: #3a1a17; --k-stock: #6aa6e8; --k-idx: #3fc2a2; --k-bond: #e0b34a; --k-gold: #e8955a; --k-crypto: #b893ea; --k-oetf: #93aebb; --k-debt: #e07a92; --k-unk: #4a5751;
+    --good: #5fcf85; --warn: #e0b34a; --warn-soft: #33290f; --crit: #ff8a80; --crit-soft: #3a1a17; --k-stock: #6aa6e8; --k-idx: #3fc2a2; --k-bond: #e0b34a; --k-gold: #e8955a; --k-crypto: #b893ea; --k-oetf: #93aebb; --k-debt: #e07a92; --k-unk: #4a5751; --fl-new: #5a96e0; --fl-add: #2863b5; --fl-trim: #9c3a38; --fl-exit: #e8605c; --axis: #5d6b65;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0d1311; --surface: #151d1a; --input: #0f1613; --fg: #e5ece8; --muted: #93a49c;
   --line: #27332e; --accent: #52c2a6; --accent-fg: #0a1512; --accent-soft: #163a32;
-  --good: #5fcf85; --warn: #e0b34a; --warn-soft: #33290f; --crit: #ff8a80; --crit-soft: #3a1a17; --k-stock: #6aa6e8; --k-idx: #3fc2a2; --k-bond: #e0b34a; --k-gold: #e8955a; --k-crypto: #b893ea; --k-oetf: #93aebb; --k-debt: #e07a92; --k-unk: #4a5751;
+  --good: #5fcf85; --warn: #e0b34a; --warn-soft: #33290f; --crit: #ff8a80; --crit-soft: #3a1a17; --k-stock: #6aa6e8; --k-idx: #3fc2a2; --k-bond: #e0b34a; --k-gold: #e8955a; --k-crypto: #b893ea; --k-oetf: #93aebb; --k-debt: #e07a92; --k-unk: #4a5751; --fl-new: #5a96e0; --fl-add: #2863b5; --fl-trim: #9c3a38; --fl-exit: #e8605c; --axis: #5d6b65;
   color-scheme: dark;
 }
 body { background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 15px; line-height: 1.65; }
@@ -162,6 +163,52 @@ button.tkb { border: 0; background: none; padding: 2px 0; min-height: 0; color: 
 .links { display: flex; gap: 8px; flex-wrap: wrap; }
 .links a { display: inline-flex; align-items: center; min-height: 40px; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--line); color: var(--fg); text-decoration: none; font-size: 14px; }
 .links a.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-weight: 700; }
+/* charts */
+.chart { display: flex; flex-direction: column; gap: 4px; }
+.dv { display: grid; grid-template-columns: minmax(6.5em, 11em) 1fr 1fr; align-items: center; column-gap: 0; font-size: 13px; min-height: 26px; border-radius: 4px; }
+.dv:hover, .dv:focus-visible { background: var(--accent-soft); outline: none; }
+.dv .lab { padding-right: 8px; line-height: 1.3; overflow-wrap: anywhere; }
+.dv .neg, .dv .pos { position: relative; height: 26px; display: flex; align-items: center; }
+.dv .neg { justify-content: flex-end; border-right: 1px solid var(--axis); }
+.dv .pos { justify-content: flex-start; }
+.dv .bar-n, .dv .bar-p { height: 14px; min-width: 2px; }
+.dv .bar-n { border-radius: 4px 0 0 4px; margin-left: 2px; }
+.dv .bar-p { border-radius: 0 4px 4px 0; margin-right: 2px; }
+.dv .val { font-family: var(--f-num); font-size: 12px; color: var(--muted); white-space: nowrap; padding: 0 5px; }
+.dv .neg .val { order: -1; }
+.dv.head { min-height: 0; font-size: 11px; color: var(--muted); }
+.dv.head:hover { background: none; }
+.dv.head .neg { height: auto; padding-right: 6px; border: 0; }
+.dv.head .pos { height: auto; padding-left: 6px; }
+.c-new { background: var(--fl-new); } .c-add { background: var(--fl-add); } .c-trim { background: var(--fl-trim); } .c-exit { background: var(--fl-exit); }
+.seg { display: flex; gap: 2px; height: 22px; }
+.seg span { height: 100%; min-width: 2px; }
+.seg span:first-child { border-radius: 4px 0 0 4px; } .seg span:last-child { border-radius: 0 4px 4px 0; }
+.seglabels { display: flex; gap: 2px; font-size: 12px; color: var(--muted); }
+.seglabels span { overflow: hidden; white-space: nowrap; text-overflow: clip; min-width: 0; font-family: var(--f-num); }
+.legend2 { display: flex; gap: 6px 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+.legend2 i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.dumbs { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+.dumb { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.dumb .k { font-size: 12px; color: var(--muted); }
+.dumb .v { font-family: var(--f-num); font-size: 18px; }
+.dumb .track { position: relative; height: 22px; margin: 0 8px; }
+.dumb .track::before { content: ""; position: absolute; left: 0; right: 0; top: 10px; height: 2px; background: var(--line); }
+.dumb .link { position: absolute; top: 9px; height: 4px; background: var(--axis); border-radius: 2px; }
+.dumb .dot { position: absolute; top: 3px; width: 16px; height: 16px; margin-left: -8px; border-radius: 50%; box-shadow: 0 0 0 2px var(--surface); }
+.dumb .dot.prev { background: var(--surface); border: 2px solid var(--muted); }
+.dumb .dot.cur { background: var(--fg); }
+.dumb .ends { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); font-family: var(--f-num); }
+.dumb .s { font-size: 12px; color: var(--muted); }
+.hbar { display: grid; grid-template-columns: minmax(7em, 12em) 1fr; align-items: center; gap: 8px; font-size: 13px; min-height: 24px; }
+.hbar .t { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.hbar .b { height: 12px; border-radius: 0 4px 4px 0; background: var(--fl-new); min-width: 2px; }
+.hbar .val { font-family: var(--f-num); font-size: 12px; color: var(--muted); white-space: nowrap; }
+#vtip { position: fixed; z-index: 30; pointer-events: none; background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 12px; line-height: 1.5; max-width: 280px; box-shadow: 0 6px 20px rgba(0,0,0,.18); opacity: 0; transition: opacity .1s; }
+#vtip.on { opacity: 1; }
+#vtip b { font-weight: 700; }
+@media (max-width: 520px) { .dv { grid-template-columns: minmax(5.5em, 8em) 1fr 1fr; font-size: 12px; } .dv .val { font-size: 11px; padding: 0 3px; } }
+@media (prefers-reduced-motion: reduce) { #vtip { transition: none; } }
 </style>
 
 <div class="wrap">
@@ -273,16 +320,37 @@ button.tkb { border: 0; background: none; padding: 2px 0; min-height: 0; color: 
     <section aria-labelledby="h-mkt">
       <h2 id="h-mkt">市場の分析（資金の流れ・市場心理・兆候）</h2>
       <p id="mktNote" class="sub"></p>
-      <div id="mktTiles" class="tiles"></div>
+
+      <h3>市場心理（前期 → 今期）</h3>
+      <p class="note">白丸が前期、黒丸が今期。点を押すと数字が出ます。</p>
+      <div id="mktDumbs" class="dumbs"></div>
+
+      <h3>売買件数の広がり（集中投資型）</h3>
+      <div id="mktBreadth" class="chart"></div>
+
+      <h3>分野ごとの資金の流れ（推定売買額）</h3>
+      <div class="row"><div id="flowScope" class="chips" role="group" aria-label="集計の範囲">
+        <button type="button" data-scope="all" aria-pressed="true">全体</button>
+        <button type="button" data-scope="sel" aria-pressed="false">集中投資型だけ</button>
+      </div></div>
+      <p class="note">株数の変化 × 株価で推定した売買の金額です。株価の上下による評価額の変化は含みません。右が流入（買い）、左が流出（売り）。棒を押すと詳細が出ます。</p>
+      <div id="mktFlowChart" class="chart"></div>
+
+      <h3>分野ごとの買った人数・売った人数</h3>
+      <p class="note">金額ではなく人数。一部の大口に左右されない「広さ」を見ます。</p>
+      <div id="mktPeople" class="chart"></div>
+
+      <h3>資産の種類ごとの資金の流れ</h3>
+      <div id="mktKinds" class="chart"></div>
+
+      <details class="limits"><summary>分野ごとの数字を表で見る</summary><div class="tablewrap"><table id="mktSectors"></table></div></details>
+
       <div class="cols2">
-        <div><h3>資金の流れ</h3><ul id="mktFlows" class="points"></ul></div>
-        <div><h3>市場心理</h3><ul id="mktMood" class="points"></ul></div>
+        <div><h3>資金の流れ（読み方）</h3><ul id="mktFlows" class="points"></ul></div>
+        <div><h3>市場心理（読み方）</h3><ul id="mktMood" class="points"></ul></div>
       </div>
       <h3>見込み（注目が集まり始めた兆候）</h3>
       <ul id="mktOutlook" class="points"></ul>
-      <h3>分野ごとの推定売買額（前期比）</h3>
-      <p class="note">株数の変化 × 株価で推定した売買の金額です。株価の上下による評価額の変化は含みません。</p>
-      <div class="tablewrap"><table id="mktSectors"></table></div>
       <h3>同じ四半期に複数の投資家が新しく買い始めた銘柄</h3>
       <div class="tablewrap"><table id="mktEarly"></table></div>
     </section>
@@ -291,7 +359,7 @@ button.tkb { border: 0; background: none; padding: 2px 0; min-height: 0; color: 
       <h2 id="h-etf">ETF の種類と保有</h2>
       <p class="sub">著名投資家が持つ ETF を 1 本ずつ、種類・保有額・前期からの推定売買額と一緒に並べています。</p>
       <div id="etfChips" class="chips" role="group" aria-label="ETF の種類で絞り込む"></div>
-      <div id="etfSubs" class="kinds"></div>
+      <div id="etfSubs" class="chart"></div>
       <div class="tablewrap"><table id="etfTable"></table></div>
     </section>
 
@@ -329,6 +397,7 @@ button.tkb { border: 0; background: none; padding: 2px 0; min-height: 0; color: 
   </div>
 </div>
 <div id="toast" role="status" aria-live="polite"></div>
+<div id="vtip" role="tooltip"></div>
 <div id="sheet" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="sheetTitle"><div class="panel" id="sheetPanel"></div></div>
 
 <script>
@@ -747,16 +816,97 @@ button.tkb { border: 0; background: none; padding: 2px 0; min-height: 0; color: 
     return (v < 0 ? '−' : '+') + s;
   }
   function usdV(v) { return v >= 1e9 ? '$' + (v / 1e9).toFixed(2) + 'B' : '$' + Math.round(v / 1e6).toLocaleString('ja-JP') + 'M'; }
+  // ---- グラフ部品（HTML の棒。スマホ幅でも文字が潰れない）----
+  function divChart(rows, fmt, heads) {
+    var max = Math.max.apply(null, rows.map(function (r) { return Math.abs(r.v); }).concat([1]));
+    var h = heads ? '<div class="dv head" aria-hidden="true"><span></span><span class="neg">' + esc(heads[0]) + '</span><span class="pos">' + esc(heads[1]) + '</span></div>' : '';
+    return h + rows.map(function (r) {
+      var w = (Math.abs(r.v) / max * 92).toFixed(1) + '%';
+      var bar = '<span class="' + (r.v < 0 ? 'bar-n c-exit' : 'bar-p c-new') + '" style="width:' + w + '"></span><span class="val">' + fmt(r.v) + '</span>';
+      return '<div class="dv" tabindex="0" data-tip="' + esc(r.tip || '') + '" aria-label="' + esc(r.label + ' ' + fmt(r.v)) + '"><span class="lab">' + esc(r.label) + '</span>' +
+        '<span class="neg">' + (r.v < 0 ? bar : '') + '</span><span class="pos">' + (r.v >= 0 ? bar : '') + '</span></div>';
+    }).join('');
+  }
+  function butterfly(rows) {
+    var max = Math.max.apply(null, rows.map(function (r) { return Math.max(r.l, r.r); }).concat([1]));
+    return '<div class="dv head" aria-hidden="true"><span></span><span class="neg">売った人数</span><span class="pos">買った人数</span></div>' +
+      rows.map(function (r) {
+        return '<div class="dv" tabindex="0" data-tip="' + esc(r.tip) + '" aria-label="' + esc(r.label + ' 買い ' + r.r + ' 人、売り ' + r.l + ' 人') + '"><span class="lab">' + esc(r.label) + '</span>' +
+          '<span class="neg"><span class="val">' + r.l + '</span><span class="bar-n c-exit" style="width:' + (r.l / max * 88).toFixed(1) + '%"></span></span>' +
+          '<span class="pos"><span class="bar-p c-new" style="width:' + (r.r / max * 88).toFixed(1) + '%"></span><span class="val">' + r.r + '</span></span></div>';
+      }).join('');
+  }
+  function dumbbell(k, prev, cur, fmt, note, lo, prevWord) {
+    var pw = prevWord || '前期';
+    var hi = Math.max(prev, cur) * 1.25 || 1, base = lo == null ? 0 : lo;
+    function x(v) { return ((v - base) / (hi - base) * 100).toFixed(1) + '%'; }
+    var a = Math.min(prev, cur), b = Math.max(prev, cur);
+    return '<div class="dumb" tabindex="0" data-tip="' + esc(k + '：' + pw + ' ' + fmt(prev) + '（白丸） → 今期 ' + fmt(cur) + '（黒丸）') + '"><div class="k">' + esc(k) + '</div>' +
+      '<div class="v">' + (prevWord ? pw + ' ' + fmt(prev) + ' ／ 今期 ' + fmt(cur) : fmt(prev) + ' → ' + fmt(cur)) + '</div>' +
+      '<div class="track" aria-hidden="true"><span class="link" style="left:' + x(a) + ';width:calc(' + x(b) + ' - ' + x(a) + ')"></span>' +
+      '<span class="dot prev" style="left:' + x(prev) + '"></span><span class="dot cur" style="left:' + x(cur) + '"></span></div>' +
+      '<div class="ends" aria-hidden="true"><span>' + fmt(base) + '</span><span>' + fmt(hi) + '</span></div>' +
+      '<div class="s">' + esc(note) + '</div></div>';
+  }
+  var tipEl = null;
+  function showTip(el, x, y) {
+    var t = el.getAttribute('data-tip'); if (!t) return;
+    tipEl = tipEl || $('vtip');
+    tipEl.textContent = t; tipEl.classList.add('on');
+    var r = tipEl.getBoundingClientRect();
+    var left = Math.min(Math.max(8, x + 12), innerWidth - r.width - 8), top = y + 14;
+    if (top + r.height > innerHeight - 8) top = y - r.height - 12;
+    tipEl.style.left = left + 'px'; tipEl.style.top = top + 'px';
+  }
+  function hideTip() { if (tipEl) tipEl.classList.remove('on'); }
+  $('viewInvestors').addEventListener('pointermove', function (e) {
+    var el = e.target.closest('[data-tip]'); if (el) showTip(el, e.clientX, e.clientY); else hideTip();
+  });
+  $('viewInvestors').addEventListener('pointerleave', hideTip);
+  $('viewInvestors').addEventListener('focusin', function (e) {
+    var el = e.target.closest('[data-tip]'); if (!el) return;
+    var r = el.getBoundingClientRect(); showTip(el, r.left + 20, r.bottom - 6);
+  });
+  $('viewInvestors').addEventListener('focusout', hideTip);
+  window.addEventListener('scroll', hideTip, { passive: true });
+
+  var flowScope = 'all';
+  function renderFlowChart() {
+    var m = data.market, key = flowScope === 'sel' ? 'flow_sel' : 'flow';
+    var rows = m.sectors.slice().sort(function (a, b) { return b[key] - a[key]; }).map(function (x) {
+      var tip = x.s + '：' + usdS(x[key]) + '（買い ' + x.buyers + ' 人／売り ' + x.sellers + ' 人）' +
+        (x.top ? '。最も大きく動かしたのは ' + x.top.p + '（' + usdS(x.top.flow) + '）' : '');
+      return { label: x.s, v: x[key], tip: tip };
+    });
+    $('mktFlowChart').innerHTML = divChart(rows, usdS, ['← 流出（売り）', '流入（買い）→']);
+    Array.prototype.forEach.call($('flowScope').children, function (b) { b.setAttribute('aria-pressed', String(b.dataset.scope === flowScope)); });
+  }
+  $('flowScope').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return; flowScope = b.dataset.scope; renderFlowChart();
+  });
+
   function renderMarket() {
     var m = data.market; if (!m) return;
     var st = m.sentiment, b = st.breadth;
     $('mktNote').textContent = '前期（' + data.prev_date + '）と比べられる ' + m.n_filers + ' 人・社の売買から推定しています。1〜4 か月前の動きで、予測ではありません。';
-    function tileD(k, v, s, cls) { return '<div class="tile"><div class="k">' + esc(k) + '</div><div class="v ' + (cls || '') + '">' + v + '</div><div class="s">' + s + '</div></div>'; }
-    $('mktTiles').innerHTML =
-      tileD('プット ÷ コール', st.pc_ratio == null ? '—' : st.pc_ratio.toFixed(2), '前期 ' + (st.pc_ratio_prev == null ? '—' : st.pc_ratio_prev.toFixed(2)) + '（1 超で下落への備えが優勢）') +
-      tileD('プットの厚さ', st.hedge_pct.toFixed(1) + '%', '株式ロングに対して。前期 ' + st.hedge_pct_prev.toFixed(1) + '%') +
-      tileD('守りの資産', st.defensive_pct.toFixed(2) + '%', '債券・金 ETF の平均。前期 ' + st.defensive_pct_prev.toFixed(2) + '%') +
-      tileD('買い ÷ 売り（件数）', st.breadth_ratio == null ? '—' : st.breadth_ratio.toFixed(2), '新規 ' + b['new'] + '・買増 ' + b.add + ' ／ 減少 ' + b.trim + '・全売却 ' + b.exit, st.breadth_ratio != null && st.breadth_ratio < 0.9 ? 'down' : (st.breadth_ratio > 1.1 ? 'up' : ''));
+    var pct1 = function (v) { return v.toFixed(1) + '%'; }, pct2 = function (v) { return v.toFixed(2) + '%'; }, r2 = function (v) { return v.toFixed(2); };
+    $('mktDumbs').innerHTML =
+      (st.pc_ratio != null && st.pc_ratio_prev != null ? dumbbell('プット ÷ コール（想定元本）', st.pc_ratio_prev, st.pc_ratio, r2, '1 を超えると、下落への備えが上昇への賭けより大きい') : '') +
+      dumbbell('プットの厚さ（株式ロングに対して）', st.hedge_pct_prev, st.hedge_pct, pct1, '大きいほど下落への備えが厚い') +
+      dumbbell('守りの資産（債券・金 ETF の平均比率）', st.defensive_pct_prev, st.defensive_pct, pct2, '国債・現金は 13F に出ないため一部だけ') +
+      (st.breadth_ratio != null ? dumbbell('買い ÷ 売り（件数）', 1, st.breadth_ratio, r2, '1 未満は売りのほうが多い。白丸は基準の 1.00（前期の値ではありません）', 0, '基準') : '');
+    var segs = [['exit', '全売却', b.exit], ['trim', '減少', b.trim], ['add', '買い増し', b.add], ['new', '新規', b['new']]];
+    var tot = segs.reduce(function (a, x) { return a + x[2]; }, 0) || 1;
+    $('mktBreadth').innerHTML = '<div class="seg" role="img" aria-label="' + esc(segs.map(function (x) { return x[1] + ' ' + x[2] + ' 件'; }).join('、')) + '">' +
+      segs.map(function (x) { return '<span class="c-' + x[0] + '" tabindex="0" data-tip="' + esc(x[1] + '：' + x[2] + ' 件（' + (x[2] / tot * 100).toFixed(0) + '%）') + '" style="width:' + (x[2] / tot * 100).toFixed(2) + '%"></span>'; }).join('') + '</div>' +
+      '<div class="seglabels" aria-hidden="true">' + segs.map(function (x) { return '<span style="width:' + (x[2] / tot * 100).toFixed(2) + '%">' + x[2] + '</span>'; }).join('') + '</div>' +
+      '<div class="legend2">' + segs.map(function (x) { return '<span><i class="c-' + x[0] + '"></i>' + x[1] + ' ' + x[2] + '</span>'; }).join('') + '<span>売り ' + (b.exit + b.trim) + ' ／ 買い ' + (b['new'] + b.add) + '</span></div>';
+    renderFlowChart();
+    var ppl = m.sectors.slice().sort(function (a, b2) { return (b2.buyers - b2.sellers) - (a.buyers - a.sellers); }).map(function (x) {
+      return { label: x.s, l: x.sellers, r: x.buyers, tip: x.s + '：買い ' + x.buyers + ' 人／売り ' + x.sellers + ' 人（差 ' + (x.buyers - x.sellers > 0 ? '+' : '') + (x.buyers - x.sellers) + '）' };
+    });
+    $('mktPeople').innerHTML = butterfly(ppl);
+    $('mktKinds').innerHTML = divChart(m.kinds.map(function (k) { return { label: k.label, v: k.flow, tip: k.label + '：推定 ' + usdS(k.flow) }; }), usdS, ['← 流出', '流入 →']);
     function li(xs) { return xs.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join(''); }
     $('mktFlows').innerHTML = li(m.notes.flows);
     $('mktMood').innerHTML = li(m.notes.mood);
@@ -779,8 +929,12 @@ button.tkb { border: 0; background: none; padding: 2px 0; min-height: 0; color: 
     var list = all.filter(function (e) { return etfKind === 'all' || e.kind === etfKind; });
     var subs = {};
     list.forEach(function (e) { var s = subs[e.sub] || (subs[e.sub] = { n: 0, v: 0, f: 0, k: e.kind }); s.n++; s.v += e.value; s.f += e.flow; });
-    $('etfSubs').innerHTML = Object.keys(subs).sort(function (a, b) { return subs[b].v - subs[a].v; }).map(function (k) {
-      var s = subs[k]; return '<div><i class="k' + s.k + '"></i><span class="lab">' + esc(k) + '（' + s.n + ' 本）</span><span class="v">' + usdV(s.v) + '</span><span class="d ' + (s.f >= 0 ? 'up' : 'down') + '">' + usdS(s.f) + '</span></div>';
+    var keys = Object.keys(subs).sort(function (a, b) { return subs[b].v - subs[a].v; });
+    var vmax = Math.max.apply(null, keys.map(function (k) { return subs[k].v; }).concat([1]));
+    $('etfSubs').innerHTML = '<p class="note">種類ごとの保有額（棒）と、前期からの推定売買額。</p>' + keys.map(function (k) {
+      var x = subs[k];
+      return '<div class="hbar" tabindex="0" data-tip="' + esc(k + '：' + x.n + ' 本、保有 ' + usdV(x.v) + '、推定売買 ' + usdS(x.f)) + '"><span class="t"><i class="kinds-dot k' + x.k + '" style="width:10px;height:10px;border-radius:3px;display:inline-block;flex:none"></i>' + esc(k) + '（' + x.n + '）</span>' +
+        '<span style="display:flex;align-items:center;gap:6px;min-width:0"><span class="b" style="width:' + (x.v / vmax * 70).toFixed(1) + '%"></span><span class="val">' + usdV(x.v) + ' ／ <span class="' + (x.f >= 0 ? 'up' : 'down') + '">' + usdS(x.f) + '</span></span></span></div>';
     }).join('');
     $('etfTable').innerHTML = '<thead><tr><th>ティッカー</th><th>名称</th><th>種類</th><th class="n">保有額</th><th class="n">推定売買</th><th>主な保有者</th></tr></thead><tbody>' +
       list.slice(0, 60).map(function (e) {
