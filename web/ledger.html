@@ -1,0 +1,452 @@
+<title>JevInvest 持仓台帳</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+JP:wght@400;500;700&display=swap">
+<style>
+/* Layout: 1 column working sheet. Alerts and totals first, editable ledger next, targets and export last. */
+:root {
+  --bg: #f2f5f3;
+  --surface: #fbfcfb;
+  --input: #ffffff;
+  --fg: #15201b;
+  --muted: #5b6b64;
+  --line: #d9e1dc;
+  --accent: #0e6b5b;
+  --accent-fg: #ffffff;
+  --accent-soft: #dcefe9;
+  --good: #1b7a3a;
+  --warn: #8a5b00;
+  --warn-soft: #faf0d4;
+  --crit: #b3261e;
+  --crit-soft: #fbe4e1;
+  --f-body: 'Noto Sans JP', system-ui, -apple-system, 'Hiragino Sans', 'Yu Gothic', sans-serif;
+  --f-num: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d1311; --surface: #151d1a; --input: #0f1613; --fg: #e5ece8; --muted: #93a49c;
+    --line: #27332e; --accent: #52c2a6; --accent-fg: #0a1512; --accent-soft: #163a32;
+    --good: #5fcf85; --warn: #e0b34a; --warn-soft: #33290f; --crit: #ff8a80; --crit-soft: #3a1a17;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d1311; --surface: #151d1a; --input: #0f1613; --fg: #e5ece8; --muted: #93a49c;
+  --line: #27332e; --accent: #52c2a6; --accent-fg: #0a1512; --accent-soft: #163a32;
+  --good: #5fcf85; --warn: #e0b34a; --warn-soft: #33290f; --crit: #ff8a80; --crit-soft: #3a1a17;
+  color-scheme: dark;
+}
+body { background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 15px; line-height: 1.65; }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+.wrap { max-width: 980px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 56px; display: flex; flex-direction: column; gap: 18px; }
+h1 { font-size: 22px; line-height: 1.3; margin: 0; font-weight: 700; text-wrap: balance; }
+h2 { font-size: 16px; margin: 0; font-weight: 700; text-wrap: balance; }
+.sub { color: var(--muted); font-size: 13px; margin: 0; }
+.num, td.n, .tile .v { font-family: var(--f-num); font-variant-numeric: tabular-nums; }
+section { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+header { display: flex; flex-direction: column; gap: 6px; }
+.privacy { background: var(--accent-soft); color: var(--fg); border-radius: 8px; padding: 10px 12px; font-size: 13px; }
+.privacy b { color: var(--accent); }
+.sample { background: var(--warn-soft); color: var(--fg); border-radius: 8px; padding: 10px 12px; font-size: 13px; display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+.tile { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; min-width: 0; }
+.tile .k { color: var(--muted); font-size: 12px; }
+.tile .v { font-size: 20px; font-weight: 500; overflow-wrap: anywhere; }
+.tile .s { color: var(--muted); font-size: 12px; }
+.up { color: var(--good); } .down { color: var(--crit); }
+.alerts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.alerts li { display: flex; gap: 8px; align-items: baseline; padding: 8px 10px; border-radius: 8px; font-size: 14px; }
+.alerts .crit { background: var(--crit-soft); }
+.alerts .warn { background: var(--warn-soft); }
+.alerts .info { background: var(--accent-soft); }
+.chip { flex: none; font-size: 11px; font-weight: 700; letter-spacing: .04em; padding: 1px 7px; border-radius: 999px; border: 1px solid currentColor; }
+.crit .chip { color: var(--crit); } .warn .chip { color: var(--warn); } .info .chip { color: var(--accent); }
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th { text-align: left; font-size: 12px; color: var(--muted); font-weight: 500; padding: 6px 6px; white-space: nowrap; }
+td { padding: 4px 6px; border-top: 1px solid var(--line); vertical-align: middle; }
+td.n, th.n { text-align: right; white-space: nowrap; }
+input, select, textarea, button { font: inherit; color: var(--fg); }
+input, select, textarea { background: var(--input); border: 1px solid var(--line); border-radius: 6px; padding: 8px 8px; width: 100%; min-width: 0; }
+input.num { text-align: right; min-width: 8.5em; }
+#pos td:nth-child(1) input { min-width: 11em; }
+#pos td:nth-child(3) input { min-width: 6.5em; }
+#pos td:nth-child(2) select { min-width: 12em; }
+textarea { font-family: var(--f-num); font-size: 12px; line-height: 1.5; min-height: 9em; resize: vertical; }
+input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+button { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; cursor: pointer; min-height: 40px; }
+button { white-space: nowrap; }
+#pos { min-width: 760px; }
+#allocTable, #concTable { min-width: 580px; }
+button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-weight: 700; }
+button.ghost { border-color: transparent; color: var(--muted); padding: 8px; }
+button.danger { color: var(--crit); border-color: var(--crit); }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.field label { font-size: 12px; color: var(--muted); }
+.bar { position: relative; height: 12px; background: var(--line); border-radius: 6px; min-width: 120px; }
+.bar .fill { position: absolute; inset: 0 auto 0 0; background: var(--accent); border-radius: 6px; }
+.bar .tick { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--fg); }
+.bar .tick.cap { background: var(--crit); }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; background: var(--accent); margin-right: 5px; vertical-align: -1px; }
+.legend i.t { width: 2px; height: 12px; border-radius: 0; background: var(--fg); margin-right: 6px; }
+.legend i.c { width: 2px; height: 12px; border-radius: 0; background: var(--crit); margin-right: 6px; }
+.note { color: var(--muted); font-size: 12px; margin: 0; }
+.check { display: flex; gap: 8px; align-items: center; font-size: 14px; }
+.check input { width: auto; }
+#toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--fg); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: 13px; opacity: 0; pointer-events: none; transition: opacity .15s; max-width: calc(100% - 32px); z-index: 10; }
+#toast.on { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { #toast { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>JevInvest 持仓台帳</h1>
+    <p class="sub">証券会社のアプリに表示されている評価額を、そのまま円で入力します。</p>
+    <p class="privacy"><b>入力した金額は、このブラウザの中にだけ保存されます。</b>送信はされず、Claude にも届きません。Claude に相談したいときは、下の「Claude に貼る用（比率のみ）」をコピーして送ります。</p>
+  </header>
+
+  <div id="sampleBanner" class="sample" hidden>
+    <span>いま表示されているのは<b>例のデータ</b>です。あなたの数字ではありません。</span>
+    <button type="button" id="clearSample" class="primary">例を消して自分の入力を始める</button>
+  </div>
+
+  <section aria-labelledby="h-alert">
+    <h2 id="h-alert">先に確認すること</h2>
+    <ul id="alerts" class="alerts"></ul>
+    <div id="tiles" class="tiles"></div>
+  </section>
+
+  <section aria-labelledby="h-pos">
+    <h2 id="h-pos">保有</h2>
+    <p class="sub">同じ銘柄を複数の口座で持っている場合は、口座ごとに 1 行ずつ入力します。上限の判定では銘柄名で合算するので、銘柄名は表記をそろえてください。1 銘柄の上限は、米国個別株・日本株・その他だけに当てます。</p>
+    <div class="tablewrap">
+      <table id="pos">
+        <thead><tr><th>銘柄名</th><th>資産クラス</th><th>口座</th><th class="n">評価額（円）</th><th class="n">取得原価（円）</th><th></th></tr></thead>
+        <tbody id="posBody"></tbody>
+      </table>
+    </div>
+    <datalist id="accounts"></datalist>
+    <div class="row">
+      <button type="button" id="addRow" class="primary">行を追加</button>
+      <span id="saveState" class="note"></span>
+    </div>
+    <p class="note">取得原価が空の行は、損益の計算に含めません。投資信託は、アプリに出ている評価額と取得金額をそのまま入れます。</p>
+  </section>
+
+  <section aria-labelledby="h-alloc">
+    <h2 id="h-alloc">目標配分との差</h2>
+    <div class="legend"><span><i></i>現在</span><span><i class="t"></i>目標</span></div>
+    <div class="tablewrap"><table id="allocTable"></table></div>
+    <p class="note">調整額は、プラスが買い増し、マイナスが売却です。税と手数料は含めていません。課税口座で売ると約 20.315% の税がかかるため、売却より新しい資金の振り分けで合わせるほうが有利なことが多くなります。個別株は、購入の前に独立性の確認（DESC と事前承認）を済ませてください。</p>
+  </section>
+
+  <section aria-labelledby="h-conc">
+    <h2 id="h-conc">銘柄ごとのウェイト</h2>
+    <div class="legend"><span><i></i>ウェイト</span><span><i class="c"></i>1 銘柄の上限</span></div>
+    <div class="tablewrap"><table id="concTable"></table></div>
+    <div class="tablewrap"><table id="acctTable"></table></div>
+  </section>
+
+  <section aria-labelledby="h-set">
+    <h2 id="h-set">目標配分と上限</h2>
+    <div id="targets" class="grid2"></div>
+    <div class="grid2">
+      <div class="field"><label for="maxSingle">1 銘柄の上限（%）</label><input id="maxSingle" class="num" inputmode="decimal"></div>
+      <div class="field"><label for="minCash">現金比率の下限（%）</label><input id="minCash" class="num" inputmode="decimal"></div>
+    </div>
+    <p id="targetSum" class="note"></p>
+  </section>
+
+  <section aria-labelledby="h-out">
+    <h2 id="h-out">Claude に貼る用（比率のみ）</h2>
+    <p class="sub">金額は含まれません。コピーして、Claude Code のセッションに貼り、「分析して」と送ってください。</p>
+    <label class="check"><input type="checkbox" id="hideNames"> 銘柄名を伏せる（銘柄A、銘柄B …に置き換える）</label>
+    <textarea id="summary" readonly aria-label="Claude に貼る用のテキスト"></textarea>
+    <div class="row"><button type="button" id="copySummary" class="primary">コピー</button></div>
+  </section>
+
+  <section aria-labelledby="h-bk">
+    <h2 id="h-bk">バックアップと復元</h2>
+    <p class="sub">ブラウザのデータを消したり、別の端末で開いたりすると、入力は消えます。下のテキストを自分のメモアプリなどに保存しておくと、貼り付けて元に戻せます。このテキストには金額が含まれます。</p>
+    <textarea id="backup" readonly aria-label="バックアップ用のテキスト"></textarea>
+    <div class="row"><button type="button" id="copyBackup">バックアップをコピー</button></div>
+    <div class="field"><label for="restore">復元するテキストを貼り付ける</label><textarea id="restore" placeholder="バックアップのテキストをここに貼り付け"></textarea></div>
+    <div class="row">
+      <button type="button" id="doRestore">貼り付けた内容で復元</button>
+      <button type="button" id="wipe" class="danger">すべて消す</button>
+      <span id="wipeNote" class="note"></span>
+    </div>
+  </section>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  'use strict';
+  var KEY = 'jevinvest.ledger.v1';
+  var CLASSES = [
+    ['cash', '現金'], ['developed_equity', '全世界・先進国株（インデックス）'],
+    ['us_equity', '米国個別株'], ['jp_equity', '日本株'], ['bond', '債券'], ['other', 'その他']
+  ];
+  // 1 銘柄の上限は個別株のためのもの。現金やインデックスファンド・債券には当てない。
+  var CAPPED = ['us_equity', 'jp_equity', 'other'];
+  var CLASS_LABEL = {}; CLASSES.forEach(function (c) { CLASS_LABEL[c[0]] = c[1]; });
+  var uid = 0;
+  function newId() { uid += 1; return 'p' + Date.now().toString(36) + uid; }
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function num(v) { var n = parseFloat(String(v == null ? '' : v).replace(/[,，\s円¥]/g, '')); return isFinite(n) ? n : 0; }
+  function yen(n) { return Math.round(n).toLocaleString('ja-JP'); }
+  function pct(n, d) { return n.toFixed(d == null ? 1 : d) + '%'; }
+  function spct(n, d) { return (n >= 0 ? '+' : '') + n.toFixed(d == null ? 1 : d) + '%'; }
+  function sgn(n) { return (n >= 0 ? '+' : '−') + yen(Math.abs(n)); }
+
+  function sampleState() {
+    return {
+      version: 1, sample: true, hideNames: false,
+      positions: [
+        { id: newId(), name: '例 現金', cls: 'cash', account: '特定口座', value: '1,000,000', cost: '1,000,000' },
+        { id: newId(), name: '例 全世界株ファンド', cls: 'developed_equity', account: 'NISA', value: '2,400,000', cost: '2,000,000' },
+        { id: newId(), name: '例 米国株 X', cls: 'us_equity', account: '特定口座', value: '900,000', cost: '700,000' },
+        { id: newId(), name: '例 米国株 X', cls: 'us_equity', account: 'NISA', value: '600,000', cost: '500,000' },
+        { id: newId(), name: '例 日本株 Y', cls: 'jp_equity', account: '特定口座', value: '300,000', cost: '320,000' },
+        { id: newId(), name: '例 債券ファンド', cls: 'bond', account: 'NISA', value: '800,000', cost: '820,000' }
+      ],
+      targets: { cash: 5, developed_equity: 55, us_equity: 20, jp_equity: 5, bond: 15, other: 0 },
+      guards: { maxSingle: 20, minCash: 5 }
+    };
+  }
+  function emptyState() {
+    return { version: 1, sample: false, hideNames: false, positions: [], targets: { cash: 5, developed_equity: 55, us_equity: 20, jp_equity: 5, bond: 15, other: 0 }, guards: { maxSingle: 20, minCash: 5 } };
+  }
+
+  var state, storageOk = true;
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (raw) { var s = JSON.parse(raw); if (valid(s)) return s; }
+    } catch (e) { storageOk = false; }
+    return sampleState();
+  }
+  function valid(s) {
+    return s && s.version === 1 && Array.isArray(s.positions) && s.targets && s.guards &&
+      s.positions.every(function (p) { return p && typeof p.id === 'string'; });
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); storageOk = true; } catch (e) { storageOk = false; }
+    $('saveState').textContent = storageOk ? '自動保存済み（このブラウザ内）' : 'このブラウザには保存できません。バックアップをコピーして残してください。';
+    $('backup').value = JSON.stringify(state);
+  }
+
+  // ---- 計算 ----
+  function compute(s) {
+    var rows = s.positions.map(function (p) {
+      return { id: p.id, name: p.name, cls: p.cls, account: (p.account || '').trim() || '（口座なし）', v: num(p.value), k: num(p.cost), key: (p.name || '').trim() || '（名称なし）' };
+    }).filter(function (r) { return r.v > 0; });
+    var total = rows.reduce(function (a, r) { return a + r.v; }, 0);
+    var withCost = rows.filter(function (r) { return r.k > 0; });
+    var cost = withCost.reduce(function (a, r) { return a + r.k; }, 0);
+    var valWithCost = withCost.reduce(function (a, r) { return a + r.v; }, 0);
+    var byClass = {}, byAcct = {}, bySym = {};
+    rows.forEach(function (r) {
+      byClass[r.cls] = (byClass[r.cls] || 0) + r.v;
+      byAcct[r.account] = (byAcct[r.account] || 0) + r.v;
+      var e = bySym[r.key] || (bySym[r.key] = { key: r.key, cls: r.cls, v: 0, k: 0, vk: 0, accts: {} });
+      e.v += r.v; e.accts[r.account] = 1;
+      if (r.k > 0) { e.k += r.k; e.vk += r.v; }
+    });
+    var syms = Object.keys(bySym).map(function (k) { var e = bySym[k]; e.w = total ? e.v / total * 100 : 0; e.pnlPct = e.k ? (e.vk - e.k) / e.k * 100 : null; return e; })
+      .sort(function (a, b) { return b.v - a.v; });
+    var hhi = syms.reduce(function (a, e) { var w = e.w / 100; return a + w * w; }, 0);
+    var g = s.guards, alerts = [];
+    var cap = num(g.maxSingle), floor = num(g.minCash);
+    if (!s.positions.length) alerts.push(['info', '入力待ち', '「行を追加」から、保有を 1 行ずつ入力してください。']);
+    else if (!total) alerts.push(['info', '入力待ち', '評価額が入力されていません。']);
+    if (cap > 0) syms.forEach(function (e) {
+      if (CAPPED.indexOf(e.cls) < 0) return;
+      if (e.w > cap) alerts.push(['crit', '上限超え', '「' + e.key + '」が上限 ' + cap + '% を超えています（現在 ' + pct(e.w) + '、口座を合算）。']);
+      else if (e.w > cap * 0.9) alerts.push(['warn', '上限に近い', '「' + e.key + '」が上限 ' + cap + '% に近づいています（現在 ' + pct(e.w) + '）。']);
+    });
+    var cashPct = total ? (byClass.cash || 0) / total * 100 : 0;
+    if (total && floor > 0 && cashPct < floor) alerts.push(['crit', '現金不足', '現金比率が下限 ' + floor + '% を下回っています（現在 ' + pct(cashPct) + '）。']);
+    var tsum = CLASSES.reduce(function (a, c) { return a + num(s.targets[c[0]]); }, 0);
+    if (Math.abs(tsum - 100) > 0.01) alerts.push(['warn', '目標の合計', '目標配分の合計が ' + tsum + '% です。100% になるよう直してください。']);
+    CLASSES.forEach(function (c) {
+      if (byClass[c[0]] && !num(s.targets[c[0]])) alerts.push(['warn', '目標 0%', '「' + c[1] + '」は保有がありますが、目標が 0% です。']);
+    });
+    var rebalance = CLASSES.map(function (c) {
+      var cur = byClass[c[0]] || 0, t = num(s.targets[c[0]]);
+      return { key: c[0], label: c[1], cur: cur, curPct: total ? cur / total * 100 : 0, tgt: t, gap: (total ? cur / total * 100 : 0) - t, adj: total * t / 100 - cur };
+    }).filter(function (r) { return r.cur > 0 || r.tgt > 0; });
+    return { total: total, cost: cost, pnl: valWithCost - cost, pnlPct: cost ? (valWithCost - cost) / cost * 100 : null, syms: syms, byAcct: byAcct, hhi: hhi, eff: hhi ? 1 / hhi : 0, alerts: alerts, rebalance: rebalance, cashPct: cashPct, cap: cap, tsum: tsum, nWithCost: withCost.length, nRows: rows.length };
+  }
+
+  // ---- 描画 ----
+  function barCell(value, max, tick, isCap) {
+    var w = max ? Math.min(value / max * 100, 100) : 0;
+    var t = tick != null && max ? Math.min(tick / max * 100, 100) : null;
+    return '<div class="bar"><span class="fill" style="width:' + w.toFixed(1) + '%"></span>' +
+      (t != null ? '<span class="tick' + (isCap ? ' cap' : '') + '" style="left:' + t.toFixed(1) + '%"></span>' : '') + '</div>';
+  }
+  function renderResults() {
+    var r = compute(state);
+    $('alerts').innerHTML = r.alerts.length ? r.alerts.map(function (a) { return '<li class="' + a[0] + '"><span class="chip">' + esc(a[1]) + '</span><span>' + esc(a[2]) + '</span></li>'; }).join('') :
+      '<li class="info"><span class="chip">問題なし</span><span>設定した上限と下限は、すべて満たしています。</span></li>';
+    var tiles = [];
+    tiles.push('<div class="tile"><div class="k">評価額</div><div class="v">' + yen(r.total) + '<span class="s"> 円</span></div><div class="s">' + r.nRows + ' 行</div></div>');
+    if (r.pnlPct != null) tiles.push('<div class="tile"><div class="k">損益</div><div class="v ' + (r.pnl >= 0 ? 'up' : 'down') + '">' + sgn(r.pnl) + '</div><div class="s">' + spct(r.pnlPct, 2) + '（取得原価のある ' + r.nWithCost + ' 行）</div></div>');
+    if (r.total) {
+      tiles.push('<div class="tile"><div class="k">実質銘柄数</div><div class="v">' + r.eff.toFixed(2) + '</div><div class="s">実 ' + r.syms.length + ' 銘柄 / 指数 ' + r.hhi.toFixed(3) + '</div></div>');
+      tiles.push('<div class="tile"><div class="k">現金比率</div><div class="v">' + pct(r.cashPct) + '</div><div class="s">下限 ' + esc(state.guards.minCash) + '%</div></div>');
+    }
+    $('tiles').innerHTML = tiles.join('');
+
+    var maxA = Math.max.apply(null, r.rebalance.map(function (x) { return Math.max(x.curPct, x.tgt); }).concat([10])) * 1.1;
+    $('allocTable').innerHTML = '<thead><tr><th>資産クラス</th><th class="n">現在</th><th class="n">目標</th><th class="n">差</th><th style="width:30%">現在と目標</th><th class="n">調整額（円）</th></tr></thead><tbody>' +
+      (r.rebalance.length ? r.rebalance.map(function (x) {
+        return '<tr><td>' + esc(x.label) + '</td><td class="n">' + pct(x.curPct) + '</td><td class="n">' + pct(x.tgt) + '</td><td class="n ' + (Math.abs(x.gap) < 0.05 ? '' : (x.gap > 0 ? 'up' : 'down')) + '">' + (x.gap >= 0 ? '+' : '−') + Math.abs(x.gap).toFixed(1) + 'pp</td><td>' + barCell(x.curPct, maxA, x.tgt, false) + '</td><td class="n">' + (r.total ? sgn(x.adj) : '—') + '</td></tr>';
+      }).join('') : '<tr><td colspan="6" class="note">入力するとここに表示されます。</td></tr>') + '</tbody>';
+
+    var maxC = Math.max.apply(null, r.syms.map(function (e) { return e.w; }).concat([r.cap || 0, 10])) * 1.1;
+    $('concTable').innerHTML = '<thead><tr><th>銘柄</th><th>クラス</th><th class="n">ウェイト</th><th style="width:30%">上限との比較</th><th class="n">損益率</th></tr></thead><tbody>' +
+      (r.syms.length ? r.syms.map(function (e) {
+        var over = r.cap > 0 && CAPPED.indexOf(e.cls) >= 0 && e.w > r.cap;
+        return '<tr><td>' + esc(e.key) + '<div class="note">' + esc(Object.keys(e.accts).join(' / ')) + '</div></td><td>' + esc(CLASS_LABEL[e.cls] || e.cls) + '</td><td class="n ' + (over ? 'down' : '') + '">' + pct(e.w) + '</td><td>' + barCell(e.w, maxC, CAPPED.indexOf(e.cls) < 0 ? null : r.cap, true) + '</td><td class="n ' + (e.pnlPct == null ? '' : (e.pnlPct >= 0 ? 'up' : 'down')) + '">' + (e.pnlPct == null ? '—' : spct(e.pnlPct)) + '</td></tr>';
+      }).join('') : '<tr><td colspan="5" class="note">入力するとここに表示されます。</td></tr>') + '</tbody>';
+
+    var accts = Object.keys(r.byAcct).sort(function (a, b) { return r.byAcct[b] - r.byAcct[a]; });
+    $('acctTable').innerHTML = '<thead><tr><th>口座</th><th class="n">構成比</th><th class="n">評価額（円）</th></tr></thead><tbody>' +
+      (accts.length ? accts.map(function (a) { return '<tr><td>' + esc(a) + '</td><td class="n">' + pct(r.byAcct[a] / r.total * 100) + '</td><td class="n">' + yen(r.byAcct[a]) + '</td></tr>'; }).join('') : '<tr><td colspan="3" class="note">入力するとここに表示されます。</td></tr>') + '</tbody>';
+
+    $('targetSum').textContent = '目標の合計 ' + r.tsum + '%' + (Math.abs(r.tsum - 100) > 0.01 ? '（100% になるよう直してください）' : '');
+    $('summary').value = summaryText(r);
+  }
+
+  function summaryText(r) {
+    var names = {};
+    if (state.hideNames) r.syms.forEach(function (e, i) { names[e.key] = '銘柄' + String.fromCharCode(65 + (i % 26)) + (i >= 26 ? Math.floor(i / 26) : ''); });
+    var nm = function (k) { return state.hideNames ? names[k] : k; };
+    var d = new Date(), L = [];
+    L.push('# 持仓サマリー（比率のみ・金額なし）');
+    L.push('基準日: ' + d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2) + ' ／ 基準通貨: JPY ／ 入力は証券会社アプリの評価額（手入力）');
+    if (state.sample) L.push('※ 例のデータです');
+    if (!r.total) { L.push(''); L.push('（まだ入力がありません）'); return L.join('\n'); }
+    L.push('');
+    L.push('総損益率: ' + (r.pnlPct == null ? '取得原価の入力なし' : spct(r.pnlPct, 2)) + ' ／ 現金比率: ' + pct(r.cashPct));
+    L.push('');
+    L.push('## 資産クラス別（現在% / 目標% / 差pp）');
+    L.push('| クラス | 現在% | 目標% | 差pp |'); L.push('|---|--:|--:|--:|');
+    r.rebalance.forEach(function (x) { L.push('| ' + x.label + ' | ' + x.curPct.toFixed(1) + ' | ' + x.tgt.toFixed(1) + ' | ' + (x.gap >= 0 ? '+' : '') + x.gap.toFixed(1) + ' |'); });
+    L.push('');
+    L.push('## 銘柄ウェイト（同一銘柄は口座を合算）');
+    L.push('| 銘柄 | クラス | ウェイト% | 損益率% |'); L.push('|---|---|--:|--:|');
+    r.syms.forEach(function (e) { L.push('| ' + nm(e.key) + ' | ' + (CLASS_LABEL[e.cls] || e.cls) + ' | ' + e.w.toFixed(1) + ' | ' + (e.pnlPct == null ? '—' : (e.pnlPct >= 0 ? '+' : '') + e.pnlPct.toFixed(1)) + ' |'); });
+    L.push('');
+    L.push('## 集中度');
+    L.push('実銘柄数 ' + r.syms.length + ' ／ 実質銘柄数 ' + r.eff.toFixed(2) + ' ／ 最大1銘柄 ' + (r.syms[0] ? r.syms[0].w.toFixed(1) : '0') + '%');
+    L.push('');
+    L.push('## 口座別（構成比%）');
+    Object.keys(r.byAcct).sort(function (a, b) { return r.byAcct[b] - r.byAcct[a]; }).forEach(function (a) { L.push('- ' + a + ': ' + (r.byAcct[a] / r.total * 100).toFixed(1)); });
+    L.push('');
+    L.push('## 設定したガードレール');
+    L.push('1 銘柄の上限 ' + state.guards.maxSingle + '% ／ 現金の下限 ' + state.guards.minCash + '%');
+    var bad = r.alerts.filter(function (a) { return a[0] !== 'info'; });
+    L.push(bad.length ? bad.map(function (a) { return '- [' + a[1] + '] ' + (state.hideNames ? a[2].replace(/「(.+?)」/g, function (m, k) { return '「' + (names[k] || k) + '」'; }) : a[2]); }).join('\n') : '- 違反・注意なし');
+    L.push('');
+    L.push('分析してください。特に、集中度、目標配分との差、税制上の配置（NISA と課税口座）、為替エクスポージャーの観点で。');
+    return L.join('\n');
+  }
+
+  function rowHtml(p) {
+    return '<tr data-id="' + p.id + '">' +
+      '<td><input id="n-' + p.id + '" data-f="name" value="' + esc(p.name) + '" placeholder="銘柄名" aria-label="銘柄名"></td>' +
+      '<td><select id="c-' + p.id + '" data-f="cls" aria-label="資産クラス">' + CLASSES.map(function (c) { return '<option value="' + c[0] + '"' + (c[0] === p.cls ? ' selected' : '') + '>' + c[1] + '</option>'; }).join('') + '</select></td>' +
+      '<td><input id="a-' + p.id + '" data-f="account" list="accounts" value="' + esc(p.account) + '" placeholder="口座" aria-label="口座"></td>' +
+      '<td><input id="v-' + p.id + '" data-f="value" data-num class="num" inputmode="numeric" value="' + esc(p.value) + '" placeholder="0" aria-label="評価額（円）"></td>' +
+      '<td><input id="k-' + p.id + '" data-f="cost" data-num class="num" inputmode="numeric" value="' + esc(p.cost) + '" placeholder="0" aria-label="取得原価（円）"></td>' +
+      '<td><button type="button" class="ghost" data-del aria-label="この行を削除">削除</button></td></tr>';
+  }
+  function renderPositions() {
+    $('posBody').innerHTML = state.positions.map(rowHtml).join('');
+    refreshAccounts();
+  }
+  function refreshAccounts() {
+    var accts = {}; ['特定口座', 'NISA', '一般口座', 'iDeCo'].forEach(function (a) { accts[a] = 1; });
+    state.positions.forEach(function (p) { if ((p.account || '').trim()) accts[p.account.trim()] = 1; });
+    $('accounts').innerHTML = Object.keys(accts).map(function (a) { return '<option value="' + esc(a) + '">'; }).join('');
+  }
+  function renderSettings() {
+    $('targets').innerHTML = CLASSES.map(function (c) {
+      return '<div class="field"><label for="t-' + c[0] + '">' + c[1] + '（目標 %）</label><input id="t-' + c[0] + '" data-t="' + c[0] + '" class="num" inputmode="decimal" value="' + esc(state.targets[c[0]]) + '"></div>';
+    }).join('');
+    $('maxSingle').value = state.guards.maxSingle; $('minCash').value = state.guards.minCash;
+    $('hideNames').checked = !!state.hideNames;
+  }
+  function renderAll() { renderPositions(); renderSettings(); renderResults(); $('sampleBanner').hidden = !state.sample; save(); }
+
+  function toast(msg) { var t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toast.h); toast.h = setTimeout(function () { t.classList.remove('on'); }, 2200); }
+  function copyText(text, ta) {
+    var p;
+    try { p = navigator.clipboard.writeText(text); } catch (e) { p = Promise.reject(e); }
+    p.then(function () { toast('コピーしました'); }, function () { ta.focus(); ta.select(); toast('自動でコピーできませんでした。選択されたテキストをコピーしてください'); });
+  }
+
+  // ---- 操作 ----
+  $('posBody').addEventListener('input', function (e) {
+    var tr = e.target.closest('tr'); if (!tr || !e.target.dataset.f) return;
+    var p = state.positions.filter(function (x) { return x.id === tr.dataset.id; })[0]; if (!p) return;
+    p[e.target.dataset.f] = e.target.value;
+    if (state.sample) { state.sample = false; $('sampleBanner').hidden = true; }
+    renderResults(); save();
+  });
+  $('posBody').addEventListener('change', function (e) { if (e.target.dataset.f === 'account') refreshAccounts(); });
+  $('posBody').addEventListener('focusout', function (e) {
+    if (e.target.hasAttribute && e.target.hasAttribute('data-num')) {
+      var n = num(e.target.value);
+      e.target.value = e.target.value.trim() === '' ? '' : n.toLocaleString('ja-JP');
+      var tr = e.target.closest('tr'), p = state.positions.filter(function (x) { return x.id === tr.dataset.id; })[0];
+      if (p) { p[e.target.dataset.f] = e.target.value; save(); }
+    }
+  });
+  $('posBody').addEventListener('click', function (e) {
+    if (!e.target.hasAttribute('data-del')) return;
+    var id = e.target.closest('tr').dataset.id;
+    state.positions = state.positions.filter(function (x) { return x.id !== id; });
+    renderAll();
+  });
+  $('addRow').addEventListener('click', function () {
+    var last = state.positions[state.positions.length - 1];
+    state.positions.push({ id: newId(), name: '', cls: 'developed_equity', account: last ? last.account : '特定口座', value: '', cost: '' });
+    renderAll(); var rows = $('posBody').querySelectorAll('tr'); rows[rows.length - 1].querySelector('input').focus();
+  });
+  $('clearSample').addEventListener('click', function () { state = emptyState(); state.positions.push({ id: newId(), name: '', cls: 'cash', account: '特定口座', value: '', cost: '' }); renderAll(); toast('例を消しました。1 行目から入力してください'); });
+  $('targets').addEventListener('input', function (e) { if (e.target.dataset.t) { state.targets[e.target.dataset.t] = e.target.value; renderResults(); save(); } });
+  $('maxSingle').addEventListener('input', function (e) { state.guards.maxSingle = e.target.value; renderResults(); save(); });
+  $('minCash').addEventListener('input', function (e) { state.guards.minCash = e.target.value; renderResults(); save(); });
+  $('hideNames').addEventListener('change', function (e) { state.hideNames = e.target.checked; renderResults(); save(); });
+  $('copySummary').addEventListener('click', function () { copyText($('summary').value, $('summary')); });
+  $('copyBackup').addEventListener('click', function () { copyText($('backup').value, $('backup')); });
+  $('doRestore').addEventListener('click', function () {
+    try {
+      var s = JSON.parse($('restore').value);
+      if (!valid(s)) throw new Error('形式が違います');
+      state = s; state.sample = false; $('restore').value = ''; renderAll(); toast('復元しました');
+    } catch (err) { toast('復元できませんでした。バックアップのテキスト全体を貼り付けてください'); }
+  });
+  var wipeArmed = false;
+  $('wipe').addEventListener('click', function () {
+    if (!wipeArmed) { wipeArmed = true; $('wipe').textContent = 'もう一度押すと、すべて消えます'; $('wipeNote').textContent = 'バックアップを取ったか確認してください。'; setTimeout(function () { wipeArmed = false; $('wipe').textContent = 'すべて消す'; $('wipeNote').textContent = ''; }, 5000); return; }
+    wipeArmed = false; $('wipe').textContent = 'すべて消す'; $('wipeNote').textContent = '';
+    state = emptyState(); try { localStorage.removeItem(KEY); } catch (e) { /* 保存領域が使えない */ }
+    renderAll(); toast('すべて消しました');
+  });
+
+  state = load();
+  renderAll();
+})();
+</script>

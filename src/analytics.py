@@ -240,10 +240,13 @@ def _check_guards(
     cap = g.get("max_single_position_pct")
     if cap is not None:
         cap = float(cap)
+        # 上限は個別銘柄のためのもの。コアのインデックスファンドや債券まで縛ると、
+        # 目標配分どおりに持っただけで違反になる。除外する資産クラスは台帳で指定する。
+        exempt = {str(c) for c in (g.get("single_position_exempt_classes") or [])}
         by_symbol: dict[str, float] = {}
         names: dict[str, str] = {}
         for v in vals:
-            if not v.priced or v.position.is_cash:
+            if not v.priced or v.position.is_cash or v.position.asset_class in exempt:
                 continue
             s = v.position.symbol
             by_symbol[s] = by_symbol.get(s, 0.0) + v.market_value_base

@@ -110,7 +110,8 @@ def _series_payload(a: Analysis, plan=None) -> dict:
             }
             for g in a.guards
         ],
-        "guard_config": {k: float(v) for k, v in (a.guard_config or {}).items()},
+        "guard_config": {k: float(v) for k, v in (a.guard_config or {}).items()
+                         if isinstance(v, (int, float))},
         "warnings": list(dict.fromkeys(a.warnings)),
         "alloc": alloc,
         "conc": conc,

@@ -175,3 +175,17 @@ transactions:
     cli.main([*common, "transactions"])
     out = capsys.readouterr().out
     assert "XIRR" in out and "現金を除く有価証券" in out     # 入出金なし → 売買ベース・有価証券のみ
+
+
+def test_single_position_cap_can_exempt_core_index_and_bond_classes(tmp_path, market_data):
+    p = tmp_path / "h.yaml"
+    p.write_text(LEDGER.replace(
+        "guards: {max_single_position_pct: 20.0,",
+        "guards: {single_position_exempt_classes: [developed_equity], max_single_position_pct: 20.0,"),
+        encoding="utf-8")
+    a = analyze(load(p), market_data, years=1)
+
+    assert not any(g.guard == "max_single_position_pct" and g.subject == "VT" for g in a.guards)
+    assert "single_position_exempt_classes" in a.guard_config
+    assert "持仓ダッシュボード" in to_html(a)        # リスト値があってもダッシュボードは作れる
+    assert "single_position_exempt_classes" in to_markdown(a)

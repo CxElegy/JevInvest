@@ -24,6 +24,9 @@ guards:
   max_single_position_pct: 20.0       # 個別銘柄 1 つの上限（複数口座は合算して判定）
   min_cash_pct: 5.0                   # 現金比率の下限
   high_correlation_threshold: 0.8     # これ以上の相関ペアを警告
+  # 1 銘柄の上限を当てない資産クラス。コアのインデックスファンドや債券は、
+  # 目標配分どおりに持つだけで上限を超えるので外す。個別株のクラスは外さないこと。
+  single_position_exempt_classes: [developed_equity, bond]
 
 # 積立計画（python -m src.cli plan）で使う。金額は基準通貨。
 contributions:
