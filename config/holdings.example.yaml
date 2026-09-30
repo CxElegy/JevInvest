@@ -1,0 +1,96 @@
+# 持仓台帳のひな形。config/holdings.yaml にコピーして自分の内容に書き換える。
+# 金額が入るので config/holdings.yaml は .gitignore 済み。
+#
+# 同じ銘柄を同じ口座で複数回買った場合は 1 行にまとめ、平均取得単価で書く（重複はエラー）。
+
+base_currency: JPY
+
+accounts:
+  - name: 特定口座
+    type: taxable
+  - name: NISA
+    type: nisa
+
+# 目標配分（合計 100）。資産クラス名は positions の asset_class と揃える。
+target_allocation:
+  developed_equity: 55     # 全世界株インデックス（コア）
+  us_equity: 20            # 米国個別株（サテライト）
+  jp_equity: 5             # 日本株
+  bond: 15
+  cash: 5
+
+# ガードレール。書いた基準はレポートで実際に検査される。
+guards:
+  max_single_position_pct: 20.0       # 個別銘柄 1 つの上限（複数口座は合算して判定）
+  min_cash_pct: 5.0                   # 現金比率の下限
+  high_correlation_threshold: 0.8     # これ以上の相関ペアを警告
+
+# 積立計画（python -m src.cli plan）で使う。金額は基準通貨。
+contributions:
+  monthly: 200000
+  invest_full_contribution: true      # 毎月の投入額は全額投資し、現金は初期資金で賄う
+  on_hold_fallback: core              # 承認待ちの分は cash（現金留保）か core（コアへ暫定）
+  nisa:
+    tsumitate_annual: 1200000         # つみたて投資枠 年間
+    growth_annual: 2400000            # 成長投資枠 年間
+    lifetime: 18000000                # 生涯投資枠
+    growth_lifetime_max: 12000000     # 成長投資枠の生涯上限
+    used_tsumitate_this_year: 0       # 今年すでに使った分
+    used_growth_this_year: 0
+
+# 資産クラスごとの NISA 適合: both（つみたて・成長とも可）/ growth_only / none（対象外）
+nisa_eligibility:
+  developed_equity: both
+  us_equity: growth_only
+  jp_equity: growth_only
+  bond: growth_only
+  cash: none
+
+# 個別株で埋めるため、購入前に銘柄ごとの承認が要るクラス（compliance.yaml のゲートを通す）
+requires_stock_clearance:
+  - us_equity
+  - jp_equity
+
+positions:
+  # 現金。symbol は CASH- で始める（価格取得なし・額面 1）
+  - symbol: CASH-JPY
+    name: 円現金
+    asset_class: cash
+    account: 特定口座
+    quantity: 1000000
+    cost_basis_per_unit: 1
+    currency: JPY
+
+  # --- 以下は書式の例（コメントを外して自分の持仓に書き換える）---
+  #
+  # 外貨建てのETF。cost_fx_rate（取得時の為替）を書くと、損益が
+  # 「値上がり益」と「為替差益」に分解される。
+  # - symbol: VT
+  #   name: Vanguard Total World Stock ETF
+  #   asset_class: developed_equity
+  #   account: NISA
+  #   quantity: 10
+  #   cost_basis_per_unit: 120.5
+  #   currency: USD
+  #   cost_fx_rate: 150.2
+  #
+  # 日本株。symbol は Yahoo Finance の表記（東証は 4 桁 + .T）。
+  # - symbol: 7203.T
+  #   name: トヨタ自動車
+  #   asset_class: jp_equity
+  #   account: 特定口座
+  #   quantity: 100
+  #   cost_basis_per_unit: 2800
+  #   currency: JPY
+  #
+  # 投資信託。symbol は FUND- で始め、基準価額を手入力（price_override）する。
+  # 基準価額は投信協会の投信総合検索ライブラリーの CSV から転記する。
+  # - symbol: FUND-ALLCOUNTRY
+  #   name: 全世界株式インデックス
+  #   asset_class: developed_equity
+  #   account: NISA
+  #   quantity: 500000            # 口数
+  #   cost_basis_per_unit: 1.5    # 1 口あたり（基準価額 15,000 円 / 万口 なら 1.5）
+  #   currency: JPY
+  #   price_override: 1.8
+  #   price_as_of: 2026-09-28

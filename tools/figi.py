@@ -200,8 +200,10 @@ def annotate(pos: pd.DataFrame, cmap: dict[str, dict]) -> pd.DataFrame:
 
     # fillna(Series) に頼らず明示的に組む。
     # fillna でやると未解決分が 1 グループに潰れ、実在しない集計が出る。
+    # `c if c else ...` では NaN が真値として通り、group_key が NaN になって
+    # 集計の groupby に黙って捨てられる。pd.isna で明示的に判定する。
     pos["group_key"] = [
-        c if c else f"CUSIP:{cu}"
+        f"CUSIP:{cu}" if (c is None or pd.isna(c) or not c) else c
         for c, cu in zip(pos["company"], pos["cusip"], strict=True)
     ]
     return pos

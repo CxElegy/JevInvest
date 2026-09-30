@@ -1,0 +1,63 @@
+# 13F を集計する運用者の名簿（tools/fetch_13f.py が読む）。
+#
+#   name  : EDGAR の会社名検索に使う名前。ヒットしない場合は cik を直接書く
+#   style : screen_candidates.py の --styles で絞り込むための分類
+#           value / quality / growth / activist / macro / quant / concentrated
+#   cik   : 任意。書くと名前解決を飛ばす（10 桁でなくてよい）
+#
+# 名簿は「今有名な人」で作られており、同じ手法で失敗した運用会社は入っていない
+# （生存者バイアス）。フォークして自分の名簿に育てること。
+# 名前が解決できない場合は fetch_13f.py が最後に「未解決」として一覧する。
+
+investors:
+  # --- value / quality ---
+  - {name: Berkshire Hathaway, style: quality}
+  - {name: Baupost Group, style: value}
+  - {name: Pabrai Investment Funds, style: value}
+  - {name: Dalal Street LLC, style: value}
+  - {name: Himalaya Capital Management, style: value}
+  - {name: Tweedy Browne, style: value}
+  - {name: Davis Selected Advisers, style: value}
+  - {name: Southeastern Asset Management, style: value}
+  - {name: Harris Associates, style: value}
+  - {name: Dodge & Cox, style: value}
+  - {name: Greenlight Capital, style: value}
+  - {name: Akre Capital Management, style: quality}
+  - {name: Ruane Cunniff, style: quality}
+  - {name: Fundsmith, style: quality}
+  - {name: Lindsell Train, style: quality}
+  - {name: Polen Capital Management, style: quality}
+  - {name: Gardner Russo & Quinn, style: quality}
+
+  # --- concentrated / growth ---
+  - {name: Pershing Square Capital Management, style: concentrated}
+  - {name: Lone Pine Capital, style: growth}
+  - {name: Viking Global Investors, style: growth}
+  - {name: Coatue Management, style: growth}
+  - {name: Tiger Global Management, style: growth}
+  - {name: Duquesne Family Office, style: macro}
+  - {name: Appaloosa LP, style: macro}
+  - {name: Third Point, style: activist}
+  - {name: Abrams Capital Management, style: concentrated}
+  - {name: Glenview Capital Management, style: concentrated}
+  - {name: Maverick Capital, style: growth}
+
+  # --- activist ---
+  - {name: Trian Fund Management, style: activist}
+  - {name: Elliott Investment Management, style: activist}
+  - {name: ValueAct Holdings, style: activist}
+  - {name: Starboard Value LP, style: activist}
+  - {name: JANA Partners, style: activist}
+  - {name: Icahn Carl C, style: activist}
+
+  # --- macro / multi-strategy ---
+  - {name: Soros Fund Management, style: macro}
+  - {name: Tudor Investment Corp, style: macro}
+  - {name: Bridgewater Associates, style: macro}
+  - {name: Paulson & Co, style: macro}
+
+  # --- quant（数千銘柄を持つので、選別型の集計からは自動的に外れる）---
+  - {name: Renaissance Technologies, style: quant}
+  - {name: Two Sigma Investments, style: quant}
+  - {name: D. E. Shaw & Co, style: quant}
+  - {name: AQR Capital Management, style: quant}

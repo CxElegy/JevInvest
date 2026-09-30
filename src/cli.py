@@ -221,10 +221,23 @@ def cmd_transactions(args) -> None:
         try:
             a = analyze(h, md, with_risk=False)
             current = a.total_value_base
+            securities_value = sum(
+                v.market_value_base for v in a.valuations
+                if v.priced and not v.position.is_cash
+            )
         finally:
             md.close()
         print("── 実績リターン（XIRR = 金額加重）──")
-        print(f"  現在の評価額: {current:,.0f} {h.base_currency}（台帳 {args.holdings.name} より）")
+        # 入金・出金の記録があれば現金込みの評価額、無ければ売買を出入りとして有価証券のみ
+        if led.flow_mode == "external":
+            terminal = current
+            print(f"  現在の評価額: {current:,.0f} {h.base_currency}"
+                  f"（台帳 {args.holdings.name} より・現金込み）")
+        else:
+            terminal = securities_value
+            print(f"  現在の評価額: {securities_value:,.0f} {h.base_currency}"
+                  f"（台帳 {args.holdings.name} より・現金を除く有価証券。"
+                  f"入出金の記録が無いため売買を出入りとして計算）")
 
         # XIRR を出す前に、その数字が意味を持つかを確認する。
         # 台帳と取引履歴が対応していないと、無関係な評価額で年率が出てしまう。
@@ -253,7 +266,7 @@ def cmd_transactions(args) -> None:
             for b in blockers:
                 print(f"     - {b}")
         else:
-            flows = cash_flows(led, current)
+            flows = cash_flows(led, terminal)
             r = xirr(flows)
             if r is None:
                 print("  キャッシュフローの符号が揃っておらず計算できません")

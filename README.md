@@ -72,6 +72,39 @@ python -m src.cli report
 reports/latest.md を読んで分析して
 ```
 
+### その他のコマンド
+
+| コマンド | 内容 |
+|---|---|
+| `plan` | 毎月の積立を目標配分・NISA 枠・独立性のゲートに割り振る |
+| `compliance` | 独立性の確認状況を一覧し、次にやることを出す |
+| `transactions` | 取引履歴から保有（総平均法）・実現損益・XIRR を出す |
+| `dashboard` | 単一ファイルの HTML ダッシュボード（`reports/dashboard.html`） |
+
+### Claude Code から操作する（PC が無くてもよい）
+
+Claude Code（ブラウザ・タブレット・スマホのクラウドセッションでも可）で、
+次のスラッシュコマンドが使える。持仓は会話で伝えれば台帳に反映される。
+
+| コマンド | 内容 |
+|---|---|
+| `/review` | 台帳を検証してレポートを作り、判断まで返す |
+| `/add-trade` | 「トヨタを 100 株 2800 円で買った」のような文から取引を記録し、台帳に反映する |
+| `/plan` | 積立の割り振りと NISA 枠の消化を説明する |
+| `/compliance` | 独立性の確認状況を整理し、報告された結果だけを記録する |
+
+クラウドセッションでは、環境が回収されると `config/holdings.yaml` などの個人データは消える。
+専用の非公開リポジトリに置くか、更新のたびに手元に控えること。
+また、株価の取得先（Yahoo Finance）がネットワーク制限で届かない場合は、
+環境設定の Network access で `query1.finance.yahoo.com` などを許可する。
+
+### テスト
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest        # ネットワーク不要
+```
+
 ### オプション
 
 | オプション | 用途 |
@@ -180,8 +213,9 @@ python tools/analyze_13f.py            # 集計して reports/investors-13f.md �
 > ⚠ `tools/fetch_13f.py` の `USER_AGENT` を自分のメールアドレスに変えること。
 > SEC は fair access policy で連絡先の明記を要求している。
 
-対象は `config/investors.yaml` で編集できる（現在 105 名）。
-`cik` を明記すると名前解決をスキップする。
+対象は `config/investors.yaml` で編集できる（同梱は約 40 名の例。自分の名簿に育てる）。
+`cik` を明記すると名前解決をスキップする。名前で見つからない運用者は、
+`fetch_13f.py` が最後に「未解決」として一覧する。
 
 ### 購入候補の抽出とティッカー解決
 

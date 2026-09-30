@@ -1,0 +1,56 @@
+# 取引履歴のひな形。config/transactions.yaml にコピーして使う（.gitignore 済み）。
+# 取得原価は総平均法。外貨建ての取引は約定時の fx_rate（1 単位 = 基準通貨いくら）が必須。
+# fx_rate が無い取引は、黙って 1 倍にせず警告して飛ばす。
+#
+# type: buy / sell / dividend / deposit / withdraw
+# 以下は書式の例。
+
+transactions:
+  # 口座への入金（基準通貨建て）。入金・出金を書くと、XIRR は現金込みの評価額で計算される。
+  - date: 2026-04-01
+    type: deposit
+    amount: 1000000
+
+  # 外貨建ての買い付け。fee は基準通貨建て。
+  - date: 2026-04-02
+    type: buy
+    symbol: VT
+    name: Vanguard Total World Stock ETF
+    asset_class: developed_equity
+    account: NISA
+    quantity: 10
+    price: 120.5
+    currency: USD
+    fx_rate: 150.2
+    fee: 0
+
+  # 円建ての買い付け
+  - date: 2026-05-10
+    type: buy
+    symbol: 7203.T
+    name: トヨタ自動車
+    asset_class: jp_equity
+    account: 特定口座
+    quantity: 100
+    price: 2800
+    currency: JPY
+    fee: 110
+
+  # 配当（受取額は銘柄の通貨建て）
+  - date: 2026-06-30
+    type: dividend
+    symbol: VT
+    account: NISA
+    amount: 12.3
+    currency: USD
+    fx_rate: 158.0
+
+  # 売却
+  - date: 2026-08-15
+    type: sell
+    symbol: 7203.T
+    account: 特定口座
+    quantity: 40
+    price: 3100
+    currency: JPY
+    fee: 110
