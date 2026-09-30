@@ -125,6 +125,12 @@ python tools/fetch_13f.py            # 直近 2 四半期を取得（前期比�
 python tools/export_13f_json.py      # → web/investors.json
 ```
 
+- 同じタブに、**資産の持ち方**（個別株・株式インデックス ETF・債券 ETF・金・社債などの比率、
+  オプションのプット／コール）、**市場の分析**（分野別の推定売買額、プット÷コール、売買件数の広がり、
+  複数の投資家が新しく買い始めた銘柄）、**ETF の種類別一覧**がある（`tools/holdings_mix.py`、`tools/market_view.py`）
+- 推定売買額は「株数の変化 × 株価」。株価の上下による評価額の増減は含めない
+- 銘柄を押すと、その銘柄の保有者一覧と、TradingView・Yahoo Finance の最新チャートへのリンクが出る
+  （ページは外部サイトに直接つなげないため、価格データは保存せず、押したときに外部で開く）
 - 業種は各社が SEC に届け出た SIC コードから大まかに分類（`tools/sectors.py`）。証券会社の業種分類とは一致しないことがある
 - 売買は株数の前期比で判定（±10% 以上）。オプション（プット・コール）の行は保有から除外
 - 運用会社は改組で CIK が変わる（Greenlight → DME Capital、Pershing Square → Pershing Square Inc. など）。

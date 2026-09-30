@@ -138,3 +138,19 @@ def test_option_rows_are_not_merged_into_stock_holdings():
     ]
     merged, _ = fetch_13f.normalize_and_aggregate(rows)
     assert len(merged) == 1 and merged[0]["value"] == 5_000_000
+
+
+def test_options_are_kept_separately_in_the_same_unit():
+    rows = [
+        {"cusip": "X", "titleOfClass": "COM", "nameOfIssuer": "A", "value": "5000",
+         "sshPrnamt": "100000", "sshPrnamtType": "SH"},                       # 千ドル単位
+        {"cusip": "SPY", "titleOfClass": "TR", "nameOfIssuer": "SPDR", "value": "900",
+         "sshPrnamt": "2000", "sshPrnamtType": "SH", "putCall": "Put"},
+        {"cusip": "SPY", "titleOfClass": "TR", "nameOfIssuer": "SPDR", "value": "100",
+         "sshPrnamt": "200", "sshPrnamtType": "SH", "putCall": "PUT"},
+    ]
+    _, unit = fetch_13f.normalize_and_aggregate(rows)
+    opts = fetch_13f.aggregate_options(rows, unit)
+    assert unit == "thousands"
+    assert opts == [{"cusip": "SPY", "issuer": "SPDR", "put_call": "Put",
+                     "value": 1_000_000.0, "shares": 2200.0}]

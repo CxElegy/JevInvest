@@ -32,6 +32,8 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import figi  # noqa: E402
+import holdings_mix as hm  # noqa: E402
+import market_view  # noqa: E402
 import sectors as sec  # noqa: E402
 
 if hasattr(sys.stdout, "reconfigure"):
@@ -44,6 +46,7 @@ OUT = ROOT / "web" / "investors.json"
 
 SELECTIVE_MAX = 50        # これ以下の銘柄数を「選別型」とする
 LARGE_TOP_N = 20          # 大規模な運用会社で業種を付ける上位銘柄数
+LARGE_RESOLVE_N = 300     # 大規模な運用会社で資産の種類（ETF・債券など）を判定する上位銘柄数
 CHANGE_THRESHOLD = 0.10   # 株数が ±10% 以上動いたら買い増し・減少とみなす
 MIN_PREV_RATIO = 0.25     # 前期の総額が今期の 25% 未満なら前期比を出さない
 
@@ -73,13 +76,14 @@ def _grouped(df: pd.DataFrame, total: float) -> pd.DataFrame:
     """会社単位（議決権クラスをまとめる）に集計する。"""
     if df.empty:
         return pd.DataFrame(columns=["value", "shares", "weight", "ticker", "company", "sector",
-                                     "resolved"])
+                                     "kind", "resolved"])
     df = df.copy()
     df["sh"] = df["shares"].where(df["share_type"] == "SH", 0.0)
     g = df.groupby("group_key").agg(
         value=("value", "sum"), shares=("sh", "sum"),
         ticker=("ticker", figi.modal), company=("company", figi.modal),
         issuer=("issuer", figi.modal), sector=("sector", figi.modal),
+        kind=("kind", figi.modal),
     )
     g["company"] = g["company"].fillna(g["issuer"])
     g["sector"] = g["sector"].where(g["sector"].notna(), sec.OTHER)
@@ -133,6 +137,107 @@ def _sector_weights(g: pd.DataFrame) -> dict[str, float]:
     return {k: float(v) for k, v in s.items()}
 
 
+def _mix(rows: pd.DataFrame) -> dict[str, float]:
+    """1 四半期分の保有を資産の種類ごとの比率（%）にする。"""
+    vals: dict[str, float] = {}
+    for t, nm, st, sh, v in zip(rows["ticker"], rows["figi_name"], rows["sec_type"],
+                                rows["share_type"], rows["value"], strict=True):
+        k = hm.classify(t, nm, st, sh)
+        vals[k] = vals.get(k, 0.0) + float(v)
+    return hm.mix_weights(vals)
+
+
+def _options(db: sqlite3.Connection, cik: str, rd: str, cmap: dict) -> tuple[dict, dict]:
+    """プットとコールの想定元本の合計と、大きい順の対象銘柄名。"""
+    out = {}
+    for pc in ("Put", "Call"):
+        rows = db.execute(
+            "SELECT cusip, issuer, SUM(value) FROM options WHERE cik=? AND report_date=?"
+            " AND put_call=? GROUP BY cusip ORDER BY 3 DESC", (cik, rd, pc)).fetchall()
+        names = []
+        for cusip, issuer, _v in rows[:8]:
+            t = (cmap.get(cusip) or {}).get("ticker")
+            names.append(sec.base_ticker(t) if t else str(issuer).title())
+        out[pc] = {"value": float(sum(r[2] or 0 for r in rows)), "names": names}
+    return out["Put"], out["Call"]
+
+
+def _group_mix(filers: list[dict]) -> dict:
+    """全体を通した持ち方。投資家を同じ重みで平均する（金額で重み付けすると巨大クオンツが支配する）。"""
+    def avg(fs):
+        if not fs:
+            return []
+        acc = {k: 0.0 for k in hm.KINDS}
+        for f in fs:
+            for m in f["mix"]:
+                acc[m["k"]] += m["w"]
+        return [{"k": k, "label": hm.KIND_JP[k], "w": round(v / len(fs), 1)}
+                for k, v in acc.items() if v > 0]
+
+    by_style = []
+    for style in dict.fromkeys(f["style"] for f in filers):
+        fs = [f for f in filers if f["style"] == style]
+        by_style.append({"style": style, "style_jp": fs[0]["style_jp"], "n": len(fs), "mix": avg(fs)})
+
+    def w(f, *ks):
+        return sum(m["w"] for m in f["mix"] if m["k"] in ks)
+
+    def rank(fn, minv):
+        rows = sorted(((fn(f), f) for f in filers), key=lambda x: -x[0])
+        return [{"person": f["person"], "name": f["name"], "v": round(v, 1)} for v, f in rows if v >= minv]
+
+    idx = rank(lambda f: w(f, "idx_etf"), 1.0)
+    bond = rank(lambda f: w(f, "bond_etf", "debt"), 0.5)
+    gold = rank(lambda f: w(f, "gold_etf"), 0.5)
+    crypto = rank(lambda f: w(f, "crypto_etf"), 0.5)
+    puts = rank(lambda f: f["options"]["puts_pct"], 5.0)
+    n = len(filers)
+    stock_avg = sum(w(f, "stock") for f in filers) / n if n else 0.0
+
+    notes = [
+        f"{n} 人・社を同じ重みで平均すると、13F に出る保有の {stock_avg:.1f}% が個別株です。"
+        "著名投資家の多くは、ETF より個別株の選別で運用しています。",
+        f"株式インデックス ETF を 1% 以上持つのは {len(idx)} 人・社"
+        + (f"（多い順に {'、'.join(r['person'] for r in idx[:4])}）。" if idx else "。")
+        + "マクロ型やクオンツは、指数 ETF を相場全体の売買やヘッジの道具として使う傾向があります。",
+        f"債券 ETF・社債などを 0.5% 以上持つのは {len(bond)} 人・社"
+        + (f"（{'、'.join(r['person'] for r in bond[:4])}）。" if bond else "。")
+        + "ただし 13F には国債と現金が出ないため、実際の債券・現金の比率はこれより大きいはずです"
+        "（バフェットの短期国債など）。",
+        f"金・商品 ETF を 0.5% 以上持つのは {len(gold)} 人・社"
+        + (f"（{'、'.join(r['person'] for r in gold[:4])}）。" if gold else "。"),
+        f"プットの想定元本が株式ロングの 5% 以上あるのは {len(puts)} 人・社"
+        + (f"（{'、'.join(r['person'] for r in puts[:4])}）。" if puts else "。")
+        + "大半の投資家は、オプションによる下落への備えを 13F 上ではほとんど持っていません。",
+    ]
+    return {"by_style": by_style, "all": avg(filers), "rank_index": idx, "rank_bond": bond,
+            "rank_gold": gold, "rank_crypto": crypto, "rank_puts": puts, "notes": notes,
+            "kinds": [{"k": k, "label": hm.KIND_JP[k]} for k in hm.KINDS]}
+
+
+def _ticker_index(rows: list[tuple], filers: list[dict], group_rows: list[dict]) -> dict:
+    """ページに出てくる銘柄について、誰がどれだけ持っているか（銘柄を押したときの表示用）。"""
+    shown: set[str] = {r["t"] for r in group_rows if r.get("t")}
+    for f in filers:
+        for k in ("top", "new", "exits"):
+            shown.update(r["t"] for r in f[k] if r.get("t"))
+    idx: dict[str, dict] = {}
+    for t, person_, _name, w, c, pct, lab in rows:
+        if t not in shown:
+            continue
+        e = idx.setdefault(t, {"c": lab["c"], "s": lab["s"], "holders": []})
+        e["holders"].append({"p": person_, "w": round(w, 2), "chg": c,
+                             "chg_pct": None if pct is None else round(pct, 1)})
+    for f in filers:                                  # 全売却した人も載せる
+        for r in f["exits"]:
+            if r.get("t") in shown:
+                e = idx.setdefault(r["t"], {"c": r["c"], "s": r["s"], "holders": []})
+                e["holders"].append({"p": f["person"], "w": 0.0, "chg": "exit", "chg_pct": -100.0})
+    for e in idx.values():
+        e["holders"].sort(key=lambda h: -h["w"])
+    return idx
+
+
 def build(db: sqlite3.Connection, roster: list[dict], cmap: dict, sic: dict,
           generated: str | None = None) -> dict:
     filers = pd.read_sql("SELECT * FROM filers", db)
@@ -148,10 +253,14 @@ def build(db: sqlite3.Connection, roster: list[dict], cmap: dict, sic: dict,
             if isinstance(t, str) else None
             for t, st in zip(df["ticker"], df["sec_type"], strict=True)
         ]
+        df["kind"] = [hm.classify(t, nm, st, sh) for t, nm, st, sh in
+                      zip(df["ticker"], df["figi_name"], df["sec_type"], df["share_type"], strict=True)]
         return df
 
     out_filers, excluded = [], []
     focus: list[dict] = []   # 全体集計に使う（選別型・今期あり・前期比あり）
+    ticker_rows: list[tuple] = []
+    market = market_view.MarketAccumulator()
 
     for cik, ds in dates.items():
         cur_row = filers[(filers["cik"] == cik) & (filers["report_date"] == ds[0])].iloc[0]
@@ -163,7 +272,8 @@ def build(db: sqlite3.Connection, roster: list[dict], cmap: dict, sic: dict,
 
         total = float(cur_row["total_value"])
         n = int(cur_row["n_positions"])
-        cur = _grouped(annotate(_positions(db, cik, ds[0])), total)
+        cur_rows = annotate(_positions(db, cik, ds[0]))
+        cur = _grouped(cur_rows, total)
 
         prev = None
         prev_date = ds[1] if len(ds) > 1 else None
@@ -173,8 +283,8 @@ def build(db: sqlite3.Connection, roster: list[dict], cmap: dict, sic: dict,
             gap = (date.fromisoformat(ds[0]) - date.fromisoformat(prev_date)).days
             if 80 <= gap <= 100 and float(prow["total_value"]) >= total * MIN_PREV_RATIO:
                 comparable = True
-                prev = _grouped(annotate(_positions(db, cik, prev_date)),
-                                float(prow["total_value"]))
+                prev_rows = annotate(_positions(db, cik, prev_date))
+                prev = _grouped(prev_rows, float(prow["total_value"]))
 
         selective = n <= SELECTIVE_MAX
         basis = cur if selective else cur.head(LARGE_TOP_N)
@@ -206,6 +316,26 @@ def build(db: sqlite3.Connection, roster: list[dict], cmap: dict, sic: dict,
                 exits.append({**_label(r),
                               "pw": round(float(r["weight"]), 2)})
 
+        mix = _mix(cur_rows)
+        mix_prev = _mix(prev_rows) if prev is not None else {}
+        puts, calls = _options(db, cik, ds[0], cmap)
+        long_total = total or 1.0
+        wts = (cur["weight"] / 100.0)
+        n_new = int((~cur.index.isin(prev.index)).sum()) if prev is not None else 0
+        n_exit = int((~prev.index.isin(cur.index)).sum()) if prev is not None else 0
+        stats = {
+            "mix": mix, "mix_prev": mix_prev,
+            "top10_pct": float(cur.head(10)["weight"].sum()),
+            "eff_n": float(1.0 / (wts ** 2).sum()) if len(wts) else 0.0,
+            "n": n, "selective": selective, "comparable": comparable,
+            "n_new": n_new, "n_exit": n_exit,
+            "puts_pct": puts["value"] / long_total * 100.0,
+            "calls_pct": calls["value"] / long_total * 100.0,
+            "put_names": puts["names"], "call_names": calls["names"],
+            "unknown_note": (f"下位の銘柄は種類を判定していないため、{mix['unknown']:.1f}% が未分類です。"
+                             if mix.get("unknown", 0.0) >= 5 else None),
+        }
+
         rec = {
             "name": name, "person": person.get(name, name),
             "style": cur_row["style"], "style_jp": STYLE_JP.get(cur_row["style"], cur_row["style"]),
@@ -220,8 +350,24 @@ def build(db: sqlite3.Connection, roster: list[dict], cmap: dict, sic: dict,
                  for k, v in sw.items()),
                 key=lambda d: -d["w"]),
             "top": top, "new": new, "exits": exits,
+            "mix": [{"k": k, "label": hm.KIND_JP[k], "w": round(v, 1),
+                     "dw": round(v - mix_prev.get(k, 0.0), 1) if comparable and mix_prev else None}
+                    for k, v in mix.items()],
+            "options": {"puts_pct": round(stats["puts_pct"], 1), "calls_pct": round(stats["calls_pct"], 1),
+                        "puts": puts["names"][:5], "calls": calls["names"][:5]},
+            "top10_pct": round(stats["top10_pct"], 1), "eff_n": round(stats["eff_n"], 1),
+            "_stats": stats,
         }
         out_filers.append(rec)
+        for key, r in cur[cur["resolved"]].iterrows():
+            c, pct = chg(key)
+            ticker_rows.append((sec.base_ticker(r["ticker"]), rec["person"], rec["name"],
+                                float(r["weight"]), c, pct, _label(r)))
+        if prev is not None:
+            pp, pc = _options(db, cik, prev_date, cmap)
+            market.add_filer(rec["person"], cur, prev, selective, _change, _label,
+                             puts["value"], calls["value"], pp["value"], pc["value"],
+                             total, float(prow["total_value"]), mix, mix_prev)
         if selective and prev is not None:
             focus.append({"rec": rec, "cur": cur, "prev": prev, "sw": sw, "psw": psw})
 
@@ -266,6 +412,17 @@ def build(db: sqlite3.Connection, roster: list[dict], cmap: dict, sic: dict,
                 shift.append({"s": s, "w": round(w, 1), "pw": round(pw, 1), "dw": round(w - pw, 1)})
         shift.sort(key=lambda d: -d["w"])
 
+    sector_avg = {x["s"]: x["w"] for x in shift}
+    for rec in out_filers:
+        st = rec.pop("_stats")
+        st["sectors"] = rec["sectors"]
+        rec["insights"] = hm.insights(st, sector_avg if rec["selective"] else None)
+
+    holdings_view = _group_mix(out_filers)
+    market_res = market.result()
+    tickers = _ticker_index(ticker_rows, out_filers,
+                            consensus + buys + sells + market_res["etfs"] + market_res["early"])
+
     prev_q = max((f["rec"]["prev_date"] for f in focus), default=None)
     return _clean({
         "generated": generated or datetime.now().strftime("%Y-%m-%d %H:%M"),
@@ -274,6 +431,7 @@ def build(db: sqlite3.Connection, roster: list[dict], cmap: dict, sic: dict,
         "group": {"n": len(focus), "names": [f["rec"]["person"] for f in focus],
                   "consensus": consensus, "buys": buys, "sells": sells, "sector_shift": shift},
         "filers": out_filers, "excluded": excluded,
+        "holdings": holdings_view, "tickers": tickers, "market": market_res,
     })
 
 
@@ -285,8 +443,11 @@ def cusips_to_resolve(db: sqlite3.Connection) -> list[str]:
         big = int(g.iloc[0]["n_positions"]) > SELECTIVE_MAX
         for rd in g["report_date"]:
             q = ("SELECT cusip FROM positions WHERE cik=? AND report_date=? ORDER BY value DESC"
-                 + (f" LIMIT {LARGE_TOP_N}" if big else ""))
+                 + (f" LIMIT {LARGE_RESOLVE_N}" if big else ""))
             out.update(c for (c,) in db.execute(q, (cik, rd)))
+            out.update(c for (c,) in db.execute(
+                "SELECT cusip FROM options WHERE cik=? AND report_date=?"
+                " GROUP BY cusip ORDER BY SUM(value) DESC LIMIT 10", (cik, rd)))
     return sorted(out)
 
 

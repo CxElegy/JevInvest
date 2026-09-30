@@ -19,6 +19,7 @@
   --warn-soft: #faf0d4;
   --crit: #b3261e;
   --crit-soft: #fbe4e1;
+  --k-stock: #2f6fb3; --k-idx: #0e8a6f; --k-bond: #b8860b; --k-gold: #c2702a; --k-crypto: #8a5cc4; --k-oetf: #6f8f9e; --k-debt: #a8445c; --k-unk: #b9c3be;
   --f-body: 'Noto Sans JP', system-ui, -apple-system, 'Hiragino Sans', 'Yu Gothic', sans-serif;
   --f-num: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 }
@@ -26,14 +27,14 @@
   :root:not([data-theme="light"]) {
     --bg: #0d1311; --surface: #151d1a; --input: #0f1613; --fg: #e5ece8; --muted: #93a49c;
     --line: #27332e; --accent: #52c2a6; --accent-fg: #0a1512; --accent-soft: #163a32;
-    --good: #5fcf85; --warn: #e0b34a; --warn-soft: #33290f; --crit: #ff8a80; --crit-soft: #3a1a17;
+    --good: #5fcf85; --warn: #e0b34a; --warn-soft: #33290f; --crit: #ff8a80; --crit-soft: #3a1a17; --k-stock: #6aa6e8; --k-idx: #3fc2a2; --k-bond: #e0b34a; --k-gold: #e8955a; --k-crypto: #b893ea; --k-oetf: #93aebb; --k-debt: #e07a92; --k-unk: #4a5751;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0d1311; --surface: #151d1a; --input: #0f1613; --fg: #e5ece8; --muted: #93a49c;
   --line: #27332e; --accent: #52c2a6; --accent-fg: #0a1512; --accent-soft: #163a32;
-  --good: #5fcf85; --warn: #e0b34a; --warn-soft: #33290f; --crit: #ff8a80; --crit-soft: #3a1a17;
+  --good: #5fcf85; --warn: #e0b34a; --warn-soft: #33290f; --crit: #ff8a80; --crit-soft: #3a1a17; --k-stock: #6aa6e8; --k-idx: #3fc2a2; --k-bond: #e0b34a; --k-gold: #e8955a; --k-crypto: #b893ea; --k-oetf: #93aebb; --k-debt: #e07a92; --k-unk: #4a5751;
   color-scheme: dark;
 }
 body { background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 15px; line-height: 1.65; }
@@ -134,6 +135,33 @@ button.danger { color: var(--crit); border-color: var(--crit); }
 h3 { font-size: 14px; margin: 0; font-weight: 700; }
 details.limits summary { cursor: pointer; font-size: 13px; color: var(--muted); }
 details.limits ul { margin: 8px 0 0; padding-left: 1.2em; font-size: 13px; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
+.stack { display: flex; height: 18px; border-radius: 6px; overflow: hidden; background: var(--line); }
+.stack span { display: block; height: 100%; min-width: 2px; }
+.stack span + span { box-shadow: -1px 0 0 var(--surface); }
+.kinds { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 4px 16px; font-size: 13px; }
+.kinds div { display: flex; gap: 8px; align-items: baseline; min-width: 0; }
+.kinds i { flex: none; width: 10px; height: 10px; border-radius: 3px; align-self: center; }
+.kinds .lab { flex: 1; min-width: 0; }
+.kinds .v { font-family: var(--f-num); }
+.kinds .d { font-family: var(--f-num); font-size: 12px; min-width: 4.4em; text-align: right; }
+ul.points { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+.kstock { background: var(--k-stock); } .kidx_etf { background: var(--k-idx); } .kbond_etf { background: var(--k-bond); }
+.kgold_etf { background: var(--k-gold); } .kcrypto_etf { background: var(--k-crypto); } .kother_etf { background: var(--k-oetf); }
+.kdebt { background: var(--k-debt); } .kunknown { background: var(--k-unk); }
+.styletbl td:first-child { white-space: nowrap; }
+.styletbl .stack { min-width: 160px; }
+.ranks { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.ranks ol { margin: 0; padding-left: 1.4em; font-size: 13px; display: flex; flex-direction: column; gap: 2px; }
+.ranks ol b { font-family: var(--f-num); font-weight: 500; }
+button.tkb { border: 0; background: none; padding: 2px 0; min-height: 0; color: var(--accent); font-family: var(--f-num); font-weight: 500; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.sheet { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: flex-end; justify-content: center; z-index: 20; padding-top: env(safe-area-inset-top, 0px); }
+.sheet .panel { background: var(--surface); color: var(--fg); width: 100%; max-width: 720px; max-height: 88%; overflow-y: auto; border-radius: 14px 14px 0 0; padding: 16px 16px calc(20px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 12px; }
+@media (min-width: 760px) { .sheet { align-items: center; } .sheet .panel { border-radius: 14px; } }
+.panel .head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.panel .tkbig { font-family: var(--f-num); font-size: 24px; font-weight: 500; }
+.links { display: flex; gap: 8px; flex-wrap: wrap; }
+.links a { display: inline-flex; align-items: center; min-height: 40px; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--line); color: var(--fg); text-decoration: none; font-size: 14px; }
+.links a.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-weight: 700; }
 </style>
 
 <div class="wrap">
@@ -242,6 +270,31 @@ details.limits ul { margin: 8px 0 0; padding-left: 1.2em; font-size: 13px; color
       </details>
     </section>
 
+    <section aria-labelledby="h-mkt">
+      <h2 id="h-mkt">市場の分析（資金の流れ・市場心理・兆候）</h2>
+      <p id="mktNote" class="sub"></p>
+      <div id="mktTiles" class="tiles"></div>
+      <div class="cols2">
+        <div><h3>資金の流れ</h3><ul id="mktFlows" class="points"></ul></div>
+        <div><h3>市場心理</h3><ul id="mktMood" class="points"></ul></div>
+      </div>
+      <h3>見込み（注目が集まり始めた兆候）</h3>
+      <ul id="mktOutlook" class="points"></ul>
+      <h3>分野ごとの推定売買額（前期比）</h3>
+      <p class="note">株数の変化 × 株価で推定した売買の金額です。株価の上下による評価額の変化は含みません。</p>
+      <div class="tablewrap"><table id="mktSectors"></table></div>
+      <h3>同じ四半期に複数の投資家が新しく買い始めた銘柄</h3>
+      <div class="tablewrap"><table id="mktEarly"></table></div>
+    </section>
+
+    <section aria-labelledby="h-etf">
+      <h2 id="h-etf">ETF の種類と保有</h2>
+      <p class="sub">著名投資家が持つ ETF を 1 本ずつ、種類・保有額・前期からの推定売買額と一緒に並べています。</p>
+      <div id="etfChips" class="chips" role="group" aria-label="ETF の種類で絞り込む"></div>
+      <div id="etfSubs" class="kinds"></div>
+      <div class="tablewrap"><table id="etfTable"></table></div>
+    </section>
+
     <section aria-labelledby="h-person">
       <h2 id="h-person">投資家を選ぶ</h2>
       <div id="styleChips" class="chips" role="group" aria-label="スタイルで絞り込む"></div>
@@ -249,6 +302,17 @@ details.limits ul { margin: 8px 0 0; padding-left: 1.2em; font-size: 13px; color
     </section>
 
     <section id="personDetail" aria-live="polite"></section>
+
+    <section aria-labelledby="h-hold">
+      <h2 id="h-hold">全体を通した持ち方（インデックス・債券・ヘッジ）</h2>
+      <p class="sub">13F に出る保有を資産の種類に分け、投資家ごとの比率を同じ重みで平均しています。国債・現金・米国外の株は 13F に出ないため、実際の債券や現金の比率はこれより大きくなります。</p>
+      <div id="holdAll"></div>
+      <h3>分析のポイント</h3>
+      <ul id="holdNotes" class="points"></ul>
+      <h3>スタイル別の持ち方</h3>
+      <div class="tablewrap"><table id="holdStyles" class="styletbl"></table></div>
+      <div id="holdRanks" class="ranks"></div>
+    </section>
 
     <section aria-labelledby="h-group">
       <h2 id="h-group">集中投資型の投資家全体の傾向</h2>
@@ -265,6 +329,7 @@ details.limits ul { margin: 8px 0 0; padding-left: 1.2em; font-size: 13px; color
   </div>
 </div>
 <div id="toast" role="status" aria-live="polite"></div>
+<div id="sheet" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="sheetTitle"><div class="panel" id="sheetPanel"></div></div>
 
 <script>
 (function () {
@@ -581,7 +646,17 @@ details.limits ul { margin: 8px 0 0; padding-left: 1.2em; font-size: 13px; color
     var extra = (chg === 'add' || chg === 'trim') && pct != null ? ' ' + (pct > 0 ? '+' : '') + Math.round(pct) + '%' : '';
     return '<span class="tag ' + t[0] + '">' + t[1] + extra + '</span>';
   }
-  function tk(r) { return r.t ? '<span class="tk">' + esc(r.t) + '</span>' : '<span class="note">—</span>'; }
+  function tk(r) { return r.t ? '<button type="button" class="tkb" data-t="' + esc(r.t) + '" aria-label="' + esc(r.t) + ' のチャートと保有者">' + esc(r.t) + '</button>' : '<span class="note">—</span>'; }
+  function stackBar(mix) {
+    return '<div class="stack" role="img" aria-label="' + esc(mix.map(function (m) { return m.label + ' ' + m.w.toFixed(1) + '%'; }).join('、')) + '">' +
+      mix.filter(function (m) { return m.w > 0; }).map(function (m) { return '<span class="k' + m.k + '" style="width:' + m.w + '%" title="' + esc(m.label + ' ' + m.w.toFixed(1) + '%') + '"></span>'; }).join('') + '</div>';
+  }
+  function kindList(mix, showD) {
+    return '<div class="kinds">' + mix.filter(function (m) { return m.w >= 0.05; }).map(function (m) {
+      var d = showD && m.dw != null ? '<span class="d ' + (Math.abs(m.dw) < 0.05 ? 'note' : (m.dw > 0 ? 'up' : 'down')) + '">' + sgnPP(m.dw) + '</span>' : '';
+      return '<div><i class="k' + m.k + '"></i><span class="lab">' + esc(m.label) + '</span><span class="v">' + m.w.toFixed(1) + '%</span>' + d + '</div>';
+    }).join('') + '</div>';
+  }
   function barRow(label, w, max, d, title) {
     var width = max ? Math.min(w / max * 100, 100) : 0;
     var cls = d == null || Math.abs(d) < 0.05 ? 'note' : (d > 0 ? 'up' : 'down');
@@ -609,7 +684,7 @@ details.limits ul { margin: 8px 0 0; padding-left: 1.2em; font-size: 13px; color
     try { saved = localStorage.getItem(PERSON_KEY); } catch (e) { saved = null; }
     current = data.filers.filter(function (f) { return f.name === saved; })[0] ||
       data.filers.filter(function (f) { return f.name === 'Berkshire Hathaway'; })[0] || data.filers[0];
-    renderPeople(); renderPerson(); renderGroup();
+    renderMarket(); renderPeople(); renderPerson(); renderHoldings(); renderGroup();
   }
 
   function renderPeople() {
@@ -628,6 +703,15 @@ details.limits ul { margin: 8px 0 0; padding-left: 1.2em; font-size: 13px; color
       '<span>報告した保有総額 <b>' + usdB(f.total_usd) + '</b></span><span>提出日 <b>' + esc(f.filed) + '</b></span></div>';
     if (!f.comparable) h += '<p class="note">前の四半期と比べられないため、売買の変化は出していません（提出する法人が変わった直後など）。</p>';
 
+    h += '<h3>分析のポイント</h3><ul class="points">' + (f.insights || []).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>';
+    if (f.mix && f.mix.length) {
+      h += '<h3>資産の持ち方</h3><p class="note">13F に出る保有の内訳' + (f.comparable ? '（右端は前期比）' : '') + '。国債・現金は含みません。</p>' + stackBar(f.mix) + kindList(f.mix, f.comparable);
+      var o = f.options || {};
+      if (o.puts_pct || o.calls_pct) {
+        h += '<p class="note">オプション（保有額には含めず、想定元本を株式ロングに対する比率で表示）: プット ' + (o.puts_pct || 0).toFixed(1) + '%' + (o.puts && o.puts.length ? '（' + esc(o.puts.join('、')) + '）' : '') +
+          ' ／ コール ' + (o.calls_pct || 0).toFixed(1) + '%' + (o.calls && o.calls.length ? '（' + esc(o.calls.join('、')) + '）' : '') + '</p>';
+      }
+    }
     h += '<h3>注目分野</h3><p class="note">' + esc(f.sector_basis) + 'の比率（業種が分かった分を 100%、報告総額の ' + f.coverage_pct + '% 分）。右端は前期比。</p>';
     h += '<div class="sbars">' + f.sectors.map(function (x) { return barRow(x.s, x.w, maxS, x.dw); }).join('') + '</div>';
 
@@ -656,6 +740,101 @@ details.limits ul { margin: 8px 0 0; padding-left: 1.2em; font-size: 13px; color
       return '<tr><td>' + tk(e) + '</td><td>' + esc(e.c) + '<div class="names">' + esc(parts) + '</div></td><td class="n">' + n + '</td></tr>';
     }).join('') + '</tbody>';
   }
+
+  var etfKind = 'all';
+  function usdS(v) {
+    var a = Math.abs(v), s = a >= 1e9 ? '$' + (a / 1e9).toFixed(1) + 'B' : '$' + Math.round(a / 1e6).toLocaleString('ja-JP') + 'M';
+    return (v < 0 ? '−' : '+') + s;
+  }
+  function usdV(v) { return v >= 1e9 ? '$' + (v / 1e9).toFixed(2) + 'B' : '$' + Math.round(v / 1e6).toLocaleString('ja-JP') + 'M'; }
+  function renderMarket() {
+    var m = data.market; if (!m) return;
+    var st = m.sentiment, b = st.breadth;
+    $('mktNote').textContent = '前期（' + data.prev_date + '）と比べられる ' + m.n_filers + ' 人・社の売買から推定しています。1〜4 か月前の動きで、予測ではありません。';
+    function tileD(k, v, s, cls) { return '<div class="tile"><div class="k">' + esc(k) + '</div><div class="v ' + (cls || '') + '">' + v + '</div><div class="s">' + s + '</div></div>'; }
+    $('mktTiles').innerHTML =
+      tileD('プット ÷ コール', st.pc_ratio == null ? '—' : st.pc_ratio.toFixed(2), '前期 ' + (st.pc_ratio_prev == null ? '—' : st.pc_ratio_prev.toFixed(2)) + '（1 超で下落への備えが優勢）') +
+      tileD('プットの厚さ', st.hedge_pct.toFixed(1) + '%', '株式ロングに対して。前期 ' + st.hedge_pct_prev.toFixed(1) + '%') +
+      tileD('守りの資産', st.defensive_pct.toFixed(2) + '%', '債券・金 ETF の平均。前期 ' + st.defensive_pct_prev.toFixed(2) + '%') +
+      tileD('買い ÷ 売り（件数）', st.breadth_ratio == null ? '—' : st.breadth_ratio.toFixed(2), '新規 ' + b['new'] + '・買増 ' + b.add + ' ／ 減少 ' + b.trim + '・全売却 ' + b.exit, st.breadth_ratio != null && st.breadth_ratio < 0.9 ? 'down' : (st.breadth_ratio > 1.1 ? 'up' : ''));
+    function li(xs) { return xs.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join(''); }
+    $('mktFlows').innerHTML = li(m.notes.flows);
+    $('mktMood').innerHTML = li(m.notes.mood);
+    $('mktOutlook').innerHTML = li(m.notes.outlook);
+    $('mktSectors').innerHTML = '<thead><tr><th>分野</th><th class="n">全体</th><th class="n">集中投資型</th><th class="n">買い／売り（人）</th><th>最も大きく動かした投資家</th></tr></thead><tbody>' +
+      m.sectors.map(function (x) {
+        var t = x.top ? esc(x.top.p) + ' <span class="names">' + usdS(x.top.flow) + (x.top.share != null ? '・全体の ' + Math.min(x.top.share, 999) + '%' : '') + '</span>' : '—';
+        return '<tr><td>' + esc(x.s) + '</td><td class="n ' + (x.flow >= 0 ? 'up' : 'down') + '">' + usdS(x.flow) + '</td><td class="n ' + (x.flow_sel >= 0 ? 'up' : 'down') + '">' + usdS(x.flow_sel) + '</td><td class="n">' + x.buyers + ' ／ ' + x.sellers + '</td><td>' + t + '</td></tr>';
+      }).join('') + '</tbody>';
+    $('mktEarly').innerHTML = m.early.length ? '<thead><tr><th>ティッカー</th><th>会社</th><th>新しく買った投資家</th></tr></thead><tbody>' +
+      m.early.map(function (e) { return '<tr><td>' + tk(e) + '</td><td>' + esc(e.c) + '<div class="names">' + esc(e.s) + '</div></td><td>' + esc(e.names.join('、')) + '</td></tr>'; }).join('') + '</tbody>'
+      : '<tbody><tr><td class="note">該当なし</td></tr></tbody>';
+    renderEtfs();
+  }
+  function renderEtfs() {
+    var m = data.market, all = m.etfs;
+    var kinds = [['all', 'すべて']], seen = {};
+    all.forEach(function (e) { if (!seen[e.kind]) { seen[e.kind] = 1; kinds.push([e.kind, e.kind_jp]); } });
+    $('etfChips').innerHTML = kinds.map(function (k) { return '<button type="button" data-k="' + esc(k[0]) + '" aria-pressed="' + (k[0] === etfKind) + '">' + esc(k[1]) + '</button>'; }).join('');
+    var list = all.filter(function (e) { return etfKind === 'all' || e.kind === etfKind; });
+    var subs = {};
+    list.forEach(function (e) { var s = subs[e.sub] || (subs[e.sub] = { n: 0, v: 0, f: 0, k: e.kind }); s.n++; s.v += e.value; s.f += e.flow; });
+    $('etfSubs').innerHTML = Object.keys(subs).sort(function (a, b) { return subs[b].v - subs[a].v; }).map(function (k) {
+      var s = subs[k]; return '<div><i class="k' + s.k + '"></i><span class="lab">' + esc(k) + '（' + s.n + ' 本）</span><span class="v">' + usdV(s.v) + '</span><span class="d ' + (s.f >= 0 ? 'up' : 'down') + '">' + usdS(s.f) + '</span></div>';
+    }).join('');
+    $('etfTable').innerHTML = '<thead><tr><th>ティッカー</th><th>名称</th><th>種類</th><th class="n">保有額</th><th class="n">推定売買</th><th>主な保有者</th></tr></thead><tbody>' +
+      list.slice(0, 60).map(function (e) {
+        return '<tr><td>' + tk(e) + '</td><td>' + esc(e.c) + '</td><td class="names">' + esc(e.sub) + '</td><td class="n">' + usdV(e.value) + '</td><td class="n ' + (e.flow >= 0 ? 'up' : 'down') + '">' + usdS(e.flow) + '</td><td class="names">' + esc(e.holders.slice(0, 3).join('、')) + (e.holders.length > 3 ? ' ほか ' + (e.holders.length - 3) + ' 人' : '') + '</td></tr>';
+      }).join('') + '</tbody>' + (list.length > 60 ? '<caption class="note" style="caption-side:bottom;text-align:left">保有額の大きい 60 本を表示（全 ' + list.length + ' 本）</caption>' : '');
+  }
+  $('etfChips').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return; etfKind = b.dataset.k; renderEtfs();
+  });
+
+  function renderHoldings() {
+    var hd = data.holdings; if (!hd) return;
+    $('holdAll').innerHTML = '<p class="note">' + data.filers.length + ' 人・社の平均</p>' + stackBar(hd.all) + kindList(hd.all, false);
+    $('holdNotes').innerHTML = hd.notes.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('');
+    var ks = hd.kinds.filter(function (k) { return hd.by_style.some(function (s) { return s.mix.some(function (m) { return m.k === k.k && m.w >= 0.05; }); }); });
+    $('holdStyles').innerHTML = '<thead><tr><th>スタイル</th><th class="n">人数</th><th>内訳</th>' + ks.map(function (k) { return '<th class="n">' + esc(k.label) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+      hd.by_style.map(function (s) {
+        var byk = {}; s.mix.forEach(function (m) { byk[m.k] = m.w; });
+        return '<tr><td>' + esc(s.style_jp) + '</td><td class="n">' + s.n + '</td><td>' + stackBar(s.mix) + '</td>' + ks.map(function (k) { return '<td class="n">' + (byk[k.k] ? byk[k.k].toFixed(1) + '%' : '—') + '</td>'; }).join('') + '</tr>';
+      }).join('') + '</tbody>';
+    function rank(title, rows, unit, note) {
+      return '<div><h3>' + esc(title) + '</h3>' + (note ? '<p class="note">' + esc(note) + '</p>' : '') + (rows.length ? '<ol>' + rows.slice(0, 8).map(function (r) { return '<li>' + esc(r.person) + ' <b>' + r.v.toFixed(1) + unit + '</b></li>'; }).join('') + '</ol>' : '<p class="note">該当なし</p>') + '</div>';
+    }
+    $('holdRanks').innerHTML = rank('株式インデックス ETF が多い', hd.rank_index, '%') + rank('債券 ETF・社債などが多い', hd.rank_bond, '%') +
+      rank('プットで下落に備えている', hd.rank_puts, '%', 'プットの想定元本 ÷ 株式ロング') + rank('金・商品 ETF を持つ', hd.rank_gold, '%');
+  }
+
+  // ---- 銘柄を押したとき ----
+  var lastFocus = null;
+  function tvUrl(t) { return 'https://www.tradingview.com/chart/?symbol=' + encodeURIComponent(t.replace('/', '.')); }
+  function yfUrl(t) { return 'https://finance.yahoo.com/quote/' + encodeURIComponent(t.replace('/', '-')) + '/chart'; }
+  function openTicker(t, from) {
+    var e = (data.tickers || {})[t] || { c: '', s: '', holders: [] };
+    lastFocus = from || null;
+    var h = '<div class="head"><div><div class="tkbig" id="sheetTitle">' + esc(t) + '</div><div>' + esc(e.c) + '</div><div class="note">' + esc(e.s) + '</div></div>' +
+      '<button type="button" id="sheetClose">閉じる</button></div>' +
+      '<h3>チャート（最新）</h3><p class="note">押したときに外部サイトの最新チャートを新しいタブで開きます。1 時間足・日足・週足・月足は開いた先で切り替えられます。このページには価格データを保存していません。</p>' +
+      '<div class="links"><a class="primary" href="' + tvUrl(t) + '" target="_blank" rel="noopener noreferrer">TradingView でローソク足を開く</a>' +
+      '<a href="' + yfUrl(t) + '" target="_blank" rel="noopener noreferrer">Yahoo Finance で開く</a></div>' +
+      '<h3>この銘柄を持つ著名投資家（' + esc(data.report_date) + ' 時点）</h3>' +
+      (e.holders.length ? '<div class="tablewrap"><table><thead><tr><th>投資家</th><th class="n">比率</th><th>前期比</th></tr></thead><tbody>' +
+        e.holders.map(function (x) { return '<tr><td>' + esc(x.p) + '</td><td class="n">' + (x.chg === 'exit' ? '—' : x.w.toFixed(2) + '%') + '</td><td>' + tag(x.chg, x.chg_pct) + '</td></tr>'; }).join('') +
+        '</tbody></table></div><p class="note">比率はその投資家の 13F 保有総額に対する割合です。大規模な運用会社は上位 300 銘柄だけを照合しています。</p>' : '<p class="note">照合できた保有者はいません。</p>') +
+      '<p class="note">参考情報で、買い推奨ではありません。個別株を買う前には独立性の確認（DESC と事前承認）が必要です。</p>';
+    $('sheetPanel').innerHTML = h;
+    $('sheet').hidden = false;
+    $('sheetClose').focus();
+  }
+  function closeSheet() { $('sheet').hidden = true; if (lastFocus && lastFocus.focus) lastFocus.focus(); }
+  $('viewInvestors').addEventListener('click', function (e) {
+    var b = e.target.closest('button.tkb'); if (b) openTicker(b.dataset.t, b);
+  });
+  $('sheet').addEventListener('click', function (e) { if (e.target === $('sheet') || e.target.id === 'sheetClose') closeSheet(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('sheet').hidden) closeSheet(); });
 
   function renderGroup() {
     var g = data.group;

@@ -107,6 +107,17 @@ def init_db() -> sqlite3.Connection:
             share_type  TEXT,
             PRIMARY KEY (cik, report_date, cusip, class)
         );
+        -- プット・コールは保有株とは別に持つ。value は原資産ベースの想定元本（ドル）。
+        CREATE TABLE IF NOT EXISTS options (
+            cik         TEXT NOT NULL,
+            report_date TEXT NOT NULL,
+            cusip       TEXT NOT NULL,
+            issuer      TEXT,
+            put_call    TEXT NOT NULL,   -- Put / Call
+            value       REAL,
+            shares      REAL,
+            PRIMARY KEY (cik, report_date, cusip, put_call)
+        );
         CREATE TABLE IF NOT EXISTS unresolved (
             roster_name TEXT PRIMARY KEY,
             reason      TEXT,
@@ -240,6 +251,22 @@ def _num(s: str | None) -> float:
         return 0.0
 
 
+def aggregate_options(rows: list[dict], unit: str) -> list[dict]:
+    """プット・コールの行を (CUSIP, 種別) でまとめる。単位は現物側の判定に合わせる。"""
+    scale = 1000.0 if unit == "thousands" else 1.0
+    agg: dict[tuple[str, str], dict] = {}
+    for r in rows:
+        pc = (r.get("putCall") or "").strip().capitalize()
+        if pc not in ("Put", "Call"):
+            continue
+        a = agg.setdefault((r.get("cusip", ""), pc), {
+            "cusip": r.get("cusip", ""), "issuer": r.get("nameOfIssuer", ""),
+            "put_call": pc, "value": 0.0, "shares": 0.0})
+        a["value"] += _num(r.get("value")) * scale
+        a["shares"] += _num(r.get("sshPrnamt"))
+    return list(agg.values())
+
+
 def normalize_and_aggregate(rows: list[dict]) -> tuple[list[dict], str]:
     """単位を正規化し、同一銘柄の行をまとめる。
 
@@ -357,6 +384,7 @@ def process(ed: Edgar, db: sqlite3.Connection, entry: dict, refresh: bool,
 
         rows = fetch_info_table(ed, cik, fi["accession"])
         positions, unit = normalize_and_aggregate(rows)
+        options = aggregate_options(rows, unit)
         total = sum(p["value"] for p in positions)
 
         db.execute(
@@ -376,6 +404,13 @@ def process(ed: Edgar, db: sqlite3.Connection, entry: dict, refresh: bool,
                  p["value"], p["shares"], p["share_type"])
                 for p in positions
             ],
+        )
+        db.execute("DELETE FROM options WHERE cik=? AND report_date=?",
+                   (cik, fi["report_date"]))
+        db.executemany(
+            "INSERT OR REPLACE INTO options VALUES (?,?,?,?,?,?,?)",
+            [(cik, fi["report_date"], o["cusip"], o["issuer"], o["put_call"],
+              o["value"], o["shares"]) for o in options],
         )
         notes.append(
             f"{fi['report_date']} / {len(positions)} 銘柄 / ${total / 1e9:,.1f}B"

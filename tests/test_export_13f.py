@@ -92,3 +92,32 @@ def test_sector_mapping_and_ticker_normalisation():
     assert sec.sec_ticker("BRK/B") == "BRK-B" and sec.sec_ticker("GOOGL 6.25 05/15/29 A") == "GOOGL"
     assert sec.sec_ticker("EA*") == "EA"
     assert next_deadline("2026-12-31") == "2027-05-15"
+
+
+def test_etf_subtypes_and_asset_kinds():
+    import holdings_mix as hm
+    assert hm.classify("SPY", "SPDR S&P 500 ETF TRUST", "ETP", "SH") == "idx_etf"
+    assert hm.classify("BIL", "SPDR BB 1-3M T-BILL ETF", "ETP", "SH") == "bond_etf"
+    assert hm.classify("GDX", "VANECK GOLD MINERS ETF", "ETP", "SH") == "gold_etf"
+    assert hm.classify("IBIT", "ISHARES BITCOIN TRUST", "ETP", "SH") == "crypto_etf"
+    assert hm.classify("XLE", "ENERGY SELECT SECTOR", "ETP", "SH") == "other_etf"
+    assert hm.classify("AAPL", "APPLE INC", "Common Stock", "SH") == "stock"
+    assert hm.classify("X", "ANY", "Common Stock", "PRN") == "debt"
+    assert hm.classify(None, None, None, "SH") == "unknown"
+    assert hm.etf_subtype("BIL", "SPDR BB 1-3M T-BILL ETF", "bond_etf") == "短期国債（現金の置き場）"
+    assert hm.etf_subtype("HYG", "ISHARES IBOXX HY", "bond_etf") == "ハイイールド債"
+    assert hm.etf_subtype("EWY", "ISHARES MSCI SOUTH KOREA ETF", "idx_etf") == "海外・新興国株の指数"
+    assert hm.etf_subtype("SPY", "SPDR S&P 500", "idx_etf") == "米国株の指数"
+    assert hm.etf_subtype("GDX", "VANECK GOLD MINERS ETF", "gold_etf") == "金鉱・銀鉱株"
+    assert hm.etf_subtype("XLF", "FINANCIAL SELECT SECTOR", "other_etf") == "米国の業種別"
+
+
+def test_market_flows_price_out_valuation_changes(db):
+    d = build(db, ROSTER, CMAP, SIC, generated="t")
+    m = d["market"]
+    # Fund A: AAPL 100→200 株、今期 1 株 3 → +300。KO 50 株を全売却、前期 1 株 6 → −300。NEW +300。
+    by = {s["s"]: s for s in m["sectors"]}
+    assert by["テクノロジー（ハード・半導体）"]["flow"] == 300
+    assert by["生活必需品"]["flow"] == -300 and by["生活必需品"]["sellers"] == 1
+    assert m["sentiment"]["breadth"]["new"] == 1 and m["sentiment"]["breadth"]["exit"] == 1
+    assert m["notes"]["outlook"][-1].startswith("これは 1〜4 か月前")
