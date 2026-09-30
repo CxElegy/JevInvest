@@ -209,16 +209,86 @@ button.tkb { border: 0; background: none; padding: 2px 0; min-height: 0; color: 
 #vtip b { font-weight: 700; }
 @media (max-width: 520px) { .dv { grid-template-columns: minmax(5.5em, 8em) 1fr 1fr; font-size: 12px; } .dv .val { font-size: 11px; padding: 0 3px; } }
 @media (prefers-reduced-motion: reduce) { #vtip { transition: none; } }
+/* plan */
+ol.advice { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; counter-reset: adv; }
+ol.advice li { counter-increment: adv; border: 1px solid var(--line); border-left-width: 4px; border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
+ol.advice li.crit { border-left-color: var(--crit); } ol.advice li.warn { border-left-color: var(--warn); }
+ol.advice li.good { border-left-color: var(--good); } ol.advice li.info { border-left-color: var(--accent); }
+ol.advice .t { font-weight: 700; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+ol.advice .t::before { content: counter(adv); font-family: var(--f-num); color: var(--muted); font-weight: 500; }
+ol.advice .t .chip { font-size: 11px; }
+ol.advice li.crit .chip { color: var(--crit); } ol.advice li.warn .chip { color: var(--warn); } ol.advice li.good .chip { color: var(--good); } ol.advice li.info .chip { color: var(--accent); }
+ol.advice .b { font-size: 14px; }
+ol.advice .how { font-size: 13px; color: var(--muted); }
+.cols { position: relative; height: 190px; margin: 8px 0 22px; border-bottom: 0; }
+.cols .zero { position: absolute; left: 0; right: 0; height: 1px; background: var(--axis); }
+.cols .thr { position: absolute; left: 0; right: 0; border-top: 2px dashed var(--warn); }
+.cols .thr span { position: absolute; right: 0; top: -18px; font-size: 11px; color: var(--muted); background: var(--surface); padding: 0 4px; }
+.cols .c { position: absolute; bottom: 0; top: 0; display: flex; flex-direction: column; align-items: center; }
+.cols .c:hover .cb, .cols .c:focus-visible .cb { filter: brightness(1.15); }
+.cols .c:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.cols .c .cb { position: absolute; left: 14%; right: 14%; border-radius: 4px 4px 0 0; background: var(--fl-new); }
+.cols .c .cb.neg { background: var(--fl-exit); border-radius: 0 0 4px 4px; }
+.cols .c .m { position: absolute; bottom: -20px; font-size: 11px; color: var(--muted); font-family: var(--f-num); }
+.cols .c .lv { position: absolute; font-size: 11px; font-family: var(--f-num); color: var(--fg); white-space: nowrap; transform: translateY(-100%); padding-bottom: 2px; }
 </style>
 
 <div class="wrap">
   <header>
     <h1>JevInvest 持仓台帳</h1>
     <nav class="tabs" role="tablist" aria-label="表示の切り替え">
+      <button type="button" role="tab" id="tabPlan" aria-controls="viewPlan" aria-selected="false">家計と次の一手</button>
       <button type="button" role="tab" id="tabLedger" aria-controls="viewLedger" aria-selected="true">自分の台帳</button>
       <button type="button" role="tab" id="tabInvestors" aria-controls="viewInvestors" aria-selected="false">著名投資家の動向</button>
     </nav>
   </header>
+
+  <div id="viewPlan" class="view" role="tabpanel" aria-labelledby="tabPlan" hidden>
+    <p class="sub">毎月の手取り・生活費・立替・現金を入れると、手取りのリターンを上げるために次にやるべきことを、効く順に並べます。</p>
+    <p class="privacy"><b>入力した金額は、このブラウザの中にだけ保存されます。</b>送信はされず、Claude にも届きません。</p>
+
+    <section aria-labelledby="h-in">
+      <h2 id="h-in">いまの数字</h2>
+      <form id="planForm" class="grid2" autocomplete="off">
+        <div class="field"><label for="pf-cash">現金・預金（円）</label><input id="pf-cash" data-k="cash" class="num" inputmode="numeric"></div>
+        <div class="field"><label for="pf-income">毎月の手取り（円）</label><input id="pf-income" data-k="income" class="num" inputmode="numeric"></div>
+        <div class="field"><label for="pf-spend">毎月の生活費（円・立替は除く）</label><input id="pf-spend" data-k="spend" class="num" inputmode="numeric"></div>
+        <div class="field"><label for="pf-advance">毎月の立替（円・あとで戻るお金）</label><input id="pf-advance" data-k="advance" class="num" inputmode="numeric"></div>
+        <div class="field"><label for="pf-lag">立替が戻るまで（か月）</label><input id="pf-lag" data-k="lag" class="num" inputmode="decimal"></div>
+        <div class="field"><label for="pf-bonus">賞与の手取り（円・年合計）</label><input id="pf-bonus" data-k="bonus" class="num" inputmode="numeric"></div>
+        <div class="field"><label for="pf-debt">リボ・カードローンなどの残高（円）</label><input id="pf-debt" data-k="debt" class="num" inputmode="numeric"></div>
+        <div class="field"><label for="pf-rate">その金利（年 %）</label><input id="pf-rate" data-k="rate" class="num" inputmode="decimal"></div>
+        <div class="field"><label for="pf-invested">すでに投資している額（円）</label><input id="pf-invested" data-k="invested" class="num" inputmode="numeric"></div>
+        <div class="field"><label for="pf-nisa">今年すでに使った NISA 枠（円）</label><input id="pf-nisa" data-k="nisa" class="num" inputmode="numeric"></div>
+        <div class="field"><label for="pf-months">生活防衛資金の目安（生活費の何か月分）</label><input id="pf-months" data-k="months" class="num" inputmode="decimal"></div>
+      </form>
+      <p class="note">立替は「会社の経費などを立て替えて、あとで精算されるお金」です。生活費には含めずに入れてください。</p>
+      <div class="row"><button type="button" id="planRecord" class="primary">今月の数字として記録する</button><span id="planSaved" class="note"></span></div>
+    </section>
+
+    <section aria-labelledby="h-now">
+      <h2 id="h-now">いまの状態</h2>
+      <div id="planTiles" class="tiles"></div>
+      <h3>このままの場合の現金（12 か月）</h3>
+      <p class="note">立替で出ていく分を差し引いた「自由に使える現金」の見込み。破線は生活防衛資金の目安。棒を押すと金額が出ます。</p>
+      <div id="planChart"></div>
+    </section>
+
+    <section aria-labelledby="h-next">
+      <h2 id="h-next">次の一手（効く順）</h2>
+      <ol id="planAdvice" class="advice"></ol>
+      <p class="note">税・手数料を引いた後の、長期のリターンを基準にしています。個別株を買う前には、独立性の確認（DESC と事前承認）が必要です。</p>
+    </section>
+
+    <section aria-labelledby="h-hist">
+      <h2 id="h-hist">毎月の記録</h2>
+      <p class="sub">毎月 1 回「今月の数字として記録する」を押すと、前の月からの変化も踏まえて次の一手が変わります。</p>
+      <div id="planHistChart"></div>
+      <div class="tablewrap"><table id="planHist"></table></div>
+      <div class="row"><button type="button" id="planCopy">Claude に相談する用にコピー</button></div>
+      <textarea id="planSummary" readonly aria-label="Claude に相談する用のテキスト" hidden></textarea>
+    </section>
+  </div>
 
   <div id="viewLedger" class="view" role="tabpanel" aria-labelledby="tabLedger">
   <p class="sub">証券会社のアプリに表示されている評価額を、そのまま円で入力します。</p>
@@ -682,13 +752,14 @@ button.tkb { border: 0; background: none; padding: 2px 0; min-height: 0; color: 
   // ---- タブ ----
   function showTab(which) {
     var inv = which === 'investors';
-    $('viewLedger').hidden = inv; $('viewInvestors').hidden = !inv;
-    $('tabLedger').setAttribute('aria-selected', String(!inv));
-    $('tabInvestors').setAttribute('aria-selected', String(inv));
+    [['plan', 'viewPlan', 'tabPlan'], ['ledger', 'viewLedger', 'tabLedger'], ['investors', 'viewInvestors', 'tabInvestors']].forEach(function (t) {
+      $(t[1]).hidden = t[0] !== which; $(t[2]).setAttribute('aria-selected', String(t[0] === which));
+    });
     try { localStorage.setItem(TAB_KEY, which); } catch (e) { /* 保存できなくても表示はできる */ }
     if (inv) loadData();
   }
   $('tabLedger').addEventListener('click', function () { showTab('ledger'); });
+  $('tabPlan').addEventListener('click', function () { showTab('plan'); });
   $('tabInvestors').addEventListener('click', function () { showTab('investors'); });
 
   // ---- データ ----
@@ -1017,8 +1088,226 @@ button.tkb { border: 0; background: none; padding: 2px 0; min-height: 0; color: 
     $('personDetail').scrollIntoView({ block: 'start', behavior: 'smooth' });
   });
 
-  var start = location.hash === '#investors' ? 'investors' : null;
+  var start = { '#investors': 'investors', '#plan': 'plan', '#ledger': 'ledger' }[location.hash] || null;
   if (!start) { try { start = localStorage.getItem(TAB_KEY); } catch (e) { start = null; } }
-  showTab(start === 'investors' ? 'investors' : 'ledger');
+  showTab(['plan', 'ledger', 'investors'].indexOf(start) >= 0 ? start : 'plan');
+})();
+</script>
+
+<script>
+(function () {
+  'use strict';
+  function $(id) { return document.getElementById(id); }
+  function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function num(v) { var n = parseFloat(String(v == null ? '' : v).replace(/[,，\s円¥万]/g, '')); return isFinite(n) ? n : 0; }
+  function yen(n) { return Math.round(n).toLocaleString('ja-JP') + ' 円'; }
+  function man(n) { var a = Math.abs(n), s = a >= 10000 ? (Math.round(a / 1000) / 10).toLocaleString('ja-JP') + ' 万円' : Math.round(a).toLocaleString('ja-JP') + ' 円'; return (n < 0 ? '−' : '') + s; }
+  var KEY = 'jevinvest.plan.v1';
+  var FIELDS = ['cash', 'income', 'spend', 'advance', 'lag', 'bonus', 'debt', 'rate', 'invested', 'nisa', 'months'];
+  var DEFAULTS = { lag: '1', months: '6', bonus: '0', debt: '0', rate: '0', invested: '0', nisa: '0' };
+  var NISA_TSUMI = 1200000, NISA_GROWTH = 2400000;
+
+  // ---- 計算（テストしやすいよう純粋関数）----
+  function derive(i) {
+    var v = {}; FIELDS.forEach(function (k) { v[k] = num(i[k]); });
+    if (!i.lag && i.lag !== 0) v.lag = 1;
+    if (!v.months) v.months = 6;
+    var flt = v.advance * v.lag;
+    var net = v.income - v.spend;
+    var netB = net + v.bonus / 12;
+    var free = v.cash - flt;
+    var buffer = v.spend * v.months;
+    return {
+      v: v, float: flt, net: net, netB: netB, free: free, buffer: buffer,
+      coverMonths: v.spend ? free / v.spend : null,
+      runway: netB < 0 ? (free > 0 ? free / -netB : 0) : null,
+      savingsRate: v.income ? net / v.income * 100 : null,
+      nisaLeft: Math.max(NISA_TSUMI + NISA_GROWTH - v.nisa, 0)
+    };
+  }
+
+  function advise(i, hist) {
+    var d = derive(i), v = d.v, out = [];
+    if (!v.income && !v.spend && !v.cash) {
+      return [{ lv: 'info', chip: '入力待ち', t: '手取り・生活費・現金を入れてください', b: '入れると、次にやることを効く順に出します。' }];
+    }
+    // 1. 赤字
+    if (d.netB < 0) {
+      var target = Math.round(v.income * 0.9 / 1000) * 1000;
+      out.push({ lv: 'crit', chip: '最優先', t: '毎月 ' + man(-d.netB) + ' の赤字を止める',
+        b: '生活費が手取りを上回っています。このままだと、自由に使える現金は約 ' + (d.runway != null ? d.runway.toFixed(1) : '0') + ' か月でなくなります。赤字のまま投資すると、実質的に貯金を取り崩して投資することになり、下落時に売らざるを得なくなります。',
+        how: 'まず月 ' + man(-d.netB) + ' 減らして赤字をなくし、次に生活費を ' + man(target) + '（手取りの 9 割）まで下げるのが目安です。そこまで下げれば年 ' + man((v.income - target) * 12) + ' を投資に回せます。効果が大きい順に、通信・保険・サブスクなどの固定費、住居費、車の見直しから。' });
+    }
+    // 2. 高金利の借入
+    if (v.debt > 0 && v.rate >= 3) {
+      out.push({ lv: v.rate >= 10 ? 'crit' : 'warn', chip: v.rate >= 10 ? '最優先' : '優先', t: '金利 ' + v.rate + '% の借入 ' + man(v.debt) + ' を先に返す',
+        b: '返済は「確実に年 ' + v.rate + '% の利回り」と同じです。株式の長期の期待リターン（年 5〜7% 程度）より確実で、' + (v.rate >= 10 ? '明らかに有利です。' : 'リスクなしで得られます。'),
+        how: '生活防衛資金を少し残して、残りの現金で繰り上げ返済。リボ払いは設定を解除する。' });
+    }
+    // 3. 立替
+    if (v.advance > 0) {
+      var heavy = d.float > v.cash * 0.25;
+      out.push({ lv: heavy ? 'warn' : 'info', chip: heavy ? '重要' : '確認', t: '立替で常に ' + man(d.float) + ' の現金が拘束されています',
+        b: '現金 ' + man(v.cash) + ' のうち、自由に使えるのは ' + man(d.free) + ' です。' + (heavy ? '立替の割合が大きく、精算が遅れると生活費が足りなくなるおそれがあります。' : ''),
+        how: '会社の法人カード・仮払い制度を使う、精算の締めを月 2 回にする、など立て替えない仕組みにできないか確認を。個人のクレジットカードで立て替えている場合は、ポイント分は得ですが、引き落とし日と精算日のずれに注意。' });
+    }
+    // 4. 生活防衛資金
+    var short = d.buffer - d.free;
+    if (short > 0) {
+      var fillM = d.netB > 0 ? short / d.netB : null;
+      out.push({ lv: d.coverMonths != null && d.coverMonths < 3 ? 'crit' : 'warn', chip: '投資より先', t: '生活防衛資金があと ' + man(short) + ' 足りません',
+        b: '自由に使える現金は生活費の ' + (d.coverMonths != null ? d.coverMonths.toFixed(1) : '—') + ' か月分。目安の ' + v.months + ' か月分（' + man(d.buffer) + '）に届くまでは、まとまった額の投資は控えるのが安全です。相場が下がった時に現金が足りないと、安値で売ることになり、リターンが大きく削られます。',
+        how: fillM != null ? '今の黒字 月 ' + man(d.netB) + ' をすべて現金に回すと、約 ' + Math.ceil(fillM) + ' か月で届きます。' : 'まず赤字を止めることが先です。' });
+    }
+    // 5. 積立と一括
+    if (d.netB > 0 && short <= 0) {
+      var m = Math.floor(d.netB / 1000) * 1000;
+      var tsumi = Math.min(m, NISA_TSUMI / 12), growth = Math.min(Math.max(m - tsumi, 0), NISA_GROWTH / 12);
+      out.push({ lv: 'good', chip: '実行', t: '毎月 ' + man(m) + ' を NISA で積み立てる',
+        b: '生活防衛資金が足りているので、毎月の黒字は全額投資に回せます。NISA は運用益に約 20% の税がかからないため、同じ商品でも課税口座より手取りが増えます。',
+        how: 'つみたて投資枠に月 ' + man(tsumi) + (growth > 0 ? '、成長投資枠に月 ' + man(growth) : '') + '。中身は手数料の安い全世界株か米国株のインデックスファンドを中心に。' });
+      var extra = d.free - d.buffer;
+      if (extra > 100000) {
+        var lump = Math.min(extra, d.nisaLeft);
+        out.push({ lv: 'good', chip: '実行', t: '余裕資金 ' + man(extra) + ' のうち ' + man(lump) + ' を今年の NISA 枠へ',
+          b: '生活防衛資金を超えた現金は、預金のままだとインフレ分だけ目減りします。一括と分割では、平均的には早く投資したほうが有利な場合が多いですが、下落が怖いなら 3〜6 か月に分けても大きな差はありません。',
+          how: '今年の NISA 残り枠は ' + man(d.nisaLeft) + '。使わなかった枠は翌年に繰り越せません。' });
+      }
+    } else if (d.netB > 0 && short > 0) {
+      out.push({ lv: 'info', chip: 'その次', t: '生活防衛資金がたまったら、毎月 ' + man(Math.floor(d.netB / 1000) * 1000) + ' を NISA で積み立て',
+        b: '防衛資金がたまるまでは積立を少額（例: 月 1 万円）にとどめ、習慣だけ作っておくのも一つの方法です。', how: '' });
+    }
+    // 6. 前月との比較
+    if (hist && hist.length >= 2) {
+      var a = hist[hist.length - 2], b = hist[hist.length - 1];
+      var dc = num(b.cash) - num(a.cash);
+      var declines = 0;
+      for (var k = hist.length - 1; k > 0 && num(hist[k].cash) < num(hist[k - 1].cash); k--) declines++;
+      if (declines >= 3) {
+        out.unshift({ lv: 'crit', chip: '要注意', t: '現金が ' + declines + ' か月続けて減っています',
+          b: '直近の 1 か月で ' + man(dc) + '。一時的な出費でなければ、支出の見直しが最優先です。', how: '' });
+      } else {
+        var ds = num(b.spend) - num(a.spend);
+        out.push({ lv: dc >= 0 ? 'good' : 'warn', chip: '前月比', t: '現金は前月から ' + (dc >= 0 ? '+' : '') + man(dc),
+          b: '生活費は前月から ' + (ds >= 0 ? '+' : '') + man(ds) + '。' + (dc >= 0 ? '計画どおり増えています。' : '減った理由（一時的な出費か、立替の精算待ちか）を確認してください。'), how: '' });
+      }
+    }
+    // 7. 常に
+    out.push({ lv: 'info', chip: '習慣', t: '売買を増やさない・相場予想で動かない',
+      b: '手取りのリターンを最も確実に削るのは、下落時の狼狽売りと売買の繰り返しです。積立は自動にして、見直しは月 1 回この画面で十分です。', how: '' });
+    return out;
+  }
+
+  function project(i) {
+    var d = derive(i), rows = [], c = d.free;
+    for (var m = 1; m <= 12; m++) { c += d.netB; rows.push(c); }
+    return { start: d.free, rows: rows, buffer: d.buffer };
+  }
+  window.JevPlan = { derive: derive, advise: advise, project: project };
+
+  // ---- 画面 ----
+  var st = { input: {}, hist: [] };
+  try { var raw = localStorage.getItem(KEY); if (raw) { var o = JSON.parse(raw); if (o && o.input) st = o; } } catch (e) { /* 空で始める */ }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(st)); $('planSaved').textContent = '自動保存済み（このブラウザ内）'; } catch (e) { $('planSaved').textContent = 'このブラウザには保存できません'; } }
+
+  FIELDS.forEach(function (k) {
+    var el = $('pf-' + k);
+    var v = st.input[k] != null ? st.input[k] : (DEFAULTS[k] || '');
+    el.value = v; st.input[k] = v;
+    el.placeholder = { cash: '例 1,000,000', income: '例 300,000', spend: '例 250,000', advance: '例 0' }[k] || '0';
+  });
+
+  function monthsLabel(n) { var t = new Date(), d = new Date(t.getFullYear(), t.getMonth() + n, 1); return (d.getMonth() + 1) + '月'; }  // 1 日に固定（30 日などの月末ずれを防ぐ）
+
+  function colChart(values, labels, buffer, tips) {
+    var all = values.concat([0, buffer || 0]);
+    var hi = Math.max.apply(null, all), lo = Math.min.apply(null, all);
+    var span = (hi - lo) || 1; hi += span * 0.12; if (lo < 0) lo -= span * 0.08; span = hi - lo;
+    function y(v) { return ((hi - v) / span * 100); }
+    var w = 100 / values.length, z = y(0);
+    var h = '<div class="cols" role="img" aria-label="' + esc(labels.map(function (l, i) { return l + ' ' + man(values[i]); }).join('、')) + '">';
+    h += '<div class="zero" style="top:' + z.toFixed(2) + '%"></div>';
+    if (buffer > 0) h += '<div class="thr" style="top:' + y(buffer).toFixed(2) + '%"><span>生活防衛資金 ' + man(buffer) + '</span></div>';
+    var iMin = values.indexOf(Math.min.apply(null, values));
+    values.forEach(function (v, i) {
+      var top = v >= 0 ? y(v) : z, height = Math.abs(y(v) - z);
+      var showLabel = i === 0 || i === values.length - 1 || i === iMin;
+      h += '<div class="c" style="left:' + (i * w).toFixed(2) + '%;width:' + w.toFixed(2) + '%" tabindex="0" data-tip="' + esc(tips[i]) + '">' +
+        '<span class="cb' + (v < 0 ? ' neg' : '') + '" style="top:' + top.toFixed(2) + '%;height:' + Math.max(height, 0.6).toFixed(2) + '%"></span>' +
+        (showLabel ? '<span class="lv" style="top:' + (v >= 0 ? y(v) : z).toFixed(2) + '%">' + man(v) + '</span>' : '') +
+        '<span class="m">' + esc(labels[i]) + '</span></div>';
+    });
+    return h + '</div>';
+  }
+
+  function render() {
+    var d = derive(st.input), v = d.v;
+    function tile(k, val, sub, cls) { return '<div class="tile"><div class="k">' + esc(k) + '</div><div class="v ' + (cls || '') + '">' + val + '</div><div class="s">' + sub + '</div></div>'; }
+    $('planTiles').innerHTML =
+      tile('毎月の収支', (d.net >= 0 ? '+' : '') + man(d.net), '手取り − 生活費' + (v.bonus ? '（賞与込みの月平均 ' + (d.netB >= 0 ? '+' : '') + man(d.netB) + '）' : ''), d.net >= 0 ? 'up' : 'down') +
+      tile('自由に使える現金', man(d.free), '現金 ' + man(v.cash) + ' − 立替の拘束 ' + man(d.float)) +
+      tile('生活費の何か月分', d.coverMonths == null ? '—' : d.coverMonths.toFixed(1) + ' か月', '目安 ' + v.months + ' か月（' + man(d.buffer) + '）', d.coverMonths != null && d.coverMonths < v.months ? 'down' : 'up') +
+      tile('貯蓄率', d.savingsRate == null ? '—' : d.savingsRate.toFixed(0) + '%', '手取りのうち残る割合。20% 以上が目安', d.savingsRate != null && d.savingsRate < 0 ? 'down' : '');
+    var pr = project(st.input);
+    var labels = pr.rows.map(function (_, i) { return monthsLabel(i + 1); });
+    $('planChart').innerHTML = (v.income || v.spend || v.cash) ? colChart(pr.rows, labels, pr.buffer, pr.rows.map(function (x, i) { return labels[i] + '末の見込み：' + man(x); })) : '<p class="note">数字を入れると表示します。</p>';
+    $('planAdvice').innerHTML = advise(st.input, st.hist).map(function (a) {
+      return '<li class="' + a.lv + '"><div class="t"><span class="chip">' + esc(a.chip) + '</span>' + esc(a.t) + '</div><div class="b">' + esc(a.b) + '</div>' + (a.how ? '<div class="how">' + esc(a.how) + '</div>' : '') + '</li>';
+    }).join('');
+    renderHist();
+  }
+
+  function renderHist() {
+    if (!st.hist.length) { $('planHist').innerHTML = '<tbody><tr><td class="note">まだ記録がありません。</td></tr></tbody>'; $('planHistChart').innerHTML = ''; return; }
+    $('planHist').innerHTML = '<thead><tr><th>月</th><th class="n">現金</th><th class="n">手取り</th><th class="n">生活費</th><th class="n">立替</th><th class="n">収支</th><th></th></tr></thead><tbody>' +
+      st.hist.map(function (h, i) {
+        var n = num(h.income) - num(h.spend);
+        return '<tr><td>' + esc(h.month) + '</td><td class="n">' + man(num(h.cash)) + '</td><td class="n">' + man(num(h.income)) + '</td><td class="n">' + man(num(h.spend)) + '</td><td class="n">' + man(num(h.advance)) + '</td><td class="n ' + (n >= 0 ? 'up' : 'down') + '">' + (n >= 0 ? '+' : '') + man(n) + '</td><td><button type="button" class="ghost" data-del="' + i + '">削除</button></td></tr>';
+      }).join('') + '</tbody>';
+    var vals = st.hist.map(function (h) { return num(h.cash); });
+    $('planHistChart').innerHTML = st.hist.length >= 2 ? '<p class="note">記録した現金の推移</p>' + colChart(vals, st.hist.map(function (h) { return h.month.slice(5) + '月'; }), 0, st.hist.map(function (h) { return h.month + '：現金 ' + man(num(h.cash)); })) : '';
+  }
+
+  $('planForm').addEventListener('input', function (e) {
+    var k = e.target.dataset.k; if (!k) return;
+    st.input[k] = e.target.value; save(); render();
+  });
+  $('planForm').addEventListener('focusout', function (e) {
+    var k = e.target.dataset.k; if (!k || k === 'lag' || k === 'rate' || k === 'months') return;
+    if (e.target.value.trim() !== '') { e.target.value = num(e.target.value).toLocaleString('ja-JP'); st.input[k] = e.target.value; save(); }
+  });
+  $('planForm').addEventListener('submit', function (e) { e.preventDefault(); });
+  $('planRecord').addEventListener('click', function () {
+    var d = new Date(), month = d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2);
+    var rec = { month: month }; FIELDS.forEach(function (k) { rec[k] = st.input[k]; });
+    st.hist = st.hist.filter(function (h) { return h.month !== month; }); st.hist.push(rec);
+    st.hist.sort(function (a, b) { return a.month < b.month ? -1 : 1; });
+    save(); render(); $('planSaved').textContent = month + ' の数字として記録しました';
+  });
+  $('planHist').addEventListener('click', function (e) {
+    var i = e.target.getAttribute && e.target.getAttribute('data-del'); if (i == null) return;
+    st.hist.splice(Number(i), 1); save(); render();
+  });
+  $('planCopy').addEventListener('click', function () {
+    var d = derive(st.input), v = d.v;
+    var t = ['# 家計の状態（JevInvest）', '手取り ' + man(v.income) + ' / 生活費 ' + man(v.spend) + ' / 立替 ' + man(v.advance) + '（戻るまで ' + v.lag + ' か月）',
+      '現金 ' + man(v.cash) + '（自由に使える ' + man(d.free) + '、生活費の ' + (d.coverMonths == null ? '—' : d.coverMonths.toFixed(1)) + ' か月分）',
+      '毎月の収支 ' + man(d.netB) + ' / 借入 ' + man(v.debt) + '（年 ' + v.rate + '%）/ 投資済み ' + man(v.invested),
+      '記録: ' + st.hist.map(function (h) { return h.month + ' 現金' + man(num(h.cash)); }).join('、'), '', '次の一手を一緒に考えてください。'].join('\n');
+    var ta = $('planSummary'); ta.value = t;
+    var p; try { p = navigator.clipboard.writeText(t); } catch (e) { p = Promise.reject(e); }
+    p.then(function () { $('planSaved').textContent = 'コピーしました（金額を含みます）'; }, function () { ta.hidden = false; ta.focus(); ta.select(); $('planSaved').textContent = '選択されたテキストをコピーしてください（金額を含みます）'; });
+  });
+
+  // ツールチップ（このタブの棒）
+  var tip = $('vtip');
+  function show(el, x, y) { var t = el.getAttribute('data-tip'); if (!t || !tip) return; tip.textContent = t; tip.classList.add('on'); var r = tip.getBoundingClientRect(); tip.style.left = Math.min(Math.max(8, x + 12), innerWidth - r.width - 8) + 'px'; tip.style.top = (y + 14 + r.height > innerHeight ? y - r.height - 12 : y + 14) + 'px'; }
+  function hide() { if (tip) tip.classList.remove('on'); }
+  $('viewPlan').addEventListener('pointermove', function (e) { var el = e.target.closest('[data-tip]'); if (el) show(el, e.clientX, e.clientY); else hide(); });
+  $('viewPlan').addEventListener('pointerleave', hide);
+  $('viewPlan').addEventListener('focusin', function (e) { var el = e.target.closest('[data-tip]'); if (el) { var r = el.getBoundingClientRect(); show(el, r.left + 10, r.bottom - 6); } });
+  $('viewPlan').addEventListener('focusout', hide);
+
+  render();
 })();
 </script>
