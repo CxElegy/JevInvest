@@ -16,6 +16,7 @@ SEC の fair access policy:
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import sqlite3
 import sys
@@ -33,11 +34,19 @@ ROOT = Path(__file__).resolve().parents[1]
 DB_PATH = ROOT / "data" / "edgar13f.sqlite"
 ROSTER = ROOT / "config" / "investors.yaml"
 
-# ★ここを自分の連絡先に変えること。SEC は匿名アクセスを認めていない。
-USER_AGENT = "jev-portfolio personal research tool (contact: your-email@example.com)"
+# SEC は User-Agent に連絡先の明記を求める。個人のメールアドレスをコードに書かず、
+# 環境変数 SEC_USER_AGENT で渡す（例: "JevInvest research you@example.com"）。
+USER_AGENT = os.getenv(
+    "SEC_USER_AGENT",
+    "jev-portfolio personal research tool (contact: your-email@example.com)",
+)
 
 REQUEST_INTERVAL = 0.2   # 秒。約 5 req/sec
 TIMEOUT = 60.0
+
+
+class SecBlocked(RuntimeError):
+    pass
 
 
 class Edgar:
@@ -55,6 +64,13 @@ class Edgar:
             time.sleep(wait)
         r = self._client.get(url, **kw)
         self._last = time.time()
+        # SEC は連絡先の無いアクセスを HTML の拒否ページ（403 や 200）で返す。
+        # これを「見つからない」と扱うと、全員が未解決として静かに記録されてしまう。
+        if r.status_code in (403, 429) or "Undeclared Automated Tool" in r.text[:2000]:
+            raise SecBlocked(
+                f"SEC にアクセスを拒否されました（HTTP {r.status_code}）。"
+                "SEC_USER_AGENT に連絡先メールアドレスを含めて再実行してください"
+            )
         return r
 
     def close(self) -> None:
@@ -142,6 +158,35 @@ def latest_13f(ed: Edgar, cik: str) -> dict | None:
     return None
 
 
+def recent_13f(ed: Edgar, cik: str, n: int) -> list[dict]:
+    """直近 n 四半期分の 13F-HR を、報告日ごとに 1 件ずつ新しい順で返す。
+
+    同じ報告日に原本（13F-HR）と訂正（13F-HR/A）がある場合は原本を採る。
+    訂正は「追加分だけ」の提出があり、それを採ると保有が欠けて見えるため。
+    原本が無い報告日だけ訂正を使う。
+    """
+    r = ed.get(f"https://data.sec.gov/submissions/CIK{cik}.json")
+    if r.status_code != 200:
+        return []
+    d = r.json()
+    rec = d.get("filings", {}).get("recent", {})
+    by_date: dict[str, dict] = {}
+    for i, f in enumerate(rec.get("form", [])):
+        if f not in ("13F-HR", "13F-HR/A"):
+            continue
+        rd = rec["reportDate"][i]
+        cur = by_date.get(rd)
+        if cur is None or (cur["form"] == "13F-HR/A" and f == "13F-HR"):
+            by_date[rd] = {
+                "edgar_name": d.get("name"),
+                "accession": rec["accessionNumber"][i],
+                "filed_date": rec["filingDate"][i],
+                "report_date": rd,
+                "form": f,
+            }
+    return [by_date[k] for k in sorted(by_date, reverse=True)[:n]]
+
+
 def _strip_ns(tag: str) -> str:
     return tag.split("}", 1)[-1] if "}" in tag else tag
 
@@ -181,7 +226,7 @@ def fetch_info_table(ed: Edgar, cik: str, accession: str) -> list[dict]:
         for child in node.iter():
             t = _strip_ns(child.tag)
             if t in ("nameOfIssuer", "titleOfClass", "cusip", "value",
-                     "sshPrnamt", "sshPrnamtType"):
+                     "sshPrnamt", "sshPrnamtType", "putCall"):
                 rec[t] = (child.text or "").strip()
         if rec.get("cusip"):
             rows.append(rec)
@@ -211,6 +256,10 @@ def normalize_and_aggregate(rows: list[dict]) -> tuple[list[dict], str]:
     2. 同一銘柄が複数行に分かれる。マネージャー別・議決権別に別行で出るため、
        CUSIP と クラスでまとめないと保有額が過小に見える。
     """
+    # プット・コールの行は、原資産の時価で報告される「オプションの想定元本」であって
+    # 保有株ではない。同じ CUSIP で現物と合算すると保有が水増しされるので除外する。
+    rows = [r for r in rows if not (r.get("putCall") or "").strip()]
+
     implied = sorted(
         _num(r.get("value")) / _num(r.get("sshPrnamt"))
         for r in rows
@@ -246,7 +295,8 @@ def normalize_and_aggregate(rows: list[dict]) -> tuple[list[dict], str]:
     return list(agg.values()), unit
 
 
-def process(ed: Edgar, db: sqlite3.Connection, entry: dict, refresh: bool) -> str:
+def process(ed: Edgar, db: sqlite3.Connection, entry: dict, refresh: bool,
+            quarters: int = 2) -> str:
     name = entry["name"]
     style = entry.get("style")
     cik = entry.get("cik")
@@ -293,40 +343,47 @@ def process(ed: Edgar, db: sqlite3.Connection, entry: dict, refresh: bool) -> st
         db.commit()
         return "13F なし"
 
-    existing = db.execute(
-        "SELECT accession FROM filers WHERE cik=? AND report_date=?",
-        (cik, info["report_date"]),
-    ).fetchone()
-    if existing and not refresh:
-        return f"キャッシュ {info['report_date']}"
+    filings = recent_13f(ed, cik, quarters) or [info]
+    notes: list[str] = []
+    for fi in filings:
+        existing = db.execute(
+            "SELECT n_positions, total_value, value_unit FROM filers"
+            " WHERE cik=? AND report_date=?",
+            (cik, fi["report_date"]),
+        ).fetchone()
+        if existing and not refresh:
+            notes.append(f"{fi['report_date']} キャッシュ")
+            continue
 
-    rows = fetch_info_table(ed, cik, info["accession"])
-    positions, unit = normalize_and_aggregate(rows)
-    total = sum(p["value"] for p in positions)
+        rows = fetch_info_table(ed, cik, fi["accession"])
+        positions, unit = normalize_and_aggregate(rows)
+        total = sum(p["value"] for p in positions)
 
-    db.execute(
-        "INSERT OR REPLACE INTO filers VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-        (
-            cik, info["report_date"], name, info["edgar_name"], style,
-            info["filed_date"], info["accession"], total, len(positions),
-            unit, time.time(),
-        ),
-    )
-    db.execute("DELETE FROM positions WHERE cik=? AND report_date=?",
-               (cik, info["report_date"]))
-    db.executemany(
-        "INSERT OR REPLACE INTO positions VALUES (?,?,?,?,?,?,?,?)",
-        [
-            (cik, info["report_date"], p["cusip"], p["issuer"], p["class"],
-             p["value"], p["shares"], p["share_type"])
-            for p in positions
-        ],
-    )
+        db.execute(
+            "INSERT OR REPLACE INTO filers VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+            (
+                cik, fi["report_date"], name, fi["edgar_name"], style,
+                fi["filed_date"], fi["accession"], total, len(positions),
+                unit, time.time(),
+            ),
+        )
+        db.execute("DELETE FROM positions WHERE cik=? AND report_date=?",
+                   (cik, fi["report_date"]))
+        db.executemany(
+            "INSERT OR REPLACE INTO positions VALUES (?,?,?,?,?,?,?,?)",
+            [
+                (cik, fi["report_date"], p["cusip"], p["issuer"], p["class"],
+                 p["value"], p["shares"], p["share_type"])
+                for p in positions
+            ],
+        )
+        notes.append(
+            f"{fi['report_date']} / {len(positions)} 銘柄 / ${total / 1e9:,.1f}B"
+            + ("  ⚠千ドル単位" if unit == "thousands" else "")
+        )
     db.execute("DELETE FROM unresolved WHERE roster_name=?", (name,))
     db.commit()
-
-    return (f"{info['report_date']} / {len(positions)} 銘柄 / "
-            f"${total / 1e9:,.1f}B" + ("  ⚠千ドル単位" if unit == "thousands" else ""))
+    return " ; ".join(notes)
 
 
 def main() -> None:
@@ -334,12 +391,14 @@ def main() -> None:
     ap.add_argument("--limit", type=int, help="先頭 N 件だけ処理する")
     ap.add_argument("--only", nargs="+", help="名前に含まれる文字列で絞る")
     ap.add_argument("--refresh", action="store_true", help="キャッシュを無視して取り直す")
+    ap.add_argument("--quarters", type=int, default=2,
+                    help="取得する四半期数（既定 2。前期比の売買を出すには 2 以上）")
     args = ap.parse_args()
 
     if "your-email@example.com" in USER_AGENT:
         print("⚠ USER_AGENT が既定値のままです。")
-        print("  SEC は連絡先の明記を要求しています。tools/fetch_13f.py の")
-        print("  USER_AGENT を自分のメールアドレスに変えてください。")
+        print("  SEC は連絡先の明記を要求しています。環境変数 SEC_USER_AGENT に")
+        print("  連絡先を含む文字列を設定してください。")
         print("  （このまま続行しますが、アクセスを制限される可能性があります）")
         print()
 
@@ -362,13 +421,17 @@ def main() -> None:
         for i, entry in enumerate(roster, 1):
             label = entry["name"][:38]
             try:
-                result = process(ed, db, entry, args.refresh)
+                result = process(ed, db, entry, args.refresh, args.quarters)
                 if result in ("未解決", "13F なし"):
                     failed += 1
                     print(f"[{i:>3}/{len(roster)}] {label:<38} — {result}")
                 else:
                     ok += 1
                     print(f"[{i:>3}/{len(roster)}] {label:<38} ✓ {result}")
+            except SecBlocked as e:
+                print(f"\n✗ {e}")
+                print("  拒否された状態で続けても全件失敗するので中断します。")
+                break
             except Exception as e:  # noqa: BLE001 — 1 件の失敗で全体を止めない
                 failed += 1
                 print(f"[{i:>3}/{len(roster)}] {label:<38} ✗ {type(e).__name__}: {e}")

@@ -110,6 +110,26 @@ Claude Code（ブラウザ・タブレット・スマホのクラウドセッシ
 - ブラウザのデータを消すと入力も消える。ページ下部の「バックアップ」をメモに控えておく
 - Claude Code の Artifact として公開して使う。単体の HTML ではなく、公開時に枠が付く断片
 
+### 著名投資家の動向（同じページの「著名投資家の動向」タブ）
+
+SEC の 13F（四半期ごとの保有報告）から、バフェットなど約 40 人・社について
+**投資家ごとの注目分野（業種の比率と前期比）・上位 10 銘柄・新規購入・全売却**と、
+集中投資型の投資家全体で「買われた／売られた／共通して持たれている」銘柄を表示する。
+
+**リアルタイムではない。** 四半期末の保有を 45 日以内に出す制度なので、常に 1〜4 か月前の姿。
+提出期限（2 月・5 月・8 月・11 月の 14 日ごろ）の後に、次の手順でデータを作り直す。
+
+```bash
+export SEC_USER_AGENT="JevInvest research you@example.com"   # SEC は連絡先を必須にしている
+python tools/fetch_13f.py            # 直近 2 四半期を取得（前期比のため）
+python tools/export_13f_json.py      # → web/investors.json
+```
+
+- 業種は各社が SEC に届け出た SIC コードから大まかに分類（`tools/sectors.py`）。証券会社の業種分類とは一致しないことがある
+- 売買は株数の前期比で判定（±10% 以上）。オプション（プット・コール）の行は保有から除外
+- 運用会社は改組で CIK が変わる（Greenlight → DME Capital、Pershing Square → Pershing Square Inc. など）。
+  最新四半期の報告が無い投資家は集計から外し、ページに明示する
+
 ### テスト
 
 ```bash
@@ -222,7 +242,7 @@ python tools/fetch_13f.py --limit 5    # 先頭 5 件で試す
 python tools/analyze_13f.py            # 集計して reports/investors-13f.md を出力
 ```
 
-> ⚠ `tools/fetch_13f.py` の `USER_AGENT` を自分のメールアドレスに変えること。
+> ⚠ 環境変数 `SEC_USER_AGENT` に連絡先を含む文字列を設定すること（例: `export SEC_USER_AGENT="JevInvest research you@example.com"`）。
 > SEC は fair access policy で連絡先の明記を要求している。
 
 対象は `config/investors.yaml` で編集できる（同梱は約 40 名の例。自分の名簿に育てる）。

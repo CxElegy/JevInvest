@@ -11,6 +11,9 @@
 - 金額を Claude に渡したくないとき: `web/ledger.html`（ブラウザ内だけに保存）で本人が入力し、
   比率だけの要約を貼ってもらう。金額を聞き出さない。
 
+- 著名投資家の 13F データ更新: `tools/fetch_13f.py` → `tools/export_13f_json.py` → `web/investors.json`。
+  SEC の連絡先は環境変数 `SEC_USER_AGENT` で渡し、コードやコミットに書かない。
+
 ## 守ること
 
 - **個人の金額データはコミットしない。** `config/holdings.yaml` `config/compliance.yaml`

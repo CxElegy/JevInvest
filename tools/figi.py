@@ -123,7 +123,10 @@ def resolve(db: sqlite3.Connection, cusips: list[str], refresh: bool = False,
     try:
         for i in range(0, len(todo), FIGI_BATCH):
             chunk = todo[i : i + FIGI_BATCH]
-            body = [{"idType": "ID_CUSIP", "idValue": c} for c in chunk]
+            # 先頭が英字の番号は米国外の CINS（例: Chubb H1467J104、ASML N07059210）。
+            # ID_CUSIP で問い合わせると見つからないので ID_CINS を使う。
+            body = [{"idType": "ID_CINS" if c[:1].isalpha() else "ID_CUSIP", "idValue": c}
+                    for c in chunk]
 
             # 429 は固定ウィンドウ制限なので、待って再試行すれば通る。
             # 一度の失敗で未解決として確定させると、その CUSIP が

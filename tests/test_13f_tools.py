@@ -127,3 +127,14 @@ def test_estimate_cost_runs_standalone():
     out = subprocess.run([sys.executable, str(ROOT / "tools" / "estimate_cost.py")],
                          capture_output=True, text=True, check=True).stdout
     assert "1 リクエストの内訳" in out and "questions" in out and "円 / リクエスト" in out
+
+
+def test_option_rows_are_not_merged_into_stock_holdings():
+    rows = [
+        {"cusip": "X", "titleOfClass": "COM", "nameOfIssuer": "A", "value": "5000000",
+         "sshPrnamt": "100000", "sshPrnamtType": "SH"},
+        {"cusip": "X", "titleOfClass": "COM", "nameOfIssuer": "A", "value": "9000000",
+         "sshPrnamt": "180000", "sshPrnamtType": "SH", "putCall": "Put"},
+    ]
+    merged, _ = fetch_13f.normalize_and_aggregate(rows)
+    assert len(merged) == 1 and merged[0]["value"] == 5_000_000

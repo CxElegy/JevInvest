@@ -100,14 +100,54 @@ button.danger { color: var(--crit); border-color: var(--crit); }
 #toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--fg); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: 13px; opacity: 0; pointer-events: none; transition: opacity .15s; max-width: calc(100% - 32px); z-index: 10; }
 #toast.on { opacity: 1; }
 @media (prefers-reduced-motion: reduce) { #toast { transition: none; } }
+/* tabs */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.tabs button { border: 0; border-bottom: 3px solid transparent; border-radius: 0; background: transparent; color: var(--muted); padding: 10px 12px; min-height: 44px; font-weight: 500; }
+.tabs button[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); font-weight: 700; }
+.view { display: flex; flex-direction: column; gap: 18px; }
+/* investors */
+.asof { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chips button { min-height: 34px; padding: 4px 12px; border-radius: 999px; font-size: 13px; }
+.chips button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.people { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px; }
+.people button { text-align: left; display: flex; flex-direction: column; gap: 0; padding: 8px 10px; min-height: 52px; white-space: normal; }
+.people button .p { font-weight: 700; font-size: 14px; line-height: 1.35; }
+.people button .f { color: var(--muted); font-size: 11px; line-height: 1.35; }
+.people button[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); background: var(--accent-soft); }
+.who { display: flex; flex-direction: column; gap: 2px; }
+.who .p { font-size: 20px; font-weight: 700; line-height: 1.3; }
+.facts { display: flex; gap: 6px 16px; flex-wrap: wrap; color: var(--muted); font-size: 13px; }
+.facts b { color: var(--fg); font-weight: 500; font-family: var(--f-num); }
+.tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 999px; white-space: nowrap; border: 1px solid currentColor; }
+.tag.new { color: var(--accent); } .tag.add { color: var(--good); } .tag.trim { color: var(--warn); } .tag.exit { color: var(--crit); } .tag.hold { color: var(--muted); border-color: var(--line); }
+.sbar { display: grid; grid-template-columns: minmax(9em, 14em) 1fr 4.2em 4.6em; gap: 8px; align-items: center; font-size: 13px; }
+.sbar .bar { min-width: 60px; }
+.sbar .v { text-align: right; font-family: var(--f-num); }
+.sbar .d { text-align: right; font-family: var(--f-num); font-size: 12px; }
+.sbars { display: flex; flex-direction: column; gap: 6px; }
+@media (max-width: 520px) { .sbar { grid-template-columns: 1fr 3.8em 4.4em; } .sbar .bar { grid-column: 1 / -1; order: 4; } }
+.tk { font-family: var(--f-num); font-weight: 500; }
+.names { color: var(--muted); font-size: 12px; }
+.cols2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.cols2 > div { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+h3 { font-size: 14px; margin: 0; font-weight: 700; }
+details.limits summary { cursor: pointer; font-size: 13px; color: var(--muted); }
+details.limits ul { margin: 8px 0 0; padding-left: 1.2em; font-size: 13px; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
 </style>
 
 <div class="wrap">
   <header>
     <h1>JevInvest 持仓台帳</h1>
-    <p class="sub">証券会社のアプリに表示されている評価額を、そのまま円で入力します。</p>
-    <p class="privacy"><b>入力した金額は、このブラウザの中にだけ保存されます。</b>送信はされず、Claude にも届きません。Claude に相談したいときは、下の「Claude に貼る用（比率のみ）」をコピーして送ります。</p>
+    <nav class="tabs" role="tablist" aria-label="表示の切り替え">
+      <button type="button" role="tab" id="tabLedger" aria-controls="viewLedger" aria-selected="true">自分の台帳</button>
+      <button type="button" role="tab" id="tabInvestors" aria-controls="viewInvestors" aria-selected="false">著名投資家の動向</button>
+    </nav>
   </header>
+
+  <div id="viewLedger" class="view" role="tabpanel" aria-labelledby="tabLedger">
+  <p class="sub">証券会社のアプリに表示されている評価額を、そのまま円で入力します。</p>
+    <p class="privacy"><b>入力した金額は、このブラウザの中にだけ保存されます。</b>送信はされず、Claude にも届きません。Claude に相談したいときは、下の「Claude に貼る用（比率のみ）」をコピーして送ります。</p>
 
   <div id="sampleBanner" class="sample" hidden>
     <span>いま表示されているのは<b>例のデータ</b>です。あなたの数字ではありません。</span>
@@ -181,6 +221,48 @@ button.danger { color: var(--crit); border-color: var(--crit); }
       <span id="wipeNote" class="note"></span>
     </div>
   </section>
+  </div>
+
+  <div id="viewInvestors" class="view" role="tabpanel" aria-labelledby="tabInvestors" hidden>
+    <p class="sub">世界の著名投資家が SEC（米国証券取引委員会）に出している保有報告（13F）を、投資家ごとの「注目分野」と「銘柄」にまとめています。参考情報で、買い推奨ではありません。</p>
+
+    <section aria-labelledby="h-asof">
+      <h2 id="h-asof">データの時点</h2>
+      <div id="asof" class="asof"><p class="note">読み込み中…</p></div>
+      <details class="limits">
+        <summary>13F で分かること・分からないこと</summary>
+        <ul>
+          <li>リアルタイムではありません。四半期末の保有を 45 日以内に提出する仕組みなので、常に 1〜4 か月前の姿です。</li>
+          <li>米国上場の株式（と一部の社債・優先株）のロングだけです。現金、債券、米国外の株、空売りは写りません。バフェットの巨額の短期国債も写らないので、「資産配分」としては読めません。</li>
+          <li>分野は、各社が SEC に届け出ている業種コード（SIC）からおおまかに分けています。証券会社の業種分類とは一致しないことがあります。</li>
+          <li>売買の判定は株数の前期比です（±10% 以上で「買い増し」「減少」）。取得単価や売買の理由は分かりません。</li>
+          <li>名簿は今有名な運用者で作っており、同じ手法で失敗した運用者は入っていません（生存者バイアス）。</li>
+          <li>個別株を買う前には、独立性の確認（DESC と事前承認）が必要です。</li>
+        </ul>
+      </details>
+    </section>
+
+    <section aria-labelledby="h-person">
+      <h2 id="h-person">投資家を選ぶ</h2>
+      <div id="styleChips" class="chips" role="group" aria-label="スタイルで絞り込む"></div>
+      <div id="people" class="people"></div>
+    </section>
+
+    <section id="personDetail" aria-live="polite"></section>
+
+    <section aria-labelledby="h-group">
+      <h2 id="h-group">集中投資型の投資家全体の傾向</h2>
+      <p id="groupNote" class="sub"></p>
+      <h3>注目分野（平均の比率と前期比）</h3>
+      <div id="groupSectors" class="sbars"></div>
+      <div class="cols2">
+        <div><h3>前期から買われた銘柄</h3><div class="tablewrap"><table id="groupBuys"></table></div></div>
+        <div><h3>前期から売られた銘柄</h3><div class="tablewrap"><table id="groupSells"></table></div></div>
+      </div>
+      <h3>多くの投資家が共通して持つ銘柄</h3>
+      <div class="tablewrap"><table id="groupConsensus"></table></div>
+    </section>
+  </div>
 </div>
 <div id="toast" role="status" aria-live="polite"></div>
 
@@ -448,5 +530,162 @@ button.danger { color: var(--crit); border-color: var(--crit); }
 
   state = load();
   renderAll();
+})();
+</script>
+
+<script>
+(function () {
+  'use strict';
+  function $(id) { return document.getElementById(id); }
+  function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  var TAB_KEY = 'jevinvest.tab';
+  var PERSON_KEY = 'jevinvest.person';
+  var CHG = {
+    'new': ['new', '新規'], 'add': ['add', '買い増し'], 'trim': ['trim', '減少'],
+    'exit': ['exit', '全売却'], 'hold': ['hold', '継続']
+  };
+
+  // ---- タブ ----
+  function showTab(which) {
+    var inv = which === 'investors';
+    $('viewLedger').hidden = inv; $('viewInvestors').hidden = !inv;
+    $('tabLedger').setAttribute('aria-selected', String(!inv));
+    $('tabInvestors').setAttribute('aria-selected', String(inv));
+    try { localStorage.setItem(TAB_KEY, which); } catch (e) { /* 保存できなくても表示はできる */ }
+    if (inv) loadData();
+  }
+  $('tabLedger').addEventListener('click', function () { showTab('ledger'); });
+  $('tabInvestors').addEventListener('click', function () { showTab('investors'); });
+
+  // ---- データ ----
+  var data = null, loading = false, style = 'all', current = null;
+
+  function loadData() {
+    if (data || loading) return;
+    loading = true;
+    fetch('investors.json').then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    }).then(function (d) { data = d; renderAll(); })
+      .catch(function () {
+        $('asof').innerHTML = '<p class="note">保有報告のデータを読み込めませんでした。ページを開き直してください。</p>';
+      })
+      .then(function () { loading = false; });
+  }
+
+  function usdB(v) { return '$' + (v / 1e9).toFixed(1) + 'B'; }
+  function sgnPP(v) { return v == null ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '±') + Math.abs(v).toFixed(1) + 'pp'; }
+  function tag(chg, pct) {
+    if (!chg) return '<span class="note">—</span>';
+    var t = CHG[chg] || CHG.hold;
+    var extra = (chg === 'add' || chg === 'trim') && pct != null ? ' ' + (pct > 0 ? '+' : '') + Math.round(pct) + '%' : '';
+    return '<span class="tag ' + t[0] + '">' + t[1] + extra + '</span>';
+  }
+  function tk(r) { return r.t ? '<span class="tk">' + esc(r.t) + '</span>' : '<span class="note">—</span>'; }
+  function barRow(label, w, max, d, title) {
+    var width = max ? Math.min(w / max * 100, 100) : 0;
+    var cls = d == null || Math.abs(d) < 0.05 ? 'note' : (d > 0 ? 'up' : 'down');
+    return '<div class="sbar"' + (title ? ' title="' + esc(title) + '"' : '') + '><span>' + esc(label) + '</span>' +
+      '<div class="bar"><span class="fill" style="width:' + width.toFixed(1) + '%"></span></div>' +
+      '<span class="v">' + w.toFixed(1) + '%</span><span class="d ' + cls + '">' + sgnPP(d) + '</span></div>';
+  }
+
+  function renderAll() {
+    var nextD = data.next_deadline;
+    $('asof').innerHTML =
+      '<div class="tile"><div class="k">保有の基準日（四半期末）</div><div class="v">' + esc(data.report_date) + '</div><div class="s">前期 ' + esc(data.prev_date || '—') + ' との比較</div></div>' +
+      '<div class="tile"><div class="k">次の報告の提出期限</div><div class="v">' + esc(nextD) + '</div><div class="s">この頃にデータを更新します</div></div>' +
+      '<div class="tile"><div class="k">対象</div><div class="v">' + data.filers.length + ' 人・社</div><div class="s">データ作成 ' + esc(data.generated) + '</div></div>';
+    if (data.excluded && data.excluded.length) {
+      $('asof').insertAdjacentHTML('beforeend', '<p class="note">最新四半期の報告がないため除外: ' + data.excluded.map(function (e) { return esc(e.person) + '（' + esc(e.report_date) + '）'; }).join('、') + '</p>');
+    }
+    var styles = [['all', 'すべて']];
+    var seen = {};
+    data.filers.forEach(function (f) { if (!seen[f.style]) { seen[f.style] = 1; styles.push([f.style, f.style_jp]); } });
+    $('styleChips').innerHTML = styles.map(function (s) {
+      return '<button type="button" data-style="' + esc(s[0]) + '" aria-pressed="' + (s[0] === style) + '">' + esc(s[1]) + '</button>';
+    }).join('');
+    var saved = null;
+    try { saved = localStorage.getItem(PERSON_KEY); } catch (e) { saved = null; }
+    current = data.filers.filter(function (f) { return f.name === saved; })[0] ||
+      data.filers.filter(function (f) { return f.name === 'Berkshire Hathaway'; })[0] || data.filers[0];
+    renderPeople(); renderPerson(); renderGroup();
+  }
+
+  function renderPeople() {
+    var list = data.filers.filter(function (f) { return style === 'all' || f.style === style; });
+    $('people').innerHTML = list.map(function (f) {
+      return '<button type="button" data-name="' + esc(f.name) + '" aria-pressed="' + (current && f.name === current.name) + '">' +
+        '<span class="p">' + esc(f.person) + '</span><span class="f">' + esc(f.name) + ' ・ ' + esc(f.style_jp) + '</span></button>';
+    }).join('');
+  }
+
+  function renderPerson() {
+    var f = current; if (!f) return;
+    var maxS = Math.max.apply(null, f.sectors.map(function (x) { return x.w; }).concat([10]));
+    var h = '<div class="who"><span class="p">' + esc(f.person) + '</span><span class="note">' + esc(f.name) + '</span></div>' +
+      '<div class="facts"><span>スタイル <b>' + esc(f.style_jp) + '</b></span><span>銘柄数 <b>' + f.n + '</b></span>' +
+      '<span>報告した保有総額 <b>' + usdB(f.total_usd) + '</b></span><span>提出日 <b>' + esc(f.filed) + '</b></span></div>';
+    if (!f.comparable) h += '<p class="note">前の四半期と比べられないため、売買の変化は出していません（提出する法人が変わった直後など）。</p>';
+
+    h += '<h3>注目分野</h3><p class="note">' + esc(f.sector_basis) + 'の比率（業種が分かった分を 100%、報告総額の ' + f.coverage_pct + '% 分）。右端は前期比。</p>';
+    h += '<div class="sbars">' + f.sectors.map(function (x) { return barRow(x.s, x.w, maxS, x.dw); }).join('') + '</div>';
+
+    h += '<h3>上位 10 銘柄</h3><div class="tablewrap"><table><thead><tr><th>ティッカー</th><th>会社</th><th>分野</th><th class="n">比率</th><th>前期比</th></tr></thead><tbody>' +
+      f.top.map(function (r) {
+        return '<tr><td>' + tk(r) + '</td><td>' + esc(r.c) + '</td><td class="names">' + esc(r.s) + '</td><td class="n">' + r.w.toFixed(1) + '%</td><td>' + tag(r.chg, r.chg_pct) + '</td></tr>';
+      }).join('') + '</tbody></table></div>';
+
+    if (f.selective && f.comparable) {
+      h += '<div class="cols2"><div><h3>新しく買った銘柄</h3>' +
+        (f.new.length ? '<div class="tablewrap"><table><tbody>' + f.new.map(function (r) { return '<tr><td>' + tk(r) + '</td><td>' + esc(r.c) + '<div class="names">' + esc(r.s) + '</div></td><td class="n">' + r.w.toFixed(1) + '%</td></tr>'; }).join('') + '</tbody></table></div>' : '<p class="note">なし</p>') +
+        '</div><div><h3>すべて売った銘柄</h3>' +
+        (f.exits.length ? '<div class="tablewrap"><table><tbody>' + f.exits.map(function (r) { return '<tr><td>' + tk(r) + '</td><td>' + esc(r.c) + '<div class="names">' + esc(r.s) + '</div></td><td class="n">前期 ' + r.pw.toFixed(1) + '%</td></tr>'; }).join('') + '</tbody></table></div>' : '<p class="note">なし</p>') +
+        '</div></div>';
+    } else if (!f.selective) {
+      h += '<p class="note">' + f.n.toLocaleString('ja-JP') + ' 銘柄を持つ大規模な運用会社なので、新規購入・全売却の一覧は出していません（数が多く、判断材料になりにくいため）。</p>';
+    }
+    $('personDetail').innerHTML = h;
+  }
+
+  function flowTable(rows, kinds) {
+    if (!rows.length) return '<tbody><tr><td class="note">なし</td></tr></tbody>';
+    return '<thead><tr><th>ティッカー</th><th>会社</th><th class="n">人数</th></tr></thead><tbody>' + rows.slice(0, 12).map(function (e) {
+      var parts = kinds.map(function (k) { return e[k].length ? CHG[k][1] + ': ' + e[k].join('、') : ''; }).filter(Boolean).join(' ／ ');
+      var n = kinds.reduce(function (a, k) { return a + e[k].length; }, 0);
+      return '<tr><td>' + tk(e) + '</td><td>' + esc(e.c) + '<div class="names">' + esc(parts) + '</div></td><td class="n">' + n + '</td></tr>';
+    }).join('') + '</tbody>';
+  }
+
+  function renderGroup() {
+    var g = data.group;
+    $('groupNote').textContent = '保有銘柄が 50 以下で、前期と比べられる ' + g.n + ' 人・社の平均です（各投資家を同じ重みで平均）。数千銘柄を持つクオンツ運用などは、結果が指数に近くなるため除いています。';
+    var maxS = Math.max.apply(null, g.sector_shift.map(function (x) { return x.w; }).concat([10]));
+    $('groupSectors').innerHTML = g.sector_shift.map(function (x) { return barRow(x.s, x.w, maxS, x.dw, '前期 ' + x.pw.toFixed(1) + '%'); }).join('');
+    $('groupBuys').innerHTML = flowTable(g.buys, ['new', 'add']);
+    $('groupSells').innerHTML = flowTable(g.sells, ['exit', 'trim']);
+    $('groupConsensus').innerHTML = '<thead><tr><th>ティッカー</th><th>会社</th><th>分野</th><th class="n">人数</th><th class="n">平均比率</th></tr></thead><tbody>' +
+      g.consensus.map(function (c) {
+        return '<tr><td>' + tk(c) + '</td><td>' + esc(c.c) + '<div class="names">' + esc(c.names.join('、')) + '</div></td><td class="names">' + esc(c.s) + '</td><td class="n">' + c.holders + '</td><td class="n">' + c.avg_w.toFixed(1) + '%</td></tr>';
+      }).join('') + '</tbody>';
+  }
+
+  $('styleChips').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    style = b.dataset.style;
+    Array.prototype.forEach.call($('styleChips').children, function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+    renderPeople();
+  });
+  $('people').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    current = data.filers.filter(function (f) { return f.name === b.dataset.name; })[0];
+    try { localStorage.setItem(PERSON_KEY, current.name); } catch (err) { /* 保存できなくても表示はできる */ }
+    renderPeople(); renderPerson();
+    $('personDetail').scrollIntoView({ block: 'start', behavior: 'smooth' });
+  });
+
+  var start = location.hash === '#investors' ? 'investors' : null;
+  if (!start) { try { start = localStorage.getItem(TAB_KEY); } catch (e) { start = null; } }
+  showTab(start === 'investors' ? 'investors' : 'ledger');
 })();
 </script>
