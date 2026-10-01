@@ -237,17 +237,149 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
 #st-table td:nth-child(3) input { min-width: 7.5em; text-align: right; font-family: var(--f-num); }
 #st-table td:nth-child(4) select { min-width: 11em; }
 #st-table tr.ex td { color: var(--muted); }
+/* road: 道筋タブ。結論 → 今月やること → 段階 → 見通し → 根拠 → やらないこと の順に読む */
+.verdict { display: flex; flex-direction: column; gap: 8px; padding: 18px 16px; border-radius: 12px; background: var(--accent-soft); border: 1px solid var(--line); }
+.verdict .eyebrow { font-size: 12px; letter-spacing: .08em; color: var(--accent); font-weight: 700; }
+.verdict .big { font-size: clamp(20px, 4.6vw, 28px); line-height: 1.35; font-weight: 700; text-wrap: balance; margin: 0; }
+.verdict .big .num { color: var(--accent); }
+.verdict p { margin: 0; font-size: 14px; max-width: 62ch; }
+.exnote { font-size: 12px; color: var(--warn); font-weight: 700; }
+.todo { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; counter-reset: todo; }
+.todo li { display: grid; grid-template-columns: 2.2em 1fr; gap: 4px 10px; align-items: start; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--input); counter-increment: todo; }
+.todo li::before { content: counter(todo); grid-row: span 3; width: 2em; height: 2em; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--accent-fg); font-family: var(--f-num); font-weight: 500; }
+.todo .t { font-weight: 700; font-size: 15px; }
+.todo .t .num { color: var(--accent); }
+.todo .b { font-size: 13px; color: var(--muted); margin: 0; }
+.todo .how { font-size: 13px; margin: 0; }
+.steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.steps li { display: grid; grid-template-columns: 22px 1fr auto; gap: 0 12px; position: relative; padding-bottom: 14px; }
+.steps li:last-child { padding-bottom: 0; }
+.steps li::after { content: ''; position: absolute; left: 10px; top: 22px; bottom: 0; width: 2px; background: var(--line); }
+.steps li:last-child::after { display: none; }
+.steps .dot { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line); background: var(--surface); position: relative; z-index: 1; display: grid; place-items: center; font-size: 12px; font-weight: 700; }
+.steps li.done .dot { background: var(--good); border-color: var(--good); color: var(--surface); }
+.steps li.now .dot { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+.steps .nm { font-weight: 700; font-size: 14px; }
+.steps .ds { grid-column: 2 / 4; font-size: 13px; color: var(--muted); }
+.steps .st { font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 999px; border: 1px solid currentColor; align-self: start; white-space: nowrap; }
+.steps li.done .st { color: var(--good); } .steps li.now .st { color: var(--accent); } .steps li.next .st { color: var(--muted); } .steps li.opt .st { color: var(--warn); }
+.prj { width: 100%; height: auto; display: block; }
+.prj text { font-family: var(--f-num); font-size: 11px; fill: var(--muted); }
+.prj .grid { stroke: var(--line); stroke-width: 1; }
+.prj .ln { fill: none; stroke-width: 2.5; stroke-linejoin: round; }
+.prj .l2 { stroke: var(--k-oetf); } .prj .l4 { stroke: var(--accent); stroke-width: 3.5; } .prj .l6 { stroke: var(--k-stock); } .prj .l0 { stroke: var(--axis); stroke-dasharray: 5 4; }
+.prj .area { fill: var(--accent-soft); opacity: .8; }
+.prj .end { font-weight: 500; }
+.prj .e2 { fill: var(--k-oetf); } .prj .e4 { fill: var(--accent); } .prj .e6 { fill: var(--k-stock); } .prj .e0 { fill: var(--muted); }
+.sw { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 4px; }
+.ev { display: flex; flex-direction: column; gap: 10px; }
+.evr { display: grid; grid-template-columns: minmax(7.5em, 12em) 1fr 4.4em; gap: 10px; align-items: center; font-size: 13px; }
+.evr .nm b { display: block; font-size: 14px; }
+.evr .nm span { color: var(--muted); font-size: 12px; }
+.evt { position: relative; height: 26px; }
+.evt .rng { position: absolute; top: 11px; height: 4px; background: var(--line); border-radius: 2px; }
+.evt .iqr { position: absolute; top: 6px; height: 14px; border-radius: 3px; background: var(--k-oetf); opacity: .55; }
+.evt .med { position: absolute; top: 2px; width: 3px; height: 22px; border-radius: 2px; background: var(--fg); }
+.evr.keep .iqr { background: var(--accent); opacity: .8; }
+.evr .v { font-family: var(--f-num); font-variant-numeric: tabular-nums; text-align: right; font-weight: 500; }
+.evaxis { position: relative; height: 16px; font-family: var(--f-num); font-size: 11px; color: var(--muted); }
+.evaxis span { position: absolute; transform: translateX(-50%); }
+.evaxis .one { color: var(--fg); }
+.evgrid { display: grid; grid-template-columns: minmax(7.5em, 12em) 1fr 4.4em; gap: 10px; }
+.evone { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--axis); }
+.dont { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
+.dont li { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 13px; min-width: 0; }
+.dont li b { display: block; font-size: 14px; margin-bottom: 2px; }
+.tools td, .tools th { font-size: 13px; padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.tools { border-collapse: collapse; width: 100%; }
+.tools .use { color: var(--good); font-weight: 700; white-space: nowrap; } .tools .ref { color: var(--warn); font-weight: 700; white-space: nowrap; } .tools .no { color: var(--muted); font-weight: 700; white-space: nowrap; }
+.evr .v, .evaxis span { white-space: nowrap; }
+.ptiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.ptiles .tile { padding: 8px 10px; }
+@media (max-width: 520px) {
+  .evr { grid-template-columns: 1fr 4em; gap: 2px 8px; }
+  .evr .nm { grid-column: 1 / -1; }
+  .evr .nm b, .evr .nm span { display: inline; }
+  .evr .nm span::before { content: '　'; }
+  .evgrid { grid-template-columns: 1fr 4em; gap: 8px; }
+  .evgrid > span:first-child { display: none; }
+  .ptiles .tile .v { font-size: 16px; }
+  .ptiles .tile .s { font-size: 11px; }
+}
 </style>
 
 <div class="wrap">
   <header>
     <h1>JevInvest 持仓台帳</h1>
     <nav class="tabs" role="tablist" aria-label="表示の切り替え">
-      <button type="button" role="tab" id="tabPlan" aria-controls="viewPlan" aria-selected="false">家計と次の一手</button>
-      <button type="button" role="tab" id="tabLedger" aria-controls="viewLedger" aria-selected="true">自分の台帳</button>
-      <button type="button" role="tab" id="tabInvestors" aria-controls="viewInvestors" aria-selected="false">著名投資家の動向</button>
+      <button type="button" role="tab" id="tabRoad" aria-controls="viewRoad" aria-selected="true">道筋</button>
+      <button type="button" role="tab" id="tabPlan" aria-controls="viewPlan" aria-selected="false">家計の入力</button>
+      <button type="button" role="tab" id="tabLedger" aria-controls="viewLedger" aria-selected="false">台帳</button>
+      <button type="button" role="tab" id="tabInvestors" aria-controls="viewInvestors" aria-selected="false">市場の参考</button>
     </nav>
   </header>
+
+  <div id="viewRoad" class="view" role="tabpanel" aria-labelledby="tabRoad" hidden>
+    <div class="verdict" id="rd-verdict" aria-live="polite"></div>
+
+    <section aria-labelledby="h-rdTodo">
+      <h2 id="h-rdTodo">今月やること</h2>
+      <ol class="todo" id="rd-todo"></ol>
+      <p class="note">数字は「家計の入力」タブの値から毎回計算します。入力を変えるとここも変わります。</p>
+    </section>
+
+    <section aria-labelledby="h-rdSteps">
+      <h2 id="h-rdSteps">資産づくりの順番</h2>
+      <p class="sub">上から順に片づけるのが、手取りのリターンが一番大きくなる順番です。今いる段階に印が付きます。</p>
+      <ol class="steps" id="rd-steps"></ol>
+    </section>
+
+    <section aria-labelledby="h-rdProj">
+      <h2 id="h-rdProj">このまま続けた場合の見通し</h2>
+      <p class="sub" id="rd-projSub"></p>
+      <div class="ptiles" id="rd-projTiles"></div>
+      <div id="rd-proj"></div>
+      <div class="legend" id="rd-projLegend"></div>
+      <p class="note">今の物価に直した金額（実質）です。年 4% は全世界株の長期の実質リターンとして控えめな想定、6% は米国株の過去 150 年の平均に近い想定です。毎年この通りに増えるわけではなく、途中で 3〜5 割下がる年もあります。NISA の生涯枠（元本 1,800 万円）を超えた分は課税口座で計算し、売却時の税 20.315% を引いています。</p>
+    </section>
+
+    <section aria-labelledby="h-rdEv">
+      <h2 id="h-rdEv">根拠：積立は「続け方」で結果が変わる</h2>
+      <p class="sub" id="rd-evSub">米国株の過去データで、20 年間の積立を何通りも試した結果を読み込み中です。</p>
+      <div class="ev" id="rd-ev"></div>
+      <p class="note" id="rd-evNote"></p>
+    </section>
+
+    <section aria-labelledby="h-rdDont">
+      <h2 id="h-rdDont">やらないこと</h2>
+      <ul class="dont">
+        <li><b>下がったときに売る・積立を止める</b>上の検証で一番損をした行動です。下落は積立にとって安く買える期間です。</li>
+        <li><b>短期売買・値動きの予測</b>手数料と税で手取りが減り、当たり外れの差は長期では残りにくいです。</li>
+        <li><b>著名投資家（13F）の後追い</b>1〜4 か月遅れの情報です。「市場の参考」タブは雰囲気をつかむためだけに使います。</li>
+        <li><b>AI の自動売買</b>下の 16 個のうち多くはこれです。実際のお金を動かす判断は任せません。</li>
+        <li><b>確認前の商品を買う</b>勤務先の独立性の規則があります。買う前に DESC で購入可を確認し、「台帳」タブに記録します。</li>
+        <li><b>手数料の高い商品</b>信託報酬が年 1% 違うと、20 年で最終額が一括投資なら約 2 割、積立でも約 1 割変わります。</li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="h-rdTools">
+      <h2 id="h-rdTools">AI 投資ツール 16 個の使い分け</h2>
+      <p class="sub">取り込んだ 16 個のソースを読んで判定しました。基準は、税と手数料を引いた後の長期の手取りが増えるかどうかです。</p>
+      <div class="tablewrap"><table class="tools">
+        <thead><tr><th>判定</th><th>ツール</th><th>このプロジェクトでの役割</th></tr></thead>
+        <tbody>
+          <tr><td class="use">使う</td><td>backtrader</td><td>上の「続け方」の検証に使用。積立・配分のルールを買う前に過去データで確かめる</td></tr>
+          <tr><td class="use">使う</td><td>OpenBB</td><td>株価・指数・経済指標の取得をまとめる。Yahoo が止まったときの取得先</td></tr>
+          <tr><td class="ref">参考</td><td>FinRobot</td><td>数字はコード、文章は AI という分担の手本</td></tr>
+          <tr><td class="ref">参考</td><td>TradingAgents・ai-hedge-fund</td><td>Jev を使う経路の実装例として読む。売買判断には使わない</td></tr>
+          <tr><td class="no">使わない</td><td>nofx・Vibe-Trading・vnpy・Lean</td><td>自動売買が中心。実際の発注はしない方針と合わない</td></tr>
+          <tr><td class="no">使わない</td><td>qlib・RD-Agent・FinRL・FinGPT</td><td>機械学習で短期の値動きを予測する研究用。手取りが増える根拠が弱い</td></tr>
+          <tr><td class="no">使わない</td><td>daily_stock_analysis・go-stock</td><td>毎日の売り時・買い時の通知。売買を増やす方向に働く</td></tr>
+          <tr><td class="no">使わない</td><td>FinceptTerminal</td><td>パソコン専用のアプリ。タブレットでは動かない</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+  </div>
 
   <div id="viewPlan" class="view" role="tabpanel" aria-labelledby="tabPlan" hidden>
     <p class="sub">毎月の手取り・生活費・立替・現金を入れると、手取りのリターンを上げるために次にやるべきことを、効く順に並べます。</p>
@@ -786,7 +918,7 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
   'use strict';
   function $(id) { return document.getElementById(id); }
   function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
-  var TAB_KEY = 'jevinvest.tab';
+  var TAB_KEY = 'jevinvest.tab.v2';  // v2: 道筋タブを最初に見せるため、以前の保存値は使わない
   var PERSON_KEY = 'jevinvest.person';
   var CHG = {
     'new': ['new', '新規'], 'add': ['add', '買い増し'], 'trim': ['trim', '減少'],
@@ -796,14 +928,16 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
   // ---- タブ ----
   function showTab(which) {
     var inv = which === 'investors';
-    [['plan', 'viewPlan', 'tabPlan'], ['ledger', 'viewLedger', 'tabLedger'], ['investors', 'viewInvestors', 'tabInvestors']].forEach(function (t) {
+    [['road', 'viewRoad', 'tabRoad'], ['plan', 'viewPlan', 'tabPlan'], ['ledger', 'viewLedger', 'tabLedger'], ['investors', 'viewInvestors', 'tabInvestors']].forEach(function (t) {
       $(t[1]).hidden = t[0] !== which; $(t[2]).setAttribute('aria-selected', String(t[0] === which));
     });
     try { localStorage.setItem(TAB_KEY, which); } catch (e) { /* 保存できなくても表示はできる */ }
     if (inv) loadData();
+    if (which === 'road' && window.JevRoad) window.JevRoad.render();
   }
   $('tabLedger').addEventListener('click', function () { showTab('ledger'); });
   $('tabPlan').addEventListener('click', function () { showTab('plan'); });
+  $('tabRoad').addEventListener('click', function () { showTab('road'); });
   $('tabInvestors').addEventListener('click', function () { showTab('investors'); });
 
   // ---- データ ----
@@ -1132,9 +1266,9 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
     $('personDetail').scrollIntoView({ block: 'start', behavior: 'smooth' });
   });
 
-  var start = { '#investors': 'investors', '#plan': 'plan', '#ledger': 'ledger' }[location.hash] || null;
+  var start = { '#investors': 'investors', '#plan': 'plan', '#ledger': 'ledger', '#road': 'road' }[location.hash] || null;
   if (!start) { try { start = localStorage.getItem(TAB_KEY); } catch (e) { start = null; } }
-  showTab(['plan', 'ledger', 'investors'].indexOf(start) >= 0 ? start : 'plan');
+  showTab(['road', 'plan', 'ledger', 'investors'].indexOf(start) >= 0 ? start : 'road');
 })();
 </script>
 
@@ -1270,7 +1404,7 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
     var conv = function (obj) { MONEY.forEach(function (k) { if (obj[k] != null && String(obj[k]).trim() !== '') obj[k] = String(Math.round(num(obj[k]) / 1000) / 10); }); };
     conv(st.input); (st.hist || []).forEach(conv); st.unit = 'man';
   }
-  function save() { try { localStorage.setItem(KEY, JSON.stringify(st)); $('planSaved').textContent = '自動保存済み（このブラウザ内）'; } catch (e) { $('planSaved').textContent = 'このブラウザには保存できません'; } }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(st)); $('planSaved').textContent = '自動保存済み（このブラウザ内）'; } catch (e) { $('planSaved').textContent = 'このブラウザには保存できません'; } try { document.dispatchEvent(new Event('jevplan')); } catch (e) { /* 道筋タブは開いたときに再計算する */ } }
 
   FIELDS.forEach(function (k) {
     var el = $('pf-' + k);
@@ -1572,5 +1706,176 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
 
   stRender();
   render();
+})();
+</script>
+
+<script>
+(function () {
+  'use strict';
+  function $(id) { return document.getElementById(id); }
+  function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function man(n) { var a = Math.abs(n), s = a >= 10000 ? (Math.round(a / 1000) / 10).toLocaleString('ja-JP') + ' 万円' : Math.round(a).toLocaleString('ja-JP') + ' 円'; return (n < 0 ? '−' : '') + s; }
+  function oku(n) { return n >= 1e8 ? (Math.round(n / 1e6) / 100).toLocaleString('ja-JP') + ' 億円' : (Math.round(n / 1e5) * 10).toLocaleString('ja-JP') + ' 万円'; }
+  var KEY = 'jevinvest.plan.v1';
+  var NISA_LIFE = 18000000, NISA_YEAR = 3600000, NISA_TSUMI_M = 100000, TAX = 0.20315;
+  // 入力がないときの例（架空の数字。画面に「例」と出す）
+  var EXAMPLE = { cash: '150', income: '30', spend: '22', advance: '0', lag: '1', bonus: '0', debt: '0', rate: '0', invested: '0', nisa: '0', months: '6' };
+
+  function readInput() {
+    try { var o = JSON.parse(localStorage.getItem(KEY) || 'null'); if (o && o.input && (parseFloat(o.input.income) || parseFloat(o.input.cash))) return { input: o.input, example: false }; } catch (e) { /* 例で表示 */ }
+    return { input: EXAMPLE, example: true };
+  }
+
+  // 実質リターン r で、毎月 m 円（と最初に lump 円）を years 年積み立てたときの、税引き後の評価額
+  function simulate(m, lump, r, years, nisaUsed) {
+    var rm = Math.pow(1 + r, 1 / 12) - 1;
+    var nV = 0, nC = nisaUsed || 0, tV = 0, tC = 0, out = [], yearUse = 0;
+    function put(x) {
+      var room = Math.max(0, Math.min(NISA_LIFE - nC, NISA_YEAR - yearUse));
+      var a = Math.min(x, room); nV += a; nC += a; yearUse += a; tV += x - a; tC += x - a;
+    }
+    put(lump);
+    var startNisa = nisaUsed || 0;
+    for (var k = 0; k <= years * 12; k++) {
+      if (k % 12 === 0) out.push({ y: k / 12, total: nV + tV - Math.max(tV - tC, 0) * TAX, paid: nC - startNisa + tC, saved: Math.max(nV - (nC - startNisa), 0) * TAX });
+      if (k === years * 12) break;
+      if (k % 12 === 11) yearUse = 0;
+      nV *= 1 + rm; tV *= 1 + rm;
+      put(m);
+    }
+    return out;
+  }
+
+  function stage(d, i) {
+    var v = d.v, s = [];
+    var m = Math.max(Math.floor(d.netB / 1000) * 1000, 0);
+    var extra = d.free - d.buffer;
+    var highDebt = v.debt > 0 && v.rate >= 3;
+    s.push({ id: 'save', nm: '毎月黒字にする', done: d.netB > 0, ds: d.netB > 0 ? '毎月 ' + man(d.netB) + ' の黒字（立替は精算で戻る前提）。' : '今は毎月 ' + man(-d.netB) + ' の赤字です。投資より先に支出を見直します。' });
+    s.push({ id: 'debt', nm: '金利 3% 以上の借入を返す', done: !highDebt, ds: highDebt ? '年 ' + v.rate + '% の借入 ' + man(v.debt) + '。返すことは、その金利で確実に運用するのと同じです。' : '該当する借入はありません。' });
+    s.push({ id: 'buf', nm: '生活防衛資金を確保する', done: d.free >= d.buffer && d.buffer > 0, ds: '自分の生活費 ' + man(d.own) + ' × ' + v.months + ' か月 = ' + man(d.buffer) + '。立替の精算待ち ' + man(d.float) + ' を除いた現金は ' + man(d.free) + '。' });
+    s.push({ id: 'nisa', nm: 'NISA で毎月積み立てる', done: v.nisa > 0, ds: '黒字の月 ' + man(m) + ' を、つみたて投資枠（月 10 万円まで）と成長投資枠に。年 360 万円・生涯 1,800 万円まで運用益に税がかかりません。' });
+    s.push({ id: 'lump', nm: '余った現金を NISA 枠に入れる', done: extra <= 100000 && d.free >= d.buffer, ds: extra > 100000 ? '生活防衛資金を超える現金が ' + man(extra) + ' あります。預金のままだと物価上昇の分だけ目減りします。' : '生活防衛資金を超える現金は、ほぼありません。' });
+    s.push({ id: 'keep', nm: '続ける・年 1 回だけ見直す', done: false, ds: '下落しても止めない。見直しは年 1 回、配分のずれを直す程度で十分です。' });
+    var now = -1;
+    s.forEach(function (x, k) { x.cls = x.done ? 'done' : (now < 0 ? (now = k, 'now') : 'next'); });
+    if (now < 0) s[s.length - 1].cls = 'now';
+    return { list: s, m: m, extra: extra };
+  }
+
+  function render() {
+    if (!window.JevPlan) return;
+    var r = readInput(), d = window.JevPlan.derive(r.input), v = d.v;
+    var st = stage(d, r.input), m = st.m;
+    var nowStep = st.list.filter(function (x) { return x.cls === 'now'; })[0];
+    var today = new Date(), monthsLeft = 12 - today.getMonth();
+    var yearRoom = Math.max(NISA_YEAR - v.nisa, 0);
+    var mN = Math.min(m, 300000);  // 年 360 万円の枠 ÷ 12
+    var tsumi = Math.min(mN, NISA_TSUMI_M), growth = Math.max(mN - tsumi, 0);
+    var lump = d.free >= d.buffer ? Math.max(Math.min(d.free - d.buffer, Math.max(yearRoom - mN * monthsLeft, 0)), 0) : 0;
+    if (lump < 100000) lump = 0;
+
+    // 結論
+    var head;
+    if (d.inputOdd) head = '入力を確認してください。生活費がすべて立替として計算されています。';
+    else if (d.netB <= 0) head = '最初の一手は、毎月の赤字 <span class="num">' + man(-d.netB) + '</span> をなくすことです。';
+    else if (nowStep && nowStep.id === 'debt') head = '最初の一手は、金利 ' + v.rate + '% の借入を返すことです。';
+    else if (nowStep && nowStep.id === 'buf') head = '生活防衛資金まであと <span class="num">' + man(d.buffer - d.free) + '</span>。たまるまでは現金を優先します。';
+    else head = '毎月 <span class="num">' + man(mN) + '</span> を NISA で積み立て' + (lump ? '、余った現金 <span class="num">' + man(lump) + '</span> も年内に NISA へ' : '') + '。';
+    var p20 = simulate(mN, lump, 0.04, 20, v.nisa)[20];
+    $('rd-verdict').innerHTML = '<div class="eyebrow">あなたの次の一手</div><p class="big">' + head + '</p>' +
+      (d.netB > 0 && !d.inputOdd ? '<p>これを 20 年続けると、年 4%（物価を除いた控えめな想定）で約 <b class="num">' + oku(p20.total) + '</b>。うち NISA で払わずに済む税は約 ' + oku(p20.saved) + 'です。' + (mN > 0 ? 'NISA の生涯枠 1,800 万円は約 ' + Math.max(Math.ceil((NISA_LIFE - v.nisa - lump) / (mN * 12)), 1) + ' 年で埋まり、その後は課税口座で同じ商品を続けます。' : '') + 'やることは設定を一度するだけで、あとは続けるだけです。</p>' : '') +
+      (r.example ? '<div class="exnote">いま表示しているのは例の数字です。「家計の入力」タブに自分の数字を入れると、ここが変わります。</div>' : '');
+
+    // 今月やること
+    var todo = [];
+    if (d.inputOdd) todo.push({ t: '「家計の入力」で生活費と立替を確認する', b: '生活費は立替込みの合計、立替はそのうちあとで精算される分です。', how: '' });
+    if (d.netB <= 0) todo.push({ t: '自分の生活費を ' + man(-d.netB + 10000) + ' 以上減らす', b: '固定費（通信・保険・サブスク・住居）から見直すのが効きます。', how: '' });
+    if (v.debt > 0 && v.rate >= 3) todo.push({ t: '借入 ' + man(v.debt) + ' の繰上げ返済', b: '年 ' + v.rate + '% の借入を返すのは、確実な ' + v.rate + '% の運用と同じです。', how: '' });
+    if (d.netB > 0 && !d.inputOdd && !(v.debt > 0 && v.rate >= 3)) {
+      if (d.free < d.buffer) {
+        todo.push({ t: '毎月の黒字 ' + man(d.netB) + ' をまず現金でためる', b: '生活防衛資金まであと ' + man(d.buffer - d.free) + '。約 ' + Math.ceil((d.buffer - d.free) / d.netB) + ' か月で届きます。', how: '並行して NISA の積立を月 1 万円だけ始めておくと、届いたときに金額を変えるだけで済みます。' });
+      } else {
+        todo.push({ t: '買う商品を DESC で確認する', b: '勤務先の独立性の規則で、確認前の商品は買えません。候補は手数料の安い全世界株か米国株のインデックスファンド（投資信託）です。', how: '確認できたら「台帳」タブに記録します。このページは購入可かどうかを判定しません。' });
+        todo.push({ t: 'NISA で毎月 <span class="num">' + man(mN) + '</span> の積立を設定する', b: 'つみたて投資枠に月 ' + man(tsumi) + (growth ? '、成長投資枠に月 ' + man(growth) : '') + '。給料日の翌営業日など、引き落とし後に買う日にします。', how: m > mN ? '黒字のうち NISA の枠を超える月 ' + man(m - mN) + ' は、現金のままか課税口座で同じ商品を積み立てます。' : '' });
+        if (lump) todo.push({ t: '余った現金 <span class="num">' + man(lump) + '</span> を年内に成長投資枠へ', b: '今年の NISA 枠は残り ' + man(yearRoom) + '。使わなかった枠は翌年に繰り越せません。', how: '一度に入れるのが不安なら、年末までの ' + monthsLeft + ' か月に分けても結果の差は小さいです。' });
+      }
+      if (d.float >= 100000) todo.push({ t: '立替の精算を早める', b: '精算待ちの ' + man(d.float) + ' は、その間投資にも使えない現金です。', how: '経費精算を月末まで溜めずに出す、会社のカードを使えるか確認する、の 2 つが効きます。' });
+    }
+    $('rd-todo').innerHTML = todo.slice(0, 4).map(function (x) {
+      return '<li><div class="t">' + x.t + '</div><p class="b">' + esc(x.b) + '</p>' + (x.how ? '<p class="how">' + esc(x.how) + '</p>' : '') + '</li>';
+    }).join('');
+
+    // 段階
+    var lbl = { done: '済み', now: '今ここ', next: 'この後' };
+    $('rd-steps').innerHTML = st.list.map(function (x) {
+      return '<li class="' + x.cls + '"><span class="dot" aria-hidden="true">' + (x.cls === 'done' ? '✓' : '') + '</span><span class="nm">' + esc(x.nm) + '</span><span class="st">' + lbl[x.cls] + '</span><span class="ds">' + esc(x.ds) + '</span></li>';
+    }).join('');
+
+    // 見通し
+    var Y = 30, rates = [0, 0.02, 0.04, 0.06];
+    var lines = rates.map(function (rt) { return simulate(mN, lump, rt, Y, v.nisa); });
+    $('rd-projSub').textContent = '毎月 ' + man(mN) + (lump ? '・最初に ' + man(lump) : '') + ' を NISA で積み立てた場合の、税引き後の金額。';
+    var at = function (y, k) { return lines[k][y]; };
+    $('rd-projTiles').innerHTML = [10, 20, 30].map(function (y) {
+      return '<div class="tile"><div class="k">' + y + ' 年後（年 4%）</div><div class="v">' + oku(at(y, 2).total) + '</div><div class="s">元本 ' + oku(at(y, 2).paid) + '<br>浮く税 ' + oku(at(y, 2).saved) + '</div></div>';
+    }).join('');
+    var W = 640, H = 260, L = 8, R = 92, T = 12, B = 26;
+    var max = lines[3][Y].total, step = Math.pow(10, Math.floor(Math.log10(max || 1)));
+    var top = Math.ceil(max / step) * step; if (top / step < 3) { step /= 2; top = Math.ceil(max / step) * step; }
+    function x(y) { return L + (W - L - R) * y / Y; }
+    function yy(val) { return T + (H - T - B) * (1 - val / (top || 1)); }
+    var svg = '<svg class="prj" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="30 年の見通し。年 4% で 30 年後 ' + esc(oku(lines[2][Y].total)) + '">';
+    for (var g = 0; g <= top + 1; g += step) svg += '<line class="grid" x1="' + L + '" x2="' + (W - R) + '" y1="' + yy(g).toFixed(1) + '" y2="' + yy(g).toFixed(1) + '"/><text x="' + (L + 2) + '" y="' + (yy(g) - 3).toFixed(1) + '">' + (g ? oku(g) : '0') + '</text>';
+    [0, 10, 20, 30].forEach(function (y) { svg += '<text x="' + x(y).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle">' + (y ? y + ' 年後' : '今') + '</text>'; });
+    function path(k) { return lines[k].map(function (p, j) { return (j ? 'L' : 'M') + x(p.y).toFixed(1) + ' ' + yy(p.total).toFixed(1); }).join(' '); }
+    svg += '<path class="area" d="' + path(2) + ' L' + x(Y) + ' ' + yy(0) + ' L' + x(0) + ' ' + yy(0) + ' Z"/>';
+    var cls = ['l0', 'l2', 'l4', 'l6'], ecl = ['e0', 'e2', 'e4', 'e6'], names = ['元本（預金のまま）', '年 2%', '年 4%', '年 6%'];
+    var ends = [];
+    [0, 1, 3, 2].forEach(function (k) { svg += '<path class="ln ' + cls[k] + '" d="' + path(k) + '"/>'; });
+    // 右端のラベルは重ならないようにずらす
+    rates.forEach(function (rt, k) { ends.push({ k: k, y: yy(lines[k][Y].total) }); });
+    ends.sort(function (a, b) { return a.y - b.y; });
+    for (var e = 1; e < ends.length; e++) if (ends[e].y - ends[e - 1].y < 13) ends[e].y = ends[e - 1].y + 13;
+    ends.forEach(function (o) { svg += '<text class="end ' + ecl[o.k] + '" x="' + (W - R + 6) + '" y="' + (o.y + 4).toFixed(1) + '">' + oku(lines[o.k][Y].total) + '</text>'; });
+    $('rd-proj').innerHTML = svg + '</svg>';
+    var swc = ['var(--axis)', 'var(--k-oetf)', 'var(--accent)', 'var(--k-stock)'];
+    $('rd-projLegend').innerHTML = names.map(function (n, k) { return '<span><span class="sw" style="background:' + swc[k] + '"></span>' + n + '</span>'; }).join('');
+  }
+
+  var EV_NAMES = { keep: ['毎月買い続ける', '下がっても止めない'], wait: ['下がるのを待つ', '10% 下がるまで現金で待つ'], panic: ['下がったら売る', '20% 下落で全部売って止め、回復後に再開'], cash: ['預金のまま', '投資しない'] };
+  function renderEvidence(ev) {
+    var order = ['keep', 'wait', 'panic', 'cash'], s = ev.summary;
+    var lo = 0.5, hi = 4.5;
+    function px(v) { return ((Math.min(Math.max(v, lo), hi) - lo) / (hi - lo) * 100).toFixed(2) + '%'; }
+    var h = '';
+    order.forEach(function (k) {
+      var xs = ev.multiple[k].slice().sort(function (a, b) { return a - b; });
+      var q = function (p) { return xs[Math.min(xs.length - 1, Math.floor(p * xs.length))]; };
+      h += '<div class="evr ' + k + '"><div class="nm"><b>' + EV_NAMES[k][0] + '</b><span>' + EV_NAMES[k][1] + '</span></div>' +
+        '<div class="evt" role="img" aria-label="' + EV_NAMES[k][0] + ' 中央値 ' + s[k].median + ' 倍、悪い方から 1 割 ' + s[k].p10 + ' 倍"><span class="evone" style="left:' + px(1) + '"></span>' +
+        '<span class="rng" style="left:' + px(xs[0]) + ';width:calc(' + px(xs[xs.length - 1]) + ' - ' + px(xs[0]) + ')"></span>' +
+        '<span class="iqr" style="left:' + px(q(0.1)) + ';width:calc(' + px(q(0.9)) + ' - ' + px(q(0.1)) + ')"></span>' +
+        '<span class="med" style="left:' + px(s[k].median) + '"></span></div>' +
+        '<div class="v">' + s[k].median.toFixed(2) + ' 倍</div></div>';
+    });
+    h += '<div class="evgrid"><span></span><div class="evaxis">' + [1, 2, 3, 4].map(function (t) { return '<span class="' + (t === 1 ? 'one' : '') + '" style="left:' + px(t) + '">' + t + ' 倍</span>'; }).join('') + '</div><span></span></div>';
+    $('rd-ev').innerHTML = h;
+    var n = ev.windows, beatP = n - s.panic.beat_keep, beatW = n - s.wait.beat_keep;
+    $('rd-evSub').textContent = ev.data_from.slice(0, 4) + '〜' + ev.data_to.slice(0, 4) + ' 年の米国株（配当込み・物価調整後）で、' + ev.years + ' 年間の積立を開始年をずらして ' + n + ' 通り試しました。積み立てた金額の何倍になったかの比較です。';
+    $('rd-evNote').textContent = '黒い縦線が中央値、濃い帯が 10〜90% の範囲、細い線が最悪〜最良。買い続けた場合は、下がったら売る場合に ' + n + ' 通り中 ' + beatP + ' 通りで勝ち、下がるのを待つ場合にも ' + beatW + ' 通りで勝ちました。一方、20 年積み立てても元本を割った期間（最悪 ' + s.keep.worst + ' 倍、' + s.keep.worst_start + ' 年開始）もあり、生活防衛資金を先に作る理由です。手数料・税は 0、現金の実質金利は 0% の想定。米国は過去 150 年で特に成長した国なので、全世界株ではこれより低めに見ておきます。検証は backtrader（tools/backtest_habits.py）。';
+  }
+
+  var evLoaded = false;
+  function loadEvidence() {
+    if (evLoaded) return; evLoaded = true;
+    fetch('evidence.json').then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).then(renderEvidence).catch(function () {
+      $('rd-evSub').textContent = '検証結果（evidence.json）を読み込めませんでした。ページを開き直してください。'; evLoaded = false;
+    });
+  }
+
+  window.JevRoad = { render: function () { render(); loadEvidence(); }, simulate: simulate };
+  document.addEventListener('jevplan', function () { if (!$('viewRoad').hidden) render(); });
+  if (!$('viewRoad').hidden) window.JevRoad.render();
 })();
 </script>

@@ -35,7 +35,10 @@ for r in $REPOS; do
   fi
 done
 # このプロジェクトで実際に使うのは 2 つ（理由は docs/TOOLS.md）
-pip install -q "backtrader>=1.9.78" "openbb-core" "openbb-yfinance" "openbb-equity" && echo "ok    pip: backtrader, openbb (core + yfinance)" || echo "FAIL  pip: backtrader/openbb"
+# システムの Python と衝突しないよう vendor/.venv に入れる（既存の pandas などはそのまま使う）
+[ -x vendor/.venv/bin/python ] || python3 -m venv --system-site-packages vendor/.venv
+PIP=vendor/.venv/bin/pip
+$PIP install -q "backtrader>=1.9.78" openbb-core openbb-yfinance openbb-fred && echo "ok    pip: backtrader, openbb (vendor/.venv)" || echo "FAIL  pip: backtrader/openbb"
 if [ "${1:-}" = "--all-pip" ]; then
-  for p in pyqlib vnpy finrl rdagent; do pip install -q "$p" && echo "ok    pip: $p" || echo "FAIL  pip: $p"; done
+  for p in pyqlib vnpy finrl rdagent; do $PIP install -q "$p" && echo "ok    pip: $p" || echo "FAIL  pip: $p"; done
 fi
