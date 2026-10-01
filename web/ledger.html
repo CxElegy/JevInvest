@@ -231,6 +231,14 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
 .cols .c .cb.neg { background: var(--fl-exit); border-radius: 0 0 4px 4px; }
 .cols .c .m { position: absolute; bottom: -20px; font-size: 11px; color: var(--muted); font-family: var(--f-num); }
 .cols .c .lv { position: absolute; font-size: 11px; font-family: var(--f-num); color: var(--fg); white-space: nowrap; transform: translateY(-100%); padding-bottom: 2px; }
+.thumbs { display: flex; gap: 8px; flex-wrap: wrap; }
+.thumbs img { height: 96px; width: auto; border-radius: 6px; border: 1px solid var(--line); }
+#st-table input, #st-table select { padding: 6px; font-size: 13px; }
+#st-table td:nth-child(1) input { min-width: 8.5em; }
+#st-table td:nth-child(2) input { min-width: 12em; }
+#st-table td:nth-child(3) input { min-width: 7.5em; text-align: right; font-family: var(--f-num); }
+#st-table td:nth-child(4) select { min-width: 11em; }
+#st-table tr.ex td { color: var(--muted); }
 </style>
 
 <div class="wrap">
@@ -246,6 +254,30 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
   <div id="viewPlan" class="view" role="tabpanel" aria-labelledby="tabPlan" hidden>
     <p class="sub">毎月の手取り・生活費・立替・現金を入れると、手取りのリターンを上げるために次にやるべきことを、効く順に並べます。</p>
     <p class="privacy"><b>入力した金額は、このブラウザの中にだけ保存されます。</b>送信はされず、Claude にも届きません。</p>
+
+    <section aria-labelledby="h-stmt">
+      <h2 id="h-stmt">明細から月の数字を作る</h2>
+      <p class="sub">銀行アプリの入出金明細のスクリーンショットを入れると、取引を読み取って「給与」「立替の精算」「カードの支払い」などに分け、その月の数字を計算します。</p>
+      <div class="grid2">
+        <div class="field"><label for="st-month">対象の月</label><input id="st-month" type="month"></div>
+        <div class="field" id="st-imgField"><label for="st-files">明細の画像（複数可）</label><input id="st-files" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple></div>
+      </div>
+      <div id="st-thumbs" class="thumbs"></div>
+      <p id="st-imgNote" class="note">「画像から読み取る」を押すと、選んだ画像を Claude に送って文字を読み取ります。あなたの Claude の利用枠を使い、最初の 1 回は許可の確認が出ます。画像はこのページには保存しません。</p>
+      <div class="row">
+        <button type="button" id="st-read" class="primary" disabled>画像から読み取る</button>
+        <button type="button" id="st-stop" hidden>止める</button>
+        <button type="button" id="st-addRow">手で行を追加</button>
+        <span id="st-status" class="note" role="status"></span>
+      </div>
+      <div class="tablewrap"><table id="st-table"></table></div>
+      <div id="st-sum" class="tiles"></div>
+      <p id="st-sumNote" class="note"></p>
+      <div class="row">
+        <button type="button" id="st-apply" class="primary">この月の数字を「いまの数字」に反映して記録</button>
+        <button type="button" id="st-clear" class="danger">この明細を消す</button>
+      </div>
+    </section>
 
     <section aria-labelledby="h-in">
       <h2 id="h-in">いまの数字</h2>
@@ -1319,6 +1351,219 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
   $('viewPlan').addEventListener('focusin', function (e) { var el = e.target.closest('[data-tip]'); if (el) { var r = el.getBoundingClientRect(); show(el, r.left + 10, r.bottom - 6); } });
   $('viewPlan').addEventListener('focusout', hide);
 
+
+  // ================= 明細の読み取り =================
+  var CATS = [
+    ['salary', '給与（手取り）'], ['reimb', '立替の精算（戻り）'], ['income_other', 'その他の入金'],
+    ['card', 'カードの支払い'], ['cash', '現金の引き出し'], ['spend_other', 'その他の支払い'],
+    ['invest', '投資への入金（支出ではない）'], ['transfer_other', '自分の口座間の移動（数えない）']
+  ];
+  var ST_KEY = 'jevinvest.statement.v1';
+  var stm = { month: '', rows: [], example: true };
+  try { var r0 = localStorage.getItem(ST_KEY); if (r0) { var o0 = JSON.parse(r0); if (o0 && Array.isArray(o0.rows)) stm = o0; } } catch (e) { /* 空で始める */ }
+  function prevMonth() { var t = new Date(), d = new Date(t.getFullYear(), t.getMonth() - 1, 1); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2); }
+  if (!stm.month) stm.month = prevMonth();
+  if (!stm.rows.length && stm.example) {
+    // 書式の例（架空の数字）。読み取るか「手で行を追加」すると消える
+    var m = stm.month;
+    stm.rows = [
+      { date: m + '-05', desc: '例）ATM 引き出し', amount: -50000, cat: 'cash' },
+      { date: m + '-10', desc: '例）携帯会社のカード', amount: -40000, cat: 'card' },
+      { date: m + '-18', desc: '例）勤務先から振込（経費精算）', amount: 200000, cat: 'reimb' },
+      { date: m + '-25', desc: '例）給料振込', amount: 400000, cat: 'salary' },
+      { date: m + '-27', desc: '例）クレジットカード', amount: -380000, cat: 'card' }
+    ];
+  }
+  function stSave() { try { localStorage.setItem(ST_KEY, JSON.stringify(stm)); } catch (e) { /* 保存できなくても表示はできる */ } }
+
+  function guessCat(desc, amount) {
+    var d = String(desc || '');
+    if (/証券|ｼｮｳｹﾝ|ショウケン|ｴｽﾋﾞ|エスビ|SBI|楽天証|ﾏﾈｯｸｽ|マネックス|松井|NISA/i.test(d)) return amount < 0 ? 'invest' : 'income_other';
+    if (amount > 0) {
+      if (/給料|給与|賞与|ｷｭｳﾖ/.test(d)) return 'salary';
+      if (/振込|ﾌﾘｺﾐ/.test(d)) return 'reimb';
+      return 'income_other';
+    }
+    if (/ATM|ＡＴＭ|^カード\s*[\(（]\d+|引出|ﾋｷﾀﾞｼ/.test(d)) return 'cash';
+    if (/カード|ｶ-ﾄﾞ|ｶｰﾄﾞ|CARD|ｸﾚｼﾞｯﾄ|ﾄﾞｺﾓ|ドコモ|PAYPAY/i.test(d)) return 'card';
+    return 'spend_other';
+  }
+
+  function stSummary() {
+    var t = { salary: 0, reimb: 0, income_other: 0, card: 0, cash: 0, spend_other: 0, invest: 0, transfer_other: 0 };
+    var inMonth = stm.rows.filter(function (r) { return String(r.date || '').slice(0, 7) === stm.month; });
+    inMonth.forEach(function (r) { var a = num(r.amount); if (t[r.cat] != null) t[r.cat] += a; });
+    var spend = -(t.card + t.cash + t.spend_other);
+    var withBal = inMonth.filter(function (r) { return r.balance != null && r.balance !== ''; }).sort(function (a, b) { return a.date < b.date ? -1 : 1; });
+    // 同じ日に複数の取引があると並び順では最後が分からない。
+    // 「取引前の残高（残高 − 金額）」が他の取引の残高と一致しない行が、その日の最後。
+    function edge(rows, last) {
+      if (!rows.length) return null;
+      var d = rows[last ? rows.length - 1 : 0].date;
+      var same = rows.filter(function (r) { return r.date === d; });
+      var pick = same.filter(function (r) {
+        return !same.some(function (o) {
+          if (o === r) return false;
+          return last ? num(o.balance) - num(o.amount) === num(r.balance) : num(r.balance) - num(r.amount) === num(o.balance);
+        });
+      })[0] || same[last ? same.length - 1 : 0];
+      return last ? num(pick.balance) : num(pick.balance) - num(pick.amount);
+    }
+    var closing = edge(withBal, true);
+    var opening = edge(withBal, false);
+    return { n: inMonth.length, nOther: stm.rows.length - inMonth.length, salary: t.salary, reimb: t.reimb, otherIn: t.income_other,
+      spend: spend, invest: -t.invest, own: spend - t.reimb, net: t.salary + t.income_other + t.reimb - spend, closing: closing, opening: opening };
+  }
+
+  function stRender() {
+    $('st-month').value = stm.month;
+    $('st-table').innerHTML = '<thead><tr><th>日付</th><th>内容</th><th class="n">金額（入金 +／出金 −）</th><th>分類</th><th class="n">残高</th><th></th></tr></thead><tbody>' +
+      stm.rows.map(function (r, i) {
+        return '<tr data-i="' + i + '"' + (stm.example ? ' class="ex"' : '') + '><td><input id="st-d-' + i + '" data-f="date" type="date" value="' + esc(r.date) + '" aria-label="日付"></td>' +
+          '<td><input id="st-x-' + i + '" data-f="desc" value="' + esc(r.desc) + '" aria-label="内容"></td>' +
+          '<td><input id="st-a-' + i + '" data-f="amount" inputmode="numeric" value="' + esc(r.amount === '' ? '' : Number(r.amount).toLocaleString('ja-JP')) + '" aria-label="金額"></td>' +
+          '<td><select id="st-c-' + i + '" data-f="cat" aria-label="分類">' + CATS.map(function (c) { return '<option value="' + c[0] + '"' + (c[0] === r.cat ? ' selected' : '') + '>' + c[1] + '</option>'; }).join('') + '</select></td>' +
+          '<td class="n names">' + (r.balance != null && r.balance !== '' ? Number(r.balance).toLocaleString('ja-JP') : '—') + '</td>' +
+          '<td><button type="button" class="ghost" data-del aria-label="この行を削除">削除</button></td></tr>';
+      }).join('') + '</tbody>';
+    stRenderSum();
+  }
+  function stRenderSum() {
+    var x = stSummary();
+    function tile(k, val, sub, cls) { return '<div class="tile"><div class="k">' + esc(k) + '</div><div class="v ' + (cls || '') + '">' + val + '</div><div class="s">' + sub + '</div></div>'; }
+    $('st-sum').innerHTML =
+      tile('給与（手取り）', man(x.salary), x.otherIn ? 'その他の入金 ' + man(x.otherIn) : stm.month + ' の入金') +
+      tile('支出の合計', man(x.spend), 'カード・現金・その他（立替を含む）') +
+      tile('立替の精算（戻り）', man(x.reimb), '自分の生活費の推定 ' + man(x.own)) +
+      tile('この月の収支', (x.net >= 0 ? '+' : '') + man(x.net), '投資への入金 ' + man(x.invest) + ' は支出に含めない', x.net >= 0 ? 'up' : 'down');
+    var notes = [];
+    if (stm.example) notes.push('いま表示しているのは書式の例（架空の数字）です。');
+    if (x.nOther) notes.push(x.nOther + ' 件は対象の月（' + stm.month + '）以外の日付なので集計に入れていません。');
+    notes.push('立替の精算額は「その月に戻った分」で、カードで払った立替の額とずれることがあります（カードの引き落としは前の月の利用分）。数か月続けて記録すると、ずれはならされます。');
+    if (x.closing != null) notes.push('月末の残高: ' + man(x.closing));
+    $('st-sumNote').textContent = notes.join(' ');
+  }
+
+  var stSample = null, stCtl = null, stFiles = [], stMax = 5;
+  function stSetStatus(t) { $('st-status').textContent = t; }
+  (async function () {
+    try {
+      stSample = window.claude && window.claude.use ? await window.claude.use('sample') : null;
+      var caps = stSample ? await stSample.limits().catch(function () { return null; }) : null;
+      if (!stSample || !caps || !caps.images) {
+        stSample = null;
+        $('st-imgNote').textContent = 'この画面では画像の読み取りが使えません（Claude のアプリやブラウザでこのページを開くと使えます）。下の表に手で入力できます。';
+        $('st-files').disabled = true;
+      } else {
+        $('st-files').accept = caps.images.mediaTypes.join(',');
+        stMax = caps.images.maxCount || 5;
+      }
+    } catch (e) { stSample = null; }
+    $('st-read').disabled = !stSample || !stFiles.length;
+  })();
+
+  $('st-files').addEventListener('change', function (e) {
+    stFiles = Array.prototype.slice.call(e.target.files || []);
+    var max = stMax;
+    $('st-thumbs').innerHTML = '';
+    stFiles.forEach(function (f) { var img = document.createElement('img'); img.alt = '選んだ明細の画像'; img.src = URL.createObjectURL(f); $('st-thumbs').appendChild(img); });
+    $('st-read').disabled = !stSample || !stFiles.length;
+    stSetStatus(stFiles.length ? stFiles.length + ' 枚を選びました' + (stFiles.length > max ? '（一度に読めるのは ' + max + ' 枚まで。最初の ' + max + ' 枚を読みます）' : '') : '');
+  });
+
+  var ERR = {
+    not_granted: 'Claude の利用が許可されませんでした。手で入力してください。', sampling_disabled: 'このアカウントでは使えません。手で入力してください。',
+    rate_limited: '利用が集中しています。少し時間をおいてから、もう一度押してください。', image_rejected: 'この画像は読めませんでした。別の画像を選んでください。',
+    invalid_json: 'うまく読み取れませんでした。もう一度押すか、画像を 1 枚ずつにしてください。', refused: '読み取りを断られました。別の画像にしてください。',
+    session_expired: 'もう一度サインインしてください。', images_unavailable: 'この画面では画像を送れません。手で入力してください。'
+  };
+  $('st-read').addEventListener('click', async function () {
+    if (!stSample || !stFiles.length) return;
+    var files = stFiles.slice(0, stMax);
+    stCtl = new AbortController();
+    $('st-read').disabled = true; $('st-stop').hidden = false; stSetStatus('読み取り中…（30 秒〜1 分ほどかかります）');
+    var prompt = 'これは日本の銀行アプリの入出金明細のスクリーンショットです（' + files.length + ' 枚）。写っている取引をすべて読み取ってください。\n' +
+      '- 画面上部の「お支払可能金額」などの見出しの数字は取引ではないので含めない\n' +
+      '- 同じ取引が複数の画像に写っていたら 1 回だけ\n' +
+      '- 日付が「26.09.28」のように 2 桁の年なら 2026-09-28\n' +
+      '- 金額は円の整数。入金（＋、青）は正、出金（−、赤）は負\n' +
+      '- cat は次のどれか: salary（給料・賞与の振込）, reimb（勤務先などからの給料以外の振込。経費の立替精算の可能性が高い）, income_other（その他の入金）, card（クレジットカード・デビット・電子マネーの引き落とし）, cash（ATM やキャッシュカードでの現金の引き出し）, spend_other（その他の支払い・振込）, invest（証券会社への振込）, transfer_other（自分の別口座への移動）\n' +
+      '返答は次の形の JSON だけ: {"rows":[{"date":"YYYY-MM-DD","desc":"画面の表記のまま","amount":-518586,"balance":1762321,"cat":"card"}],"notes":"読めなかった点など（なければ空文字）"}';
+    try {
+      var res = await stSample.json(prompt, { images: files, signal: stCtl.signal });
+      var rows = (res && Array.isArray(res.rows)) ? res.rows : [];
+      var clean = rows.map(function (r) {
+        var a = num(r.amount);
+        var cat = CATS.some(function (c) { return c[0] === r.cat; }) ? r.cat : guessCat(r.desc, a);
+        return { date: String(r.date || '').slice(0, 10), desc: String(r.desc || ''), amount: a,
+          balance: r.balance == null || r.balance === '' ? null : num(r.balance), cat: cat };
+      }).filter(function (r) { return r.date && r.amount; });
+      if (!clean.length) { stSetStatus('取引が見つかりませんでした。明細の一覧が写っている画像か確認してください。'); return; }
+      if (stm.example) { stm.rows = []; stm.example = false; }
+      var seen = {}; stm.rows.forEach(function (r) { seen[r.date + '|' + r.amount + '|' + r.desc] = 1; });
+      var added = 0;
+      clean.forEach(function (r) { var k = r.date + '|' + r.amount + '|' + r.desc; if (!seen[k]) { seen[k] = 1; stm.rows.push(r); added++; } });
+      stm.rows.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+      var months = {}; clean.forEach(function (r) { var mm = r.date.slice(0, 7); months[mm] = (months[mm] || 0) + 1; });
+      var top = Object.keys(months).sort(function (a, b) { return months[b] - months[a]; })[0];
+      if (top) stm.month = top;
+      stSave(); stRender();
+      stSetStatus(added + ' 件を読み取りました。分類と金額を確認してください。' + (res.notes ? '（' + res.notes + '）' : ''));
+    } catch (e) {
+      if (e && e.code === 'cancelled') stSetStatus('止めました');
+      else stSetStatus(ERR[e && e.code] || '読み取りに失敗しました。もう一度押してください。');
+      if (e && (e.code === 'not_granted' || e.code === 'sampling_disabled' || e.code === 'images_unavailable')) { stSample = null; }
+    } finally {
+      $('st-stop').hidden = true; $('st-read').disabled = !stSample || !stFiles.length;
+    }
+  });
+  $('st-stop').addEventListener('click', function () { if (stCtl) stCtl.abort(); });
+
+  $('st-month').addEventListener('change', function (e) { stm.month = e.target.value || stm.month; stSave(); stRenderSum(); });
+  $('st-table').addEventListener('input', function (e) {
+    var tr = e.target.closest('tr'); if (!tr || !e.target.dataset.f) return;
+    var r = stm.rows[Number(tr.dataset.i)]; if (!r) return;
+    var f = e.target.dataset.f;
+    r[f] = f === 'amount' ? num(e.target.value) : e.target.value;
+    if (stm.example) { stm.example = false; Array.prototype.forEach.call($('st-table').querySelectorAll('tr.ex'), function (x) { x.classList.remove('ex'); }); }
+    stSave(); stRenderSum();
+  });
+  $('st-table').addEventListener('change', function (e) { if (e.target.dataset.f === 'cat') { stSave(); stRenderSum(); } });
+  $('st-table').addEventListener('click', function (e) {
+    if (!e.target.hasAttribute || !e.target.hasAttribute('data-del')) return;
+    stm.rows.splice(Number(e.target.closest('tr').dataset.i), 1); stSave(); stRender();
+  });
+  $('st-addRow').addEventListener('click', function () {
+    if (stm.example) { stm.rows = []; stm.example = false; }
+    stm.rows.push({ date: stm.month + '-01', desc: '', amount: '', balance: null, cat: 'spend_other' });
+    stSave(); stRender();
+    var ins = $('st-table').querySelectorAll('tbody tr'); ins[ins.length - 1].querySelector('[data-f=desc]').focus();
+  });
+  var clearArmed = false;
+  $('st-clear').addEventListener('click', function () {
+    if (!clearArmed) { clearArmed = true; $('st-clear').textContent = 'もう一度押すと消えます'; setTimeout(function () { clearArmed = false; $('st-clear').textContent = 'この明細を消す'; }, 4000); return; }
+    clearArmed = false; $('st-clear').textContent = 'この明細を消す';
+    stm = { month: stm.month, rows: [], example: false }; stSave(); stRender(); stSetStatus('消しました');
+  });
+  $('st-apply').addEventListener('click', function () {
+    if (stm.example) { stSetStatus('いまは例の数字です。画像を読み取るか、手で入力してから反映してください。'); return; }
+    var x = stSummary();
+    if (!x.n) { stSetStatus(stm.month + ' の取引がありません'); return; }
+    function setF(k, v) { st.input[k] = Math.round(v).toLocaleString('ja-JP'); $('pf-' + k).value = st.input[k]; }
+    setF('income', x.salary + x.otherIn);
+    setF('spend', x.spend);
+    setF('advance', x.reimb);
+    if (x.closing != null) setF('cash', x.closing);
+    if (x.invest) setF('invested', num(st.input.invested) + x.invest);
+    var rec = { month: stm.month }; FIELDS.forEach(function (k) { rec[k] = st.input[k]; });
+    st.hist = st.hist.filter(function (h) { return h.month !== stm.month; }); st.hist.push(rec);
+    st.hist.sort(function (a, b) { return a.month < b.month ? -1 : 1; });
+    save(); render();
+    stSetStatus(stm.month + ' の数字を反映して記録しました。下の「次の一手」を確認してください。');
+    $('h-now').scrollIntoView({ block: 'start', behavior: 'smooth' });
+  });
+
+  stRender();
   render();
 })();
 </script>
