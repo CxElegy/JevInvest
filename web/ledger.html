@@ -231,8 +231,6 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
 .cols .c .cb.neg { background: var(--fl-exit); border-radius: 0 0 4px 4px; }
 .cols .c .m { position: absolute; bottom: -20px; font-size: 11px; color: var(--muted); font-family: var(--f-num); }
 .cols .c .lv { position: absolute; font-size: 11px; font-family: var(--f-num); color: var(--fg); white-space: nowrap; transform: translateY(-100%); padding-bottom: 2px; }
-.thumbs { display: flex; gap: 8px; flex-wrap: wrap; }
-.thumbs img { height: 96px; width: auto; border-radius: 6px; border: 1px solid var(--line); }
 #st-table input, #st-table select { padding: 6px; font-size: 13px; }
 #st-table td:nth-child(1) input { min-width: 8.5em; }
 #st-table td:nth-child(2) input { min-width: 12em; }
@@ -257,22 +255,17 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
 
     <section aria-labelledby="h-stmt">
       <h2 id="h-stmt">明細から月の数字を作る</h2>
-      <p class="sub">銀行アプリの入出金明細のスクリーンショットを入れると、取引を読み取って「給与」「立替の精算」「カードの支払い」などに分け、その月の数字を計算します。</p>
+      <p class="sub">入出金明細の取引を手で入れるか、テキストで貼ると、「給与」「立替の精算」「カードの支払い」などに分け、その月の数字を計算します。</p>
       <div class="grid2">
         <div class="field"><label for="st-month">対象の月</label><input id="st-month" type="month"></div>
-        <div class="field" id="st-imgField"><label for="st-files">明細の画像（複数可）</label><input id="st-files" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple></div>
       </div>
-      <div id="st-thumbs" class="thumbs"></div>
-      <p id="st-imgNote" class="note">「画像から読み取る」を押すと、選んだ画像を Claude に送って文字を読み取ります。あなたの Claude の利用枠を使い、最初の 1 回は許可の確認が出ます。画像はこのページには保存しません。</p>
       <div class="row">
-        <button type="button" id="st-read" class="primary" disabled>画像から読み取る</button>
-        <button type="button" id="st-stop" hidden>止める</button>
         <button type="button" id="st-addRow">手で行を追加</button>
         <span id="st-status" class="note" role="status"></span>
       </div>
       <details class="limits" id="st-pasteBox">
-        <summary>テキストから取り込む（画像の読み取りが使えない端末向け）</summary>
-        <p class="note">明細のスクリーンショットを Claude Code のチャットに貼って「取り込み用にして」と送ると、取り込み用のテキストが返ってきます。それをここに貼って「取り込む」を押してください。1 行に 1 取引の「日付, 内容, 金額, 残高」の形でも取り込めます（例: 2026-09-25, 給料振込, 423086, 2280907）。</p>
+        <summary>テキストから取り込む</summary>
+        <p class="note">1 行に 1 取引で「日付, 内容, 金額, 残高」の形で貼って「取り込む」を押してください。1 行に 1 取引の「日付, 内容, 金額, 残高」の形でも取り込めます（例: 2026-09-25, 給料振込, 423086, 2280907）。</p>
         <textarea id="st-paste" placeholder="ここに貼り付け" aria-label="取り込むテキスト"></textarea>
         <div class="row"><button type="button" id="st-pasteGo" class="primary">取り込む</button></div>
       </details>
@@ -1471,68 +1464,9 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
     $('st-sumNote').textContent = notes.join(' ');
   }
 
-  var stSample = null, stCtl = null, stFiles = [], stMax = 5;
   function stSetStatus(t) { $('st-status').textContent = t; }
-  (async function () {
-    try {
-      stSample = window.claude && window.claude.use ? await window.claude.use('sample') : null;
-      var caps = stSample ? await stSample.limits().catch(function () { return null; }) : null;
-      if (!stSample || !caps || !caps.images) {
-        stSample = null;
-        $('st-imgNote').textContent = 'この端末の画面では、ページから画像を読み取れません（スマホのブラウザなど）。スクリーンショットを Claude Code のチャットに貼ると取り込み用のテキストを返すので、下の「テキストから取り込む」に貼ってください。';
-        $('st-imgField').hidden = true; $('st-read').hidden = true;
-        $('st-pasteBox').open = true;
-      } else {
-        $('st-files').accept = caps.images.mediaTypes.join(',');
-        stMax = caps.images.maxCount || 5;
-      }
-    } catch (e) { stSample = null; }
-    $('st-read').disabled = !stSample || !stFiles.length;
-  })();
 
-  $('st-files').addEventListener('change', function (e) {
-    stFiles = Array.prototype.slice.call(e.target.files || []);
-    var max = stMax;
-    $('st-thumbs').innerHTML = '';
-    stFiles.forEach(function (f) { var img = document.createElement('img'); img.alt = '選んだ明細の画像'; img.src = URL.createObjectURL(f); $('st-thumbs').appendChild(img); });
-    $('st-read').disabled = !stSample || !stFiles.length;
-    stSetStatus(stFiles.length ? stFiles.length + ' 枚を選びました' + (stFiles.length > max ? '（一度に読めるのは ' + max + ' 枚まで。最初の ' + max + ' 枚を読みます）' : '') : '');
-  });
-
-  var ERR = {
-    not_granted: 'Claude の利用が許可されませんでした。手で入力してください。', sampling_disabled: 'このアカウントでは使えません。手で入力してください。',
-    rate_limited: '利用が集中しています。少し時間をおいてから、もう一度押してください。', image_rejected: 'この画像は読めませんでした。別の画像を選んでください。',
-    invalid_json: 'うまく読み取れませんでした。もう一度押すか、画像を 1 枚ずつにしてください。', refused: '読み取りを断られました。別の画像にしてください。',
-    session_expired: 'もう一度サインインしてください。', images_unavailable: 'この画面では画像を送れません。手で入力してください。'
-  };
-  $('st-read').addEventListener('click', async function () {
-    if (!stSample || !stFiles.length) return;
-    var files = stFiles.slice(0, stMax);
-    stCtl = new AbortController();
-    $('st-read').disabled = true; $('st-stop').hidden = false; stSetStatus('読み取り中…（30 秒〜1 分ほどかかります）');
-    var prompt = 'これは日本の銀行アプリの入出金明細のスクリーンショットです（' + files.length + ' 枚）。写っている取引をすべて読み取ってください。\n' +
-      '- 画面上部の「お支払可能金額」などの見出しの数字は取引ではないので含めない\n' +
-      '- 同じ取引が複数の画像に写っていたら 1 回だけ\n' +
-      '- 日付が「26.09.28」のように 2 桁の年なら 2026-09-28\n' +
-      '- 金額は円の整数。入金（＋、青）は正、出金（−、赤）は負\n' +
-      '- cat は次のどれか: salary（給料・賞与の振込）, reimb（勤務先などからの給料以外の振込。経費の立替精算の可能性が高い）, income_other（その他の入金）, card（クレジットカード・デビット・電子マネーの引き落とし）, cash（ATM やキャッシュカードでの現金の引き出し）, spend_other（その他の支払い・振込）, invest（証券会社への振込）, transfer_other（自分の別口座への移動）\n' +
-      '返答は次の形の JSON だけ: {"rows":[{"date":"YYYY-MM-DD","desc":"画面の表記のまま","amount":-518586,"balance":1762321,"cat":"card"}],"notes":"読めなかった点など（なければ空文字）"}';
-    try {
-      var res = await stSample.json(prompt, { images: files, signal: stCtl.signal });
-      var added = stMerge((res && Array.isArray(res.rows)) ? res.rows : []);
-      if (added == null) { stSetStatus('取引が見つかりませんでした。明細の一覧が写っている画像か確認してください。'); return; }
-      stSetStatus(added + ' 件を読み取りました。分類と金額を確認してください。' + (res.notes ? '（' + res.notes + '）' : ''));
-    } catch (e) {
-      if (e && e.code === 'cancelled') stSetStatus('止めました');
-      else stSetStatus(ERR[e && e.code] || '読み取りに失敗しました。もう一度押してください。');
-      if (e && (e.code === 'not_granted' || e.code === 'sampling_disabled' || e.code === 'images_unavailable')) { stSample = null; }
-    } finally {
-      $('st-stop').hidden = true; $('st-read').disabled = !stSample || !stFiles.length;
-    }
-  });
-  $('st-stop').addEventListener('click', function () { if (stCtl) stCtl.abort(); });
-
-  // 読み取り結果（画像・テキスト共通）を表に足す。足した件数、取引がなければ null
+  // 取り込んだ取引を表に足す。足した件数、取引がなければ null
   function normDate(d) {
     var m = String(d || '').trim().match(/^(\d{2,4})[.\/\-年](\d{1,2})[.\/\-月](\d{1,2})/);
     if (!m) return '';
@@ -1605,7 +1539,7 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
     stm = { month: stm.month, rows: [], example: false }; stSave(); stRender(); stSetStatus('消しました');
   });
   $('st-apply').addEventListener('click', function () {
-    if (stm.example) { stSetStatus('いまは例の数字です。画像を読み取るか、手で入力してから反映してください。'); return; }
+    if (stm.example) { stSetStatus('いまは例の数字です。手で入力するか、テキストから取り込んでから反映してください。'); return; }
     var x = stSummary();
     if (!x.n) { stSetStatus(stm.month + ' の取引がありません'); return; }
     function setF(k, v) { st.input[k] = String(Math.round(v / 1000) / 10); $('pf-' + k).value = st.input[k]; }  // 円 → 万円
