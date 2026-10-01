@@ -1556,6 +1556,20 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
     $('h-now').scrollIntoView({ block: 'start', behavior: 'smooth' });
   });
 
+  // 公開時に seed.json（リポジトリには入れない）が添えられていれば、その明細を一度だけ取り込んで反映する
+  fetch('seed.json').then(function (r) { return r.ok ? r.json() : null; }).then(function (seed) {
+    if (!seed || !seed.id || !Array.isArray(seed.rows)) return;
+    var key = 'jev-seed-done', done = '';
+    try { done = localStorage.getItem(key) || ''; } catch (e) { /* 保存できない環境では毎回取り込む */ }
+    if (done === seed.id) return;
+    if (seed.month) stm.month = seed.month;
+    var added = stMerge(seed.rows);
+    if (added == null) return;
+    if (seed.month) { stm.month = seed.month; stSave(); stRender(); }
+    $('st-apply').click();
+    try { localStorage.setItem(key, seed.id); } catch (e) { /* 次回も取り込むだけ */ }
+  }).catch(function () { /* seed.json がなければ何もしない */ });
+
   stRender();
   render();
 })();

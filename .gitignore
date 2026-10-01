@@ -14,3 +14,7 @@ __pycache__/
 *.py[cod]
 .venv/
 venv/
+
+# 公開時だけ添える個人の明細
+web/seed.json
+seed.json
