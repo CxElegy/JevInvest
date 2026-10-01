@@ -270,6 +270,12 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
         <button type="button" id="st-addRow">手で行を追加</button>
         <span id="st-status" class="note" role="status"></span>
       </div>
+      <details class="limits" id="st-pasteBox">
+        <summary>テキストから取り込む（画像の読み取りが使えない端末向け）</summary>
+        <p class="note">明細のスクリーンショットを Claude Code のチャットに貼って「取り込み用にして」と送ると、取り込み用のテキストが返ってきます。それをここに貼って「取り込む」を押してください。1 行に 1 取引の「日付, 内容, 金額, 残高」の形でも取り込めます（例: 2026-09-25, 給料振込, 423086, 2280907）。</p>
+        <textarea id="st-paste" placeholder="ここに貼り付け" aria-label="取り込むテキスト"></textarea>
+        <div class="row"><button type="button" id="st-pasteGo" class="primary">取り込む</button></div>
+      </details>
       <div class="tablewrap"><table id="st-table"></table></div>
       <div id="st-sum" class="tiles"></div>
       <p id="st-sumNote" class="note"></p>
@@ -282,16 +288,16 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
     <section aria-labelledby="h-in">
       <h2 id="h-in">いまの数字</h2>
       <form id="planForm" class="grid2" autocomplete="off">
-        <div class="field"><label for="pf-cash">現金・預金（円）</label><input id="pf-cash" data-k="cash" class="num" inputmode="numeric"></div>
-        <div class="field"><label for="pf-income">毎月の手取り（円）</label><input id="pf-income" data-k="income" class="num" inputmode="numeric"></div>
-        <div class="field"><label for="pf-spend">毎月の生活費（円・立替込み）</label><input id="pf-spend" data-k="spend" class="num" inputmode="numeric"></div>
-        <div class="field"><label for="pf-advance">そのうち立替（円・あとで精算されて戻る分）</label><input id="pf-advance" data-k="advance" class="num" inputmode="numeric"></div>
+        <div class="field"><label for="pf-cash">現金・預金（万円）</label><input id="pf-cash" data-k="cash" class="num" inputmode="decimal"></div>
+        <div class="field"><label for="pf-income">毎月の手取り（万円）</label><input id="pf-income" data-k="income" class="num" inputmode="decimal"></div>
+        <div class="field"><label for="pf-spend">毎月の生活費（万円・立替込み）</label><input id="pf-spend" data-k="spend" class="num" inputmode="decimal"></div>
+        <div class="field"><label for="pf-advance">そのうち立替（万円・あとで精算されて戻る分）</label><input id="pf-advance" data-k="advance" class="num" inputmode="decimal"></div>
         <div class="field"><label for="pf-lag">立替が戻るまで（か月）</label><input id="pf-lag" data-k="lag" class="num" inputmode="decimal"></div>
-        <div class="field"><label for="pf-bonus">賞与の手取り（円・年合計）</label><input id="pf-bonus" data-k="bonus" class="num" inputmode="numeric"></div>
-        <div class="field"><label for="pf-debt">リボ・カードローンなどの残高（円）</label><input id="pf-debt" data-k="debt" class="num" inputmode="numeric"></div>
+        <div class="field"><label for="pf-bonus">賞与の手取り（万円・年合計）</label><input id="pf-bonus" data-k="bonus" class="num" inputmode="decimal"></div>
+        <div class="field"><label for="pf-debt">リボ・カードローンなどの残高（万円）</label><input id="pf-debt" data-k="debt" class="num" inputmode="decimal"></div>
         <div class="field"><label for="pf-rate">その金利（年 %）</label><input id="pf-rate" data-k="rate" class="num" inputmode="decimal"></div>
-        <div class="field"><label for="pf-invested">すでに投資している額（円）</label><input id="pf-invested" data-k="invested" class="num" inputmode="numeric"></div>
-        <div class="field"><label for="pf-nisa">今年すでに使った NISA 枠（円）</label><input id="pf-nisa" data-k="nisa" class="num" inputmode="numeric"></div>
+        <div class="field"><label for="pf-invested">すでに投資している額（万円）</label><input id="pf-invested" data-k="invested" class="num" inputmode="decimal"></div>
+        <div class="field"><label for="pf-nisa">今年すでに使った NISA 枠（万円）</label><input id="pf-nisa" data-k="nisa" class="num" inputmode="decimal"></div>
         <div class="field"><label for="pf-months">生活防衛資金の目安（生活費の何か月分）</label><input id="pf-months" data-k="months" class="num" inputmode="decimal"></div>
       </form>
       <p class="note">生活費は、カードの引き落としなども含めた毎月の支出の合計（立替込み）を入れます。立替は「会社の経費などを立て替えて、あとで精算されるお金」で、生活費のうちの金額を入れてください。</p>
@@ -323,7 +329,7 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
   </div>
 
   <div id="viewLedger" class="view" role="tabpanel" aria-labelledby="tabLedger">
-  <p class="sub">証券会社のアプリに表示されている評価額を、そのまま円で入力します。</p>
+  <p class="sub">証券会社のアプリに表示されている評価額を、万円単位で入力します（例: 123.4）。</p>
     <p class="privacy"><b>入力した金額は、このブラウザの中にだけ保存されます。</b>送信はされず、Claude にも届きません。Claude に相談したいときは、下の「Claude に貼る用（比率のみ）」をコピーして送ります。</p>
 
   <div id="sampleBanner" class="sample" hidden>
@@ -342,7 +348,7 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
     <p class="sub">同じ銘柄を複数の口座で持っている場合は、口座ごとに 1 行ずつ入力します。上限の判定では銘柄名で合算するので、銘柄名は表記をそろえてください。1 銘柄の上限は、米国個別株・日本株・その他だけに当てます。</p>
     <div class="tablewrap">
       <table id="pos">
-        <thead><tr><th>銘柄名</th><th>資産クラス</th><th>口座</th><th class="n">評価額（円）</th><th class="n">取得原価（円）</th><th></th></tr></thead>
+        <thead><tr><th>銘柄名</th><th>資産クラス</th><th>口座</th><th class="n">評価額（万円）</th><th class="n">取得原価（万円）</th><th></th></tr></thead>
         <tbody id="posBody"></tbody>
       </table>
     </div>
@@ -518,28 +524,29 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function num(v) { var n = parseFloat(String(v == null ? '' : v).replace(/[,，\s円¥]/g, '')); return isFinite(n) ? n : 0; }
-  function yen(n) { return Math.round(n).toLocaleString('ja-JP'); }
+  // 台帳の金額は万円単位で持つ
+  function yen(n) { return (Math.round(n * 10) / 10).toLocaleString('ja-JP', { maximumFractionDigits: 1 }); }
   function pct(n, d) { return n.toFixed(d == null ? 1 : d) + '%'; }
   function spct(n, d) { return (n >= 0 ? '+' : '') + n.toFixed(d == null ? 1 : d) + '%'; }
   function sgn(n) { return (n >= 0 ? '+' : '−') + yen(Math.abs(n)); }
 
   function sampleState() {
     return {
-      version: 1, sample: true, hideNames: false,
+      version: 2, sample: true, hideNames: false,
       positions: [
-        { id: newId(), name: '例 現金', cls: 'cash', account: '特定口座', value: '1,000,000', cost: '1,000,000' },
-        { id: newId(), name: '例 全世界株ファンド', cls: 'developed_equity', account: 'NISA', value: '2,400,000', cost: '2,000,000' },
-        { id: newId(), name: '例 米国株 X', cls: 'us_equity', account: '特定口座', value: '900,000', cost: '700,000' },
-        { id: newId(), name: '例 米国株 X', cls: 'us_equity', account: 'NISA', value: '600,000', cost: '500,000' },
-        { id: newId(), name: '例 日本株 Y', cls: 'jp_equity', account: '特定口座', value: '300,000', cost: '320,000' },
-        { id: newId(), name: '例 債券ファンド', cls: 'bond', account: 'NISA', value: '800,000', cost: '820,000' }
+        { id: newId(), name: '例 現金', cls: 'cash', account: '特定口座', value: '100', cost: '100' },
+        { id: newId(), name: '例 全世界株ファンド', cls: 'developed_equity', account: 'NISA', value: '240', cost: '200' },
+        { id: newId(), name: '例 米国株 X', cls: 'us_equity', account: '特定口座', value: '90', cost: '70' },
+        { id: newId(), name: '例 米国株 X', cls: 'us_equity', account: 'NISA', value: '60', cost: '50' },
+        { id: newId(), name: '例 日本株 Y', cls: 'jp_equity', account: '特定口座', value: '30', cost: '32' },
+        { id: newId(), name: '例 債券ファンド', cls: 'bond', account: 'NISA', value: '80', cost: '82' }
       ],
       targets: { cash: 5, developed_equity: 55, us_equity: 20, jp_equity: 5, bond: 15, other: 0 },
       guards: { maxSingle: 20, minCash: 5 }
     };
   }
   function emptyState() {
-    return { version: 1, sample: false, hideNames: false, positions: [], targets: { cash: 5, developed_equity: 55, us_equity: 20, jp_equity: 5, bond: 15, other: 0 }, guards: { maxSingle: 20, minCash: 5 } };
+    return { version: 2, sample: false, hideNames: false, positions: [], targets: { cash: 5, developed_equity: 55, us_equity: 20, jp_equity: 5, bond: 15, other: 0 }, guards: { maxSingle: 20, minCash: 5 } };
   }
 
   var state, storageOk = true;
@@ -547,12 +554,24 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
   function load() {
     try {
       var raw = localStorage.getItem(KEY);
-      if (raw) { var s = JSON.parse(raw); if (valid(s)) return s; }
+      if (raw) { var s = JSON.parse(raw); if (valid(s)) return toMan(s); }
     } catch (e) { storageOk = false; }
     return sampleState();
   }
+  // 以前（version 1）は円で保存していた。万円に換算して version 2 にする。
+  function toMan(s) {
+    if (s.version === 1) {
+      s.positions.forEach(function (p) {
+        ['value', 'cost'].forEach(function (k) {
+          if (String(p[k] || '').trim() !== '') p[k] = String(Math.round(num(p[k]) / 1000) / 10);
+        });
+      });
+      s.version = 2;
+    }
+    return s;
+  }
   function valid(s) {
-    return s && s.version === 1 && Array.isArray(s.positions) && s.targets && s.guards &&
+    return s && (s.version === 1 || s.version === 2) && Array.isArray(s.positions) && s.targets && s.guards &&
       s.positions.every(function (p) { return p && typeof p.id === 'string'; });
   }
   function save() {
@@ -616,7 +635,7 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
     $('alerts').innerHTML = r.alerts.length ? r.alerts.map(function (a) { return '<li class="' + a[0] + '"><span class="chip">' + esc(a[1]) + '</span><span>' + esc(a[2]) + '</span></li>'; }).join('') :
       '<li class="info"><span class="chip">問題なし</span><span>設定した上限と下限は、すべて満たしています。</span></li>';
     var tiles = [];
-    tiles.push('<div class="tile"><div class="k">評価額</div><div class="v">' + yen(r.total) + '<span class="s"> 円</span></div><div class="s">' + r.nRows + ' 行</div></div>');
+    tiles.push('<div class="tile"><div class="k">評価額</div><div class="v">' + yen(r.total) + '<span class="s"> 万円</span></div><div class="s">' + r.nRows + ' 行</div></div>');
     if (r.pnlPct != null) tiles.push('<div class="tile"><div class="k">損益</div><div class="v ' + (r.pnl >= 0 ? 'up' : 'down') + '">' + sgn(r.pnl) + '</div><div class="s">' + spct(r.pnlPct, 2) + '（取得原価のある ' + r.nWithCost + ' 行）</div></div>');
     if (r.total) {
       tiles.push('<div class="tile"><div class="k">実質銘柄数</div><div class="v">' + r.eff.toFixed(2) + '</div><div class="s">実 ' + r.syms.length + ' 銘柄 / 指数 ' + r.hhi.toFixed(3) + '</div></div>');
@@ -625,7 +644,7 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
     $('tiles').innerHTML = tiles.join('');
 
     var maxA = Math.max.apply(null, r.rebalance.map(function (x) { return Math.max(x.curPct, x.tgt); }).concat([10])) * 1.1;
-    $('allocTable').innerHTML = '<thead><tr><th>資産クラス</th><th class="n">現在</th><th class="n">目標</th><th class="n">差</th><th style="width:30%">現在と目標</th><th class="n">調整額（円）</th></tr></thead><tbody>' +
+    $('allocTable').innerHTML = '<thead><tr><th>資産クラス</th><th class="n">現在</th><th class="n">目標</th><th class="n">差</th><th style="width:30%">現在と目標</th><th class="n">調整額（万円）</th></tr></thead><tbody>' +
       (r.rebalance.length ? r.rebalance.map(function (x) {
         return '<tr><td>' + esc(x.label) + '</td><td class="n">' + pct(x.curPct) + '</td><td class="n">' + pct(x.tgt) + '</td><td class="n ' + (Math.abs(x.gap) < 0.05 ? '' : (x.gap > 0 ? 'up' : 'down')) + '">' + (x.gap >= 0 ? '+' : '−') + Math.abs(x.gap).toFixed(1) + 'pp</td><td>' + barCell(x.curPct, maxA, x.tgt, false) + '</td><td class="n">' + (r.total ? sgn(x.adj) : '—') + '</td></tr>';
       }).join('') : '<tr><td colspan="6" class="note">入力するとここに表示されます。</td></tr>') + '</tbody>';
@@ -638,7 +657,7 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
       }).join('') : '<tr><td colspan="5" class="note">入力するとここに表示されます。</td></tr>') + '</tbody>';
 
     var accts = Object.keys(r.byAcct).sort(function (a, b) { return r.byAcct[b] - r.byAcct[a]; });
-    $('acctTable').innerHTML = '<thead><tr><th>口座</th><th class="n">構成比</th><th class="n">評価額（円）</th></tr></thead><tbody>' +
+    $('acctTable').innerHTML = '<thead><tr><th>口座</th><th class="n">構成比</th><th class="n">評価額（万円）</th></tr></thead><tbody>' +
       (accts.length ? accts.map(function (a) { return '<tr><td>' + esc(a) + '</td><td class="n">' + pct(r.byAcct[a] / r.total * 100) + '</td><td class="n">' + yen(r.byAcct[a]) + '</td></tr>'; }).join('') : '<tr><td colspan="3" class="note">入力するとここに表示されます。</td></tr>') + '</tbody>';
 
     $('targetSum').textContent = '目標の合計 ' + r.tsum + '%' + (Math.abs(r.tsum - 100) > 0.01 ? '（100% になるよう直してください）' : '');
@@ -685,8 +704,8 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
       '<td><input id="n-' + p.id + '" data-f="name" value="' + esc(p.name) + '" placeholder="銘柄名" aria-label="銘柄名"></td>' +
       '<td><select id="c-' + p.id + '" data-f="cls" aria-label="資産クラス">' + CLASSES.map(function (c) { return '<option value="' + c[0] + '"' + (c[0] === p.cls ? ' selected' : '') + '>' + c[1] + '</option>'; }).join('') + '</select></td>' +
       '<td><input id="a-' + p.id + '" data-f="account" list="accounts" value="' + esc(p.account) + '" placeholder="口座" aria-label="口座"></td>' +
-      '<td><input id="v-' + p.id + '" data-f="value" data-num class="num" inputmode="numeric" value="' + esc(p.value) + '" placeholder="0" aria-label="評価額（円）"></td>' +
-      '<td><input id="k-' + p.id + '" data-f="cost" data-num class="num" inputmode="numeric" value="' + esc(p.cost) + '" placeholder="0" aria-label="取得原価（円）"></td>' +
+      '<td><input id="v-' + p.id + '" data-f="value" data-num class="num" inputmode="decimal" value="' + esc(p.value) + '" placeholder="0" aria-label="評価額（万円）"></td>' +
+      '<td><input id="k-' + p.id + '" data-f="cost" data-num class="num" inputmode="decimal" value="' + esc(p.cost) + '" placeholder="0" aria-label="取得原価（万円）"></td>' +
       '<td><button type="button" class="ghost" data-del aria-label="この行を削除">削除</button></td></tr>';
   }
   function renderPositions() {
@@ -753,7 +772,7 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
     try {
       var s = JSON.parse($('restore').value);
       if (!valid(s)) throw new Error('形式が違います');
-      state = s; state.sample = false; $('restore').value = ''; renderAll(); toast('復元しました');
+      state = toMan(s); state.sample = false; $('restore').value = ''; renderAll(); toast('復元しました');
     } catch (err) { toast('復元できませんでした。バックアップのテキスト全体を貼り付けてください'); }
   });
   var wipeArmed = false;
@@ -1138,10 +1157,12 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
   var FIELDS = ['cash', 'income', 'spend', 'advance', 'lag', 'bonus', 'debt', 'rate', 'invested', 'nisa', 'months'];
   var DEFAULTS = { lag: '1', months: '6', bonus: '0', debt: '0', rate: '0', invested: '0', nisa: '0' };
   var NISA_TSUMI = 1200000, NISA_GROWTH = 2400000;
+  var MONEY = ['cash', 'income', 'spend', 'advance', 'bonus', 'debt', 'invested', 'nisa'];
 
   // ---- 計算（テストしやすいよう純粋関数）----
   function derive(i) {
-    var v = {}; FIELDS.forEach(function (k) { v[k] = num(i[k]); });
+    // 入力は万円単位。計算は円で行う
+    var v = {}; FIELDS.forEach(function (k) { v[k] = num(i[k]) * (MONEY.indexOf(k) >= 0 ? 10000 : 1); });
     if (!i.lag && i.lag !== 0) v.lag = 1;
     if (!v.months) v.months = 6;
     // 生活費は立替込みで入力する。立替は精算で戻るので、毎月の収支に効くのは自分の生活費だけ。
@@ -1223,14 +1244,14 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
     // 6. 前月との比較
     if (hist && hist.length >= 2) {
       var a = hist[hist.length - 2], b = hist[hist.length - 1];
-      var dc = num(b.cash) - num(a.cash);
+      var dc = (num(b.cash) - num(a.cash)) * 10000;
       var declines = 0;
-      for (var k = hist.length - 1; k > 0 && num(hist[k].cash) < num(hist[k - 1].cash); k--) declines++;
+      for (var k = hist.length - 1; k > 0 && num(hist[k].cash) < num(hist[k - 1].cash); k--) declines++;  // 単位は同じなので比較だけ
       if (declines >= 3) {
         out.unshift({ lv: 'crit', chip: '要注意', t: '現金が ' + declines + ' か月続けて減っています',
           b: '直近の 1 か月で ' + man(dc) + '。一時的な出費でなければ、支出の見直しが最優先です。', how: '' });
       } else {
-        var ds = Math.max(num(b.spend) - num(b.advance), 0) - Math.max(num(a.spend) - num(a.advance), 0);
+        var ds = (Math.max(num(b.spend) - num(b.advance), 0) - Math.max(num(a.spend) - num(a.advance), 0)) * 10000;
         out.push({ lv: dc >= 0 ? 'good' : 'warn', chip: '前月比', t: '現金は前月から ' + (dc >= 0 ? '+' : '') + man(dc),
           b: '自分の生活費（立替を除く）は前月から ' + (ds >= 0 ? '+' : '') + man(ds) + '。' + (dc >= 0 ? '計画どおり増えています。' : '減った理由（一時的な出費か、立替の精算待ちか）を確認してください。'), how: '' });
       }
@@ -1251,13 +1272,18 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
   // ---- 画面 ----
   var st = { input: {}, hist: [] };
   try { var raw = localStorage.getItem(KEY); if (raw) { var o = JSON.parse(raw); if (o && o.input) st = o; } } catch (e) { /* 空で始める */ }
+  // 以前は円で保存していた。万円に換算する
+  if (st.unit !== 'man') {
+    var conv = function (obj) { MONEY.forEach(function (k) { if (obj[k] != null && String(obj[k]).trim() !== '') obj[k] = String(Math.round(num(obj[k]) / 1000) / 10); }); };
+    conv(st.input); (st.hist || []).forEach(conv); st.unit = 'man';
+  }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(st)); $('planSaved').textContent = '自動保存済み（このブラウザ内）'; } catch (e) { $('planSaved').textContent = 'このブラウザには保存できません'; } }
 
   FIELDS.forEach(function (k) {
     var el = $('pf-' + k);
     var v = st.input[k] != null ? st.input[k] : (DEFAULTS[k] || '');
     el.value = v; st.input[k] = v;
-    el.placeholder = { cash: '例 1,000,000', income: '例 300,000', spend: '例 250,000', advance: '例 0' }[k] || '0';
+    el.placeholder = { cash: '例 100', income: '例 30', spend: '例 25', advance: '例 0' }[k] || '0';
   });
 
   function monthsLabel(n) { var t = new Date(), d = new Date(t.getFullYear(), t.getMonth() + n, 1); return (d.getMonth() + 1) + '月'; }  // 1 日に固定（30 日などの月末ずれを防ぐ）
@@ -1304,11 +1330,12 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
     if (!st.hist.length) { $('planHist').innerHTML = '<tbody><tr><td class="note">まだ記録がありません。</td></tr></tbody>'; $('planHistChart').innerHTML = ''; return; }
     $('planHist').innerHTML = '<thead><tr><th>月</th><th class="n">現金</th><th class="n">手取り</th><th class="n">生活費（立替込み）</th><th class="n">うち立替</th><th class="n">収支</th><th></th></tr></thead><tbody>' +
       st.hist.map(function (h, i) {
-        var n = num(h.income) - Math.max(num(h.spend) - num(h.advance), 0);
-        return '<tr><td>' + esc(h.month) + '</td><td class="n">' + man(num(h.cash)) + '</td><td class="n">' + man(num(h.income)) + '</td><td class="n">' + man(num(h.spend)) + '</td><td class="n">' + man(num(h.advance)) + '</td><td class="n ' + (n >= 0 ? 'up' : 'down') + '">' + (n >= 0 ? '+' : '') + man(n) + '</td><td><button type="button" class="ghost" data-del="' + i + '">削除</button></td></tr>';
+        var M = function (k) { return num(h[k]) * 10000; };
+        var n = M('income') - Math.max(M('spend') - M('advance'), 0);
+        return '<tr><td>' + esc(h.month) + '</td><td class="n">' + man(M('cash')) + '</td><td class="n">' + man(M('income')) + '</td><td class="n">' + man(M('spend')) + '</td><td class="n">' + man(M('advance')) + '</td><td class="n ' + (n >= 0 ? 'up' : 'down') + '">' + (n >= 0 ? '+' : '') + man(n) + '</td><td><button type="button" class="ghost" data-del="' + i + '">削除</button></td></tr>';
       }).join('') + '</tbody>';
-    var vals = st.hist.map(function (h) { return num(h.cash); });
-    $('planHistChart').innerHTML = st.hist.length >= 2 ? '<p class="note">記録した現金の推移</p>' + colChart(vals, st.hist.map(function (h) { return h.month.slice(5) + '月'; }), 0, st.hist.map(function (h) { return h.month + '：現金 ' + man(num(h.cash)); })) : '';
+    var vals = st.hist.map(function (h) { return num(h.cash) * 10000; });
+    $('planHistChart').innerHTML = st.hist.length >= 2 ? '<p class="note">記録した現金の推移</p>' + colChart(vals, st.hist.map(function (h) { return h.month.slice(5) + '月'; }), 0, st.hist.map(function (h) { return h.month + '：現金 ' + man(num(h.cash) * 10000); })) : '';
   }
 
   $('planForm').addEventListener('input', function (e) {
@@ -1316,8 +1343,8 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
     st.input[k] = e.target.value; save(); render();
   });
   $('planForm').addEventListener('focusout', function (e) {
-    var k = e.target.dataset.k; if (!k || k === 'lag' || k === 'rate' || k === 'months') return;
-    if (e.target.value.trim() !== '') { e.target.value = num(e.target.value).toLocaleString('ja-JP'); st.input[k] = e.target.value; save(); }
+    var k = e.target.dataset.k; if (!k || MONEY.indexOf(k) < 0) return;
+    if (e.target.value.trim() !== '') { e.target.value = String(Math.round(num(e.target.value) * 10) / 10); st.input[k] = e.target.value; save(); }
   });
   $('planForm').addEventListener('submit', function (e) { e.preventDefault(); });
   $('planRecord').addEventListener('click', function () {
@@ -1336,7 +1363,7 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
     var t = ['# 家計の状態（JevInvest）', '手取り ' + man(v.income) + ' / 生活費（立替込み）' + man(v.spend) + ' / うち立替 ' + man(v.advance) + '（戻るまで ' + v.lag + ' か月）/ 自分の生活費 ' + man(d.own),
       '現金 ' + man(v.cash) + '（自由に使える ' + man(d.free) + '、生活費の ' + (d.coverMonths == null ? '—' : d.coverMonths.toFixed(1)) + ' か月分）',
       '毎月の収支 ' + man(d.netB) + ' / 借入 ' + man(v.debt) + '（年 ' + v.rate + '%）/ 投資済み ' + man(v.invested),
-      '記録: ' + st.hist.map(function (h) { return h.month + ' 現金' + man(num(h.cash)); }).join('、'), '', '次の一手を一緒に考えてください。'].join('\n');
+      '記録: ' + st.hist.map(function (h) { return h.month + ' 現金' + man(num(h.cash) * 10000); }).join('、'), '', '次の一手を一緒に考えてください。'].join('\n');
     var ta = $('planSummary'); ta.value = t;
     var p; try { p = navigator.clipboard.writeText(t); } catch (e) { p = Promise.reject(e); }
     p.then(function () { $('planSaved').textContent = 'コピーしました（金額を含みます）'; }, function () { ta.hidden = false; ta.focus(); ta.select(); $('planSaved').textContent = '選択されたテキストをコピーしてください（金額を含みます）'; });
@@ -1452,8 +1479,9 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
       var caps = stSample ? await stSample.limits().catch(function () { return null; }) : null;
       if (!stSample || !caps || !caps.images) {
         stSample = null;
-        $('st-imgNote').textContent = 'この画面では画像の読み取りが使えません（Claude のアプリやブラウザでこのページを開くと使えます）。下の表に手で入力できます。';
-        $('st-files').disabled = true;
+        $('st-imgNote').textContent = 'この端末の画面では、ページから画像を読み取れません（スマホのブラウザなど）。スクリーンショットを Claude Code のチャットに貼ると取り込み用のテキストを返すので、下の「テキストから取り込む」に貼ってください。';
+        $('st-imgField').hidden = true; $('st-read').hidden = true;
+        $('st-pasteBox').open = true;
       } else {
         $('st-files').accept = caps.images.mediaTypes.join(',');
         stMax = caps.images.maxCount || 5;
@@ -1491,23 +1519,8 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
       '返答は次の形の JSON だけ: {"rows":[{"date":"YYYY-MM-DD","desc":"画面の表記のまま","amount":-518586,"balance":1762321,"cat":"card"}],"notes":"読めなかった点など（なければ空文字）"}';
     try {
       var res = await stSample.json(prompt, { images: files, signal: stCtl.signal });
-      var rows = (res && Array.isArray(res.rows)) ? res.rows : [];
-      var clean = rows.map(function (r) {
-        var a = num(r.amount);
-        var cat = CATS.some(function (c) { return c[0] === r.cat; }) ? r.cat : guessCat(r.desc, a);
-        return { date: String(r.date || '').slice(0, 10), desc: String(r.desc || ''), amount: a,
-          balance: r.balance == null || r.balance === '' ? null : num(r.balance), cat: cat };
-      }).filter(function (r) { return r.date && r.amount; });
-      if (!clean.length) { stSetStatus('取引が見つかりませんでした。明細の一覧が写っている画像か確認してください。'); return; }
-      if (stm.example) { stm.rows = []; stm.example = false; }
-      var seen = {}; stm.rows.forEach(function (r) { seen[r.date + '|' + r.amount + '|' + r.desc] = 1; });
-      var added = 0;
-      clean.forEach(function (r) { var k = r.date + '|' + r.amount + '|' + r.desc; if (!seen[k]) { seen[k] = 1; stm.rows.push(r); added++; } });
-      stm.rows.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
-      var months = {}; clean.forEach(function (r) { var mm = r.date.slice(0, 7); months[mm] = (months[mm] || 0) + 1; });
-      var top = Object.keys(months).sort(function (a, b) { return months[b] - months[a]; })[0];
-      if (top) stm.month = top;
-      stSave(); stRender();
+      var added = stMerge((res && Array.isArray(res.rows)) ? res.rows : []);
+      if (added == null) { stSetStatus('取引が見つかりませんでした。明細の一覧が写っている画像か確認してください。'); return; }
       stSetStatus(added + ' 件を読み取りました。分類と金額を確認してください。' + (res.notes ? '（' + res.notes + '）' : ''));
     } catch (e) {
       if (e && e.code === 'cancelled') stSetStatus('止めました');
@@ -1518,6 +1531,52 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
     }
   });
   $('st-stop').addEventListener('click', function () { if (stCtl) stCtl.abort(); });
+
+  // 読み取り結果（画像・テキスト共通）を表に足す。足した件数、取引がなければ null
+  function normDate(d) {
+    var m = String(d || '').trim().match(/^(\d{2,4})[.\/\-年](\d{1,2})[.\/\-月](\d{1,2})/);
+    if (!m) return '';
+    var y = m[1].length === 2 ? '20' + m[1] : m[1];
+    return y + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[3]).slice(-2);
+  }
+  function stMerge(rows) {
+    var clean = rows.map(function (r) {
+      var a = num(r.amount);
+      var cat = CATS.some(function (c) { return c[0] === r.cat; }) ? r.cat : guessCat(r.desc, a);
+      return { date: normDate(r.date), desc: String(r.desc || ''), amount: a,
+        balance: r.balance == null || r.balance === '' ? null : num(r.balance), cat: cat };
+    }).filter(function (r) { return r.date && r.amount; });
+    if (!clean.length) return null;
+    if (stm.example) { stm.rows = []; stm.example = false; }
+    var seen = {}; stm.rows.forEach(function (r) { seen[r.date + '|' + r.amount + '|' + r.desc] = 1; });
+    var added = 0;
+    clean.forEach(function (r) { var k = r.date + '|' + r.amount + '|' + r.desc; if (!seen[k]) { seen[k] = 1; stm.rows.push(r); added++; } });
+    stm.rows.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+    var months = {}; clean.forEach(function (r) { var mm = r.date.slice(0, 7); months[mm] = (months[mm] || 0) + 1; });
+    var top = Object.keys(months).sort(function (a, b) { return months[b] - months[a]; })[0];
+    if (top) stm.month = top;
+    stSave(); stRender();
+    return added;
+  }
+  function parsePasted(text) {
+    var t = String(text || '').trim();
+    if (!t) return [];
+    var j = t.match(/[\[{][\s\S]*[\]}]/);
+    if (j) {
+      try { var o = JSON.parse(j[0]); var rows = Array.isArray(o) ? o : o.rows; if (Array.isArray(rows)) return rows; } catch (e) { /* CSV として読む */ }
+    }
+    return t.split(/\r?\n/).map(function (line) {
+      var c = line.split(/\t|,|，/).map(function (x) { return x.trim(); });
+      if (c.length < 3 || !normDate(c[0])) return null;
+      return { date: c[0], desc: c[1], amount: c[2], balance: c[3] != null && c[3] !== '' ? c[3] : null, cat: c[4] || null };
+    }).filter(Boolean);
+  }
+  $('st-pasteGo').addEventListener('click', function () {
+    var added = stMerge(parsePasted($('st-paste').value));
+    if (added == null) { stSetStatus('取り込める取引が見つかりませんでした。形式を確認してください。'); return; }
+    $('st-paste').value = '';
+    stSetStatus(added + ' 件を取り込みました。分類と金額を確認してください。');
+  });
 
   $('st-month').addEventListener('change', function (e) { stm.month = e.target.value || stm.month; stSave(); stRenderSum(); });
   $('st-table').addEventListener('input', function (e) {
@@ -1549,12 +1608,12 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
     if (stm.example) { stSetStatus('いまは例の数字です。画像を読み取るか、手で入力してから反映してください。'); return; }
     var x = stSummary();
     if (!x.n) { stSetStatus(stm.month + ' の取引がありません'); return; }
-    function setF(k, v) { st.input[k] = Math.round(v).toLocaleString('ja-JP'); $('pf-' + k).value = st.input[k]; }
+    function setF(k, v) { st.input[k] = String(Math.round(v / 1000) / 10); $('pf-' + k).value = st.input[k]; }  // 円 → 万円
     setF('income', x.salary + x.otherIn);
     setF('spend', x.spend);
     setF('advance', x.reimb);
     if (x.closing != null) setF('cash', x.closing);
-    if (x.invest) setF('invested', num(st.input.invested) + x.invest);
+    if (x.invest) setF('invested', num(st.input.invested) * 10000 + x.invest);
     var rec = { month: stm.month }; FIELDS.forEach(function (k) { rec[k] = st.input[k]; });
     st.hist = st.hist.filter(function (h) { return h.month !== stm.month; }); st.hist.push(rec);
     st.hist.sort(function (a, b) { return a.month < b.month ? -1 : 1; });
