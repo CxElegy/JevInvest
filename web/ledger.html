@@ -252,8 +252,8 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
       <form id="planForm" class="grid2" autocomplete="off">
         <div class="field"><label for="pf-cash">現金・預金（円）</label><input id="pf-cash" data-k="cash" class="num" inputmode="numeric"></div>
         <div class="field"><label for="pf-income">毎月の手取り（円）</label><input id="pf-income" data-k="income" class="num" inputmode="numeric"></div>
-        <div class="field"><label for="pf-spend">毎月の生活費（円・立替は除く）</label><input id="pf-spend" data-k="spend" class="num" inputmode="numeric"></div>
-        <div class="field"><label for="pf-advance">毎月の立替（円・あとで戻るお金）</label><input id="pf-advance" data-k="advance" class="num" inputmode="numeric"></div>
+        <div class="field"><label for="pf-spend">毎月の生活費（円・立替込み）</label><input id="pf-spend" data-k="spend" class="num" inputmode="numeric"></div>
+        <div class="field"><label for="pf-advance">そのうち立替（円・あとで精算されて戻る分）</label><input id="pf-advance" data-k="advance" class="num" inputmode="numeric"></div>
         <div class="field"><label for="pf-lag">立替が戻るまで（か月）</label><input id="pf-lag" data-k="lag" class="num" inputmode="decimal"></div>
         <div class="field"><label for="pf-bonus">賞与の手取り（円・年合計）</label><input id="pf-bonus" data-k="bonus" class="num" inputmode="numeric"></div>
         <div class="field"><label for="pf-debt">リボ・カードローンなどの残高（円）</label><input id="pf-debt" data-k="debt" class="num" inputmode="numeric"></div>
@@ -262,7 +262,7 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
         <div class="field"><label for="pf-nisa">今年すでに使った NISA 枠（円）</label><input id="pf-nisa" data-k="nisa" class="num" inputmode="numeric"></div>
         <div class="field"><label for="pf-months">生活防衛資金の目安（生活費の何か月分）</label><input id="pf-months" data-k="months" class="num" inputmode="decimal"></div>
       </form>
-      <p class="note">立替は「会社の経費などを立て替えて、あとで精算されるお金」です。生活費には含めずに入れてください。</p>
+      <p class="note">生活費は、カードの引き落としなども含めた毎月の支出の合計（立替込み）を入れます。立替は「会社の経費などを立て替えて、あとで精算されるお金」で、生活費のうちの金額を入れてください。</p>
       <div class="row"><button type="button" id="planRecord" class="primary">今月の数字として記録する</button><span id="planSaved" class="note"></span></div>
     </section>
 
@@ -1112,14 +1112,17 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
     var v = {}; FIELDS.forEach(function (k) { v[k] = num(i[k]); });
     if (!i.lag && i.lag !== 0) v.lag = 1;
     if (!v.months) v.months = 6;
-    var flt = v.advance * v.lag;
-    var net = v.income - v.spend;
+    // 生活費は立替込みで入力する。立替は精算で戻るので、毎月の収支に効くのは自分の生活費だけ。
+    var own = Math.max(v.spend - v.advance, 0);
+    var flt = v.advance * v.lag;          // 精算待ちの立替を支える運転資金
+    var net = v.income - own;
     var netB = net + v.bonus / 12;
     var free = v.cash - flt;
-    var buffer = v.spend * v.months;
+    var buffer = own * v.months;
     return {
-      v: v, float: flt, net: net, netB: netB, free: free, buffer: buffer,
-      coverMonths: v.spend ? free / v.spend : null,
+      v: v, own: own, float: flt, net: net, netB: netB, free: free, buffer: buffer,
+      inputOdd: v.spend > 0 && v.advance >= v.spend,
+      coverMonths: own ? free / own : null,
       runway: netB < 0 ? (free > 0 ? free / -netB : 0) : null,
       savingsRate: v.income ? net / v.income * 100 : null,
       nisaLeft: Math.max(NISA_TSUMI + NISA_GROWTH - v.nisa, 0)
@@ -1131,12 +1134,18 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
     if (!v.income && !v.spend && !v.cash) {
       return [{ lv: 'info', chip: '入力待ち', t: '手取り・生活費・現金を入れてください', b: '入れると、次にやることを効く順に出します。' }];
     }
+    // 0. 入力の確認
+    if (d.inputOdd) {
+      out.push({ lv: 'crit', chip: '入力を確認', t: '生活費がすべて立替になっています',
+        b: '生活費（立替込み）' + man(v.spend) + ' のうち立替が ' + man(v.advance) + ' なので、自分の生活費が 0 円として計算されています。この前提だと毎月 ' + man(d.netB) + ' の黒字になり、提案が大きく変わります。',
+        how: '生活費には、立替も含めた毎月の支出の合計を入れてください。立替がその一部なら、生活費は立替より大きくなるはずです。数字が正しければ、この項目は気にせず下の提案を参考にしてください。' });
+    }
     // 1. 赤字
     if (d.netB < 0) {
-      var target = Math.round(v.income * 0.9 / 1000) * 1000;
+      var target = Math.round(v.income * 0.9 / 1000) * 1000;  // 自分の生活費の目安
       out.push({ lv: 'crit', chip: '最優先', t: '毎月 ' + man(-d.netB) + ' の赤字を止める',
-        b: '生活費が手取りを上回っています。このままだと、自由に使える現金は約 ' + (d.runway != null ? d.runway.toFixed(1) : '0') + ' か月でなくなります。赤字のまま投資すると、実質的に貯金を取り崩して投資することになり、下落時に売らざるを得なくなります。',
-        how: 'まず月 ' + man(-d.netB) + ' 減らして赤字をなくし、次に生活費を ' + man(target) + '（手取りの 9 割）まで下げるのが目安です。そこまで下げれば年 ' + man((v.income - target) * 12) + ' を投資に回せます。効果が大きい順に、通信・保険・サブスクなどの固定費、住居費、車の見直しから。' });
+        b: '自分の生活費（立替を除く ' + man(d.own) + '）が手取りを上回っています。このままだと、自由に使える現金は約 ' + (d.runway != null ? d.runway.toFixed(1) : '0') + ' か月でなくなります。赤字のまま投資すると、実質的に貯金を取り崩して投資することになり、下落時に売らざるを得なくなります。',
+        how: 'まず月 ' + man(-d.netB) + ' 減らして赤字をなくし、次に自分の生活費を ' + man(target) + '（手取りの 9 割）まで下げるのが目安です。そこまで下げれば年 ' + man((v.income - target) * 12) + ' を投資に回せます。効果が大きい順に、通信・保険・サブスクなどの固定費、住居費、車の見直しから。' });
     }
     // 2. 高金利の借入
     if (v.debt > 0 && v.rate >= 3) {
@@ -1148,7 +1157,7 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
     if (v.advance > 0) {
       var heavy = d.float > v.cash * 0.25;
       out.push({ lv: heavy ? 'warn' : 'info', chip: heavy ? '重要' : '確認', t: '立替で常に ' + man(d.float) + ' の現金が拘束されています',
-        b: '現金 ' + man(v.cash) + ' のうち、自由に使えるのは ' + man(d.free) + ' です。' + (heavy ? '立替の割合が大きく、精算が遅れると生活費が足りなくなるおそれがあります。' : ''),
+        b: '生活費のうち毎月 ' + man(v.advance) + ' は立替で、精算されるまで ' + man(d.float) + ' を立て替えたままです。この分は生活防衛資金とは別に現金で持っておく必要があるので、自由に使える現金は ' + man(d.free) + ' です。' + (heavy ? '立替の割合が大きく、精算が遅れると生活費が足りなくなるおそれがあります。' : ''),
         how: '会社の法人カード・仮払い制度を使う、精算の締めを月 2 回にする、など立て替えない仕組みにできないか確認を。個人のクレジットカードで立て替えている場合は、ポイント分は得ですが、引き落とし日と精算日のずれに注意。' });
     }
     // 4. 生活防衛資金
@@ -1156,11 +1165,13 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
     if (short > 0) {
       var fillM = d.netB > 0 ? short / d.netB : null;
       out.push({ lv: d.coverMonths != null && d.coverMonths < 3 ? 'crit' : 'warn', chip: '投資より先', t: '生活防衛資金があと ' + man(short) + ' 足りません',
-        b: '自由に使える現金は生活費の ' + (d.coverMonths != null ? d.coverMonths.toFixed(1) : '—') + ' か月分。目安の ' + v.months + ' か月分（' + man(d.buffer) + '）に届くまでは、まとまった額の投資は控えるのが安全です。相場が下がった時に現金が足りないと、安値で売ることになり、リターンが大きく削られます。',
+        b: '自由に使える現金は、自分の生活費（立替を除く）の ' + (d.coverMonths != null ? d.coverMonths.toFixed(1) : '—') + ' か月分。目安の ' + v.months + ' か月分（' + man(d.buffer) + '）に届くまでは、まとまった額の投資は控えるのが安全です。相場が下がった時に現金が足りないと、安値で売ることになり、リターンが大きく削られます。',
         how: fillM != null ? '今の黒字 月 ' + man(d.netB) + ' をすべて現金に回すと、約 ' + Math.ceil(fillM) + ' か月で届きます。' : 'まず赤字を止めることが先です。' });
     }
     // 5. 積立と一括
-    if (d.netB > 0 && short <= 0) {
+    if (d.inputOdd) {
+      // 入力の確認が先。投資の提案は出さない
+    } else if (d.netB > 0 && short <= 0) {
       var m = Math.floor(d.netB / 1000) * 1000;
       var tsumi = Math.min(m, NISA_TSUMI / 12), growth = Math.min(Math.max(m - tsumi, 0), NISA_GROWTH / 12);
       out.push({ lv: 'good', chip: '実行', t: '毎月 ' + man(m) + ' を NISA で積み立てる',
@@ -1187,9 +1198,9 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
         out.unshift({ lv: 'crit', chip: '要注意', t: '現金が ' + declines + ' か月続けて減っています',
           b: '直近の 1 か月で ' + man(dc) + '。一時的な出費でなければ、支出の見直しが最優先です。', how: '' });
       } else {
-        var ds = num(b.spend) - num(a.spend);
+        var ds = Math.max(num(b.spend) - num(b.advance), 0) - Math.max(num(a.spend) - num(a.advance), 0);
         out.push({ lv: dc >= 0 ? 'good' : 'warn', chip: '前月比', t: '現金は前月から ' + (dc >= 0 ? '+' : '') + man(dc),
-          b: '生活費は前月から ' + (ds >= 0 ? '+' : '') + man(ds) + '。' + (dc >= 0 ? '計画どおり増えています。' : '減った理由（一時的な出費か、立替の精算待ちか）を確認してください。'), how: '' });
+          b: '自分の生活費（立替を除く）は前月から ' + (ds >= 0 ? '+' : '') + man(ds) + '。' + (dc >= 0 ? '計画どおり増えています。' : '減った理由（一時的な出費か、立替の精算待ちか）を確認してください。'), how: '' });
       }
     }
     // 7. 常に
@@ -1244,9 +1255,9 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
     var d = derive(st.input), v = d.v;
     function tile(k, val, sub, cls) { return '<div class="tile"><div class="k">' + esc(k) + '</div><div class="v ' + (cls || '') + '">' + val + '</div><div class="s">' + sub + '</div></div>'; }
     $('planTiles').innerHTML =
-      tile('毎月の収支', (d.net >= 0 ? '+' : '') + man(d.net), '手取り − 生活費' + (v.bonus ? '（賞与込みの月平均 ' + (d.netB >= 0 ? '+' : '') + man(d.netB) + '）' : ''), d.net >= 0 ? 'up' : 'down') +
-      tile('自由に使える現金', man(d.free), '現金 ' + man(v.cash) + ' − 立替の拘束 ' + man(d.float)) +
-      tile('生活費の何か月分', d.coverMonths == null ? '—' : d.coverMonths.toFixed(1) + ' か月', '目安 ' + v.months + ' か月（' + man(d.buffer) + '）', d.coverMonths != null && d.coverMonths < v.months ? 'down' : 'up') +
+      tile('毎月の収支', (d.net >= 0 ? '+' : '') + man(d.net), '手取り − 自分の生活費 ' + man(d.own) + '（立替は精算で戻る）' + (v.bonus ? '（賞与込みの月平均 ' + (d.netB >= 0 ? '+' : '') + man(d.netB) + '）' : ''), d.net >= 0 ? 'up' : 'down') +
+      tile('自由に使える現金', man(d.free), '現金 ' + man(v.cash) + ' − 精算待ちの立替 ' + man(d.float)) +
+      tile('生活費の何か月分', d.coverMonths == null ? '—' : d.coverMonths.toFixed(1) + ' か月', '立替を除く生活費で計算。目安 ' + v.months + ' か月（' + man(d.buffer) + '）', d.coverMonths != null && d.coverMonths < v.months ? 'down' : 'up') +
       tile('貯蓄率', d.savingsRate == null ? '—' : d.savingsRate.toFixed(0) + '%', '手取りのうち残る割合。20% 以上が目安', d.savingsRate != null && d.savingsRate < 0 ? 'down' : '');
     var pr = project(st.input);
     var labels = pr.rows.map(function (_, i) { return monthsLabel(i + 1); });
@@ -1259,9 +1270,9 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
 
   function renderHist() {
     if (!st.hist.length) { $('planHist').innerHTML = '<tbody><tr><td class="note">まだ記録がありません。</td></tr></tbody>'; $('planHistChart').innerHTML = ''; return; }
-    $('planHist').innerHTML = '<thead><tr><th>月</th><th class="n">現金</th><th class="n">手取り</th><th class="n">生活費</th><th class="n">立替</th><th class="n">収支</th><th></th></tr></thead><tbody>' +
+    $('planHist').innerHTML = '<thead><tr><th>月</th><th class="n">現金</th><th class="n">手取り</th><th class="n">生活費（立替込み）</th><th class="n">うち立替</th><th class="n">収支</th><th></th></tr></thead><tbody>' +
       st.hist.map(function (h, i) {
-        var n = num(h.income) - num(h.spend);
+        var n = num(h.income) - Math.max(num(h.spend) - num(h.advance), 0);
         return '<tr><td>' + esc(h.month) + '</td><td class="n">' + man(num(h.cash)) + '</td><td class="n">' + man(num(h.income)) + '</td><td class="n">' + man(num(h.spend)) + '</td><td class="n">' + man(num(h.advance)) + '</td><td class="n ' + (n >= 0 ? 'up' : 'down') + '">' + (n >= 0 ? '+' : '') + man(n) + '</td><td><button type="button" class="ghost" data-del="' + i + '">削除</button></td></tr>';
       }).join('') + '</tbody>';
     var vals = st.hist.map(function (h) { return num(h.cash); });
@@ -1290,7 +1301,7 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
   });
   $('planCopy').addEventListener('click', function () {
     var d = derive(st.input), v = d.v;
-    var t = ['# 家計の状態（JevInvest）', '手取り ' + man(v.income) + ' / 生活費 ' + man(v.spend) + ' / 立替 ' + man(v.advance) + '（戻るまで ' + v.lag + ' か月）',
+    var t = ['# 家計の状態（JevInvest）', '手取り ' + man(v.income) + ' / 生活費（立替込み）' + man(v.spend) + ' / うち立替 ' + man(v.advance) + '（戻るまで ' + v.lag + ' か月）/ 自分の生活費 ' + man(d.own),
       '現金 ' + man(v.cash) + '（自由に使える ' + man(d.free) + '、生活費の ' + (d.coverMonths == null ? '—' : d.coverMonths.toFixed(1)) + ' か月分）',
       '毎月の収支 ' + man(d.netB) + ' / 借入 ' + man(v.debt) + '（年 ' + v.rate + '%）/ 投資済み ' + man(v.invested),
       '記録: ' + st.hist.map(function (h) { return h.month + ' 現金' + man(num(h.cash)); }).join('、'), '', '次の一手を一緒に考えてください。'].join('\n');
