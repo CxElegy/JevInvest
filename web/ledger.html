@@ -306,6 +306,32 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
   .ptiles .tile .v { font-size: 16px; }
   .ptiles .tile .s { font-size: 11px; }
 }
+/* 全体の計画・攻め口座 */
+.grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.grid3 .wide { grid-column: 1 / -1; }
+.h3 { font-size: 14px; margin: 6px 0 0; font-weight: 700; }
+.monthend { border: 1px dashed var(--line); border-radius: 8px; padding: 10px 12px; font-size: 13px; display: flex; flex-direction: column; gap: 4px; }
+.monthend b { font-size: 14px; }
+.fibar { position: relative; height: 16px; border-radius: 8px; background: var(--line); overflow: hidden; }
+.fibar span { position: absolute; inset: 0 auto 0 0; background: var(--accent); border-radius: 8px; }
+.fifacts { display: flex; gap: 6px 16px; flex-wrap: wrap; font-size: 13px; color: var(--muted); margin-top: 6px; }
+.fifacts b { color: var(--fg); font-family: var(--f-num); font-weight: 500; }
+.checks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.checks label { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; }
+.checks input { margin-top: 4px; }
+.checks .when { color: var(--muted); font-size: 12px; margin-left: 4px; }
+.checks .done { color: var(--muted); text-decoration: line-through; }
+.atkhead { display: flex; flex-direction: column; gap: 6px; }
+.rules { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px; }
+.rules li { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 13px; min-width: 0; }
+.rules b { display: block; font-size: 13px; }
+.atkt input { width: 6em; font-family: var(--f-num); }
+.atkt td.n { text-align: right; }
+.badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 0 6px; border-radius: 999px; border: 1px solid currentColor; margin: 2px 4px 0 0; white-space: nowrap; }
+.badge.crit { color: var(--crit); } .badge.warn { color: var(--warn); } .badge.ok { color: var(--good); }
+.thesis { color: var(--muted); font-size: 12px; max-width: 32em; }
+input[type="checkbox"] { width: auto; flex: none; }
+#aq-q2 { min-height: 3.6em; font-family: var(--f-body); font-size: 14px; }
 </style>
 
 <div class="wrap">
@@ -315,12 +341,33 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
       <button type="button" role="tab" id="tabRoad" aria-controls="viewRoad" aria-selected="true">道筋</button>
       <button type="button" role="tab" id="tabPlan" aria-controls="viewPlan" aria-selected="false">家計の入力</button>
       <button type="button" role="tab" id="tabLedger" aria-controls="viewLedger" aria-selected="false">台帳</button>
+      <button type="button" role="tab" id="tabAtk" aria-controls="viewAtk" aria-selected="false">攻め口座</button>
       <button type="button" role="tab" id="tabInvestors" aria-controls="viewInvestors" aria-selected="false">市場の参考</button>
     </nav>
   </header>
 
   <div id="viewRoad" class="view" role="tabpanel" aria-labelledby="tabRoad" hidden>
     <div class="verdict" id="rd-verdict" aria-live="polite"></div>
+
+    <section aria-labelledby="h-pol">
+      <h2 id="h-pol">全体の計画</h2>
+      <p class="sub">方針と年齢を選ぶと、毎月の振り分け・年齢ごとの切り替え・目標までの進み具合が出ます。入力はこのブラウザ内だけに保存します。</p>
+      <div class="grid3">
+        <div class="field"><label for="pol-age">年齢</label><input id="pol-age" type="number" inputmode="numeric" min="18" max="80" placeholder="例 30"></div>
+        <div class="field"><label for="pol-fixed">毎月の固定積立（万円）</label><input id="pol-fixed" type="number" inputmode="decimal" step="0.1" min="0" placeholder="例 22"></div>
+        <div class="field wide"><label for="pol-strat">方針</label><select id="pol-strat"></select></div>
+      </div>
+      <p class="note" id="pol-stratNote"></p>
+      <div class="tablewrap"><table class="tools" id="pol-alloc"></table></div>
+      <div class="monthend" id="pol-monthend"></div>
+      <h3 class="h3">年齢ごとの切り替え</h3>
+      <ol class="steps" id="pol-glide"></ol>
+      <h3 class="h3">経済的な自由までの進み具合</h3>
+      <div id="pol-fi"></div>
+      <h3 class="h3">やることリスト</h3>
+      <ul class="checks" id="pol-checks"></ul>
+    </section>
+
 
     <section aria-labelledby="h-rdTodo">
       <h2 id="h-rdTodo">今月やること</h2>
@@ -450,6 +497,79 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
       <div class="tablewrap"><table id="planHist"></table></div>
       <div class="row"><button type="button" id="planCopy">Claude に相談する用にコピー</button></div>
       <textarea id="planSummary" readonly aria-label="Claude に相談する用のテキスト" hidden></textarea>
+    </section>
+  </div>
+
+  <div id="viewAtk" class="view" role="tabpanel" aria-labelledby="tabAtk" hidden>
+    <header class="atkhead">
+      <h2>攻め口座</h2>
+      <p class="sub">個別株など、積立とは別に自分で選んで攻める枠です。上限と撤退ルールを先に決めてあるので、うまくいかなくても積立の計画は崩れません。</p>
+      <p class="privacy"><b>入力はこのブラウザの中だけに保存されます。</b>送信されません。</p>
+    </header>
+
+    <div class="tiles" id="atk-tiles"></div>
+    <ul class="alerts" id="atk-alerts"></ul>
+
+    <section aria-labelledby="h-atkRules">
+      <h2 id="h-atkRules">ルール</h2>
+      <ul class="rules">
+        <li><b>お金の出どころ</b>毎月の固定積立の後に残った分から、月 3 万円まで。固定積立は崩さない。</li>
+        <li><b>全体の上限</b>投資資産全体の 10% まで。超えたら新しく買わず、利益は積立側へ移す。</li>
+        <li><b>1 銘柄</b>新しく買うときは投資資産の 2% まで、持ち続けて 5% を超えたら超えた分を売る。</li>
+        <li><b>撤退</b>攻め口座の損失が入れた元本の 50% に届いたら 6 か月休む。</li>
+        <li><b>持つ期間</b>原則 1 年以上。株価は決算の後に四半期に 1 回だけ見る。</li>
+        <li><b>買わないもの</b>信用取引・オプション・先物・FX・レバレッジ型・暗号資産。</li>
+        <li><b>独立性</b>1 銘柄ずつ DESC で購入可を確認してから。IPO の申込も同じ。</li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="h-atkPos">
+      <h2 id="h-atkPos">持っている銘柄</h2>
+      <div class="tablewrap"><table class="tools atkt" id="atk-table"></table></div>
+      <p class="note">現在額は決算のあとに更新すれば十分です。「売った」を押すと一覧から外れ、損益の記録だけ残ります。</p>
+    </section>
+
+    <section aria-labelledby="h-atkAdd">
+      <h2 id="h-atkAdd">買う前の 6 つの質問</h2>
+      <p class="sub">全部埋まるまで追加できません。書いた理由と売る条件は、毎年の振り返りで読み返します。</p>
+      <div class="grid3">
+        <div class="field"><label for="aq-name">銘柄名</label><input id="aq-name" placeholder="例 〇〇株式会社"></div>
+        <div class="field"><label for="aq-code">コード</label><input id="aq-code" placeholder="例 1234 / ABCD"></div>
+        <div class="field"><label for="aq-acct">口座</label><select id="aq-acct"><option>NISA 成長投資枠</option><option>特定口座</option></select></div>
+        <div class="field"><label for="aq-date">買った日</label><input id="aq-date" type="date"></div>
+        <div class="field"><label for="aq-cost">買った金額（万円）</label><input id="aq-cost" type="number" inputmode="decimal" step="0.1" min="0"></div>
+      </div>
+      <div class="field"><label for="aq-q1">① この事業を一言で言うと</label><input id="aq-q1"></div>
+      <div class="field"><label for="aq-q2">② 良くなると考える具体的な事実</label><textarea id="aq-q2" rows="2"></textarea></div>
+      <div class="field"><label for="aq-q3">③ 今の値段は高すぎないか（PER など）</label><input id="aq-q3"></div>
+      <label class="check"><input type="checkbox" id="aq-q4"> ④ 最近上がったから・人に勧められたから、ではない</label>
+      <div class="field"><label for="aq-q5">⑤ どうなったら売るか（株価ではなく事実で）</label><input id="aq-q5" placeholder="例 2 期続けて営業利益が減ったら"></div>
+      <label class="check"><input type="checkbox" id="aq-q6"> ⑥ DESC で購入可を確認した</label>
+      <p class="note" id="aq-size"></p>
+      <div class="row"><button type="button" class="primary" id="aq-add" disabled>この銘柄を追加</button><span class="note" id="aq-msg" role="status"></span></div>
+    </section>
+
+    <section aria-labelledby="h-atkRev">
+      <h2 id="h-atkRev">毎年の振り返り（12 月）</h2>
+      <p class="sub">攻め口座が、同じ期間のオルカン（積立側）に勝っているかを記録します。3 年続けて負けたら、攻め口座をやめて積立に合流させます。</p>
+      <div class="grid3">
+        <div class="field"><label for="ar-year">年</label><input id="ar-year" type="number" inputmode="numeric"></div>
+        <div class="field"><label for="ar-mine">攻め口座のリターン（%）</label><input id="ar-mine" type="number" inputmode="decimal" step="0.1"></div>
+        <div class="field"><label for="ar-bench">オルカンのリターン（%）</label><input id="ar-bench" type="number" inputmode="decimal" step="0.1"></div>
+      </div>
+      <div class="row"><button type="button" id="ar-add">この年を記録</button></div>
+      <div class="tablewrap"><table class="tools" id="ar-table"></table></div>
+      <p class="note" id="ar-verdict"></p>
+    </section>
+
+    <section aria-labelledby="h-atkIpo">
+      <h2 id="h-atkIpo">IPO の抽選</h2>
+      <p class="sub">外れても SBI の IPO チャレンジポイントが 1 つたまり、ためるほど当たりやすくなります。申込金は外れれば戻ります。審査先の IPO は申し込めないので、毎回 DESC で確認します。</p>
+      <div class="grid3">
+        <div class="field"><label for="ipo-pt">IPO チャレンジポイント</label><input id="ipo-pt" type="number" inputmode="numeric" min="0"></div>
+        <div class="field"><label for="ipo-n">今年の申込回数</label><input id="ipo-n" type="number" inputmode="numeric" min="0"></div>
+        <div class="field"><label for="ipo-win">今年の当選</label><input id="ipo-win" type="number" inputmode="numeric" min="0"></div>
+      </div>
     </section>
   </div>
 
@@ -928,16 +1048,18 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
   // ---- タブ ----
   function showTab(which) {
     var inv = which === 'investors';
-    [['road', 'viewRoad', 'tabRoad'], ['plan', 'viewPlan', 'tabPlan'], ['ledger', 'viewLedger', 'tabLedger'], ['investors', 'viewInvestors', 'tabInvestors']].forEach(function (t) {
+    [['road', 'viewRoad', 'tabRoad'], ['plan', 'viewPlan', 'tabPlan'], ['ledger', 'viewLedger', 'tabLedger'], ['atk', 'viewAtk', 'tabAtk'], ['investors', 'viewInvestors', 'tabInvestors']].forEach(function (t) {
       $(t[1]).hidden = t[0] !== which; $(t[2]).setAttribute('aria-selected', String(t[0] === which));
     });
     try { localStorage.setItem(TAB_KEY, which); } catch (e) { /* 保存できなくても表示はできる */ }
     if (inv) loadData();
     if (which === 'road' && window.JevRoad) window.JevRoad.render();
+    if ((which === 'road' || which === 'atk') && window.JevAtk) window.JevAtk.render();
   }
   $('tabLedger').addEventListener('click', function () { showTab('ledger'); });
   $('tabPlan').addEventListener('click', function () { showTab('plan'); });
   $('tabRoad').addEventListener('click', function () { showTab('road'); });
+  $('tabAtk').addEventListener('click', function () { showTab('atk'); });
   $('tabInvestors').addEventListener('click', function () { showTab('investors'); });
 
   // ---- データ ----
@@ -1266,9 +1388,9 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
     $('personDetail').scrollIntoView({ block: 'start', behavior: 'smooth' });
   });
 
-  var start = { '#investors': 'investors', '#plan': 'plan', '#ledger': 'ledger', '#road': 'road' }[location.hash] || null;
+  var start = { '#investors': 'investors', '#plan': 'plan', '#ledger': 'ledger', '#road': 'road', '#atk': 'atk' }[location.hash] || null;
   if (!start) { try { start = localStorage.getItem(TAB_KEY); } catch (e) { start = null; } }
-  showTab(['road', 'plan', 'ledger', 'investors'].indexOf(start) >= 0 ? start : 'road');
+  showTab(['road', 'plan', 'ledger', 'atk', 'investors'].indexOf(start) >= 0 ? start : 'road');
 })();
 </script>
 
@@ -1877,5 +1999,277 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
   window.JevRoad = { render: function () { render(); loadEvidence(); }, simulate: simulate };
   document.addEventListener('jevplan', function () { if (!$('viewRoad').hidden) render(); });
   if (!$('viewRoad').hidden) window.JevRoad.render();
+})();
+</script>
+
+<script>
+(function () {
+  'use strict';
+  function $(id) { return document.getElementById(id); }
+  function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function num(v) { var n = parseFloat(String(v == null ? '' : v).replace(/[,，\s円¥万%]/g, '')); return isFinite(n) ? n : 0; }
+  function mn(v) { return (Math.round(v * 10) / 10).toLocaleString('ja-JP') + ' 万円'; }   // 入力は万円
+  function pct(v) { return (Math.round(v * 10) / 10) + '%'; }
+  function load(k, d) { try { var o = JSON.parse(localStorage.getItem(k) || 'null'); return o || d; } catch (e) { return d; } }
+  function store(k, o) { try { localStorage.setItem(k, JSON.stringify(o)); } catch (e) { /* 保存できなくても表示はできる */ } }
+
+  // ---- 方針（積立の配分）----
+  // nisa: つみたて投資枠の対象か（半導体指数は成長投資枠のみとして扱う）
+  var FUNDS = {
+    acwi: { nm: 'オルカン（全世界株）', tsumi: true },
+    spx: { nm: 'S&P500', tsumi: true },
+    fang: { nm: 'FANG+', tsumi: true },
+    semi: { nm: '半導体（インデックス型）', tsumi: false },
+    topix: { nm: 'TOPIX', tsumi: true }
+  };
+  var STRATS = {
+    A: { nm: '標準：オルカン 100%', w: { acwi: 100 }, note: '全世界に 1 本で分散。値動きは一番小さい。' },
+    C: { nm: 'やや高：オルカン 50・S&P 20・FANG+ 20・TOPIX 10', w: { acwi: 50, spx: 20, fang: 20, topix: 10 }, note: '米国の大型テックに少し賭けつつ、円の資産も 1 割持つ。' },
+    X: { nm: '積極：オルカン 30・S&P 30・FANG+ 25・半導体 15', w: { acwi: 30, spx: 30, fang: 25, semi: 15 }, note: 'テックが勝ち続ければ 20 年で大きく伸びる。途中で資産が半分になる確率は約 12%。' },
+    XX: { nm: '超積極：S&P 40・FANG+ 35・半導体 25', w: { spx: 40, fang: 35, semi: 25 }, note: '上振れは最大だが、途中で半分になる確率は約 24%。米国以外を持たない。' }
+  };
+  var CARD_MAX = 10;   // クレカ積立の上限（万円／月）
+  var PKEY = 'jevinvest.policy.v1', AKEY = 'jevinvest.attack.v1';
+  var pol = load(PKEY, { age: '', fixed: '', strat: 'X', checks: {} });
+  if (!pol.checks) pol.checks = {};
+  var atk = load(AKEY, { positions: [], reviews: [], ipo: {} });
+  ['positions', 'reviews'].forEach(function (k) { if (!Array.isArray(atk[k])) atk[k] = []; });
+  if (!atk.ipo) atk.ipo = {};
+
+  function coreValue() {
+    // 「台帳」タブの評価額（現金以外）を積立側の資産とみなす。例のデータは数えない
+    var s = load('jevinvest.ledger.v1', null);
+    if (!s || s.sample || !Array.isArray(s.positions)) return 0;
+    return s.positions.reduce(function (a, p) { return a + (p.cls === 'cash' ? 0 : num(p.value)); }, 0);
+  }
+  function atkValue() { return atk.positions.filter(function (p) { return !p.closed; }).reduce(function (a, p) { return a + num(p.value || p.cost); }, 0); }
+  function atkCost() { return atk.positions.filter(function (p) { return !p.closed; }).reduce(function (a, p) { return a + num(p.cost); }, 0); }
+  function planInput() { var o = load('jevinvest.plan.v1', null); return o && o.input ? o.input : null; }
+
+  // 毎月の固定額を配分し、クレカ積立（10 万円まで）をつみたて対象のファンドから順に割り当てる
+  function allocate(fixed, w) {
+    var rows = [], card = Math.min(CARD_MAX, fixed);
+    Object.keys(w).forEach(function (k) {
+      var amt = fixed * w[k] / 100, c = FUNDS[k].tsumi ? Math.min(card, amt) : 0;
+      card -= c;
+      rows.push({ k: k, w: w[k], amt: amt, card: c, cash: amt - c });
+    });
+    return rows;
+  }
+
+  function renderPolicy() {
+    var s = STRATS[pol.strat] || STRATS.X;
+    $('pol-stratNote').textContent = s.note + ' どの商品も、買う前に DESC で購入可を確認します。';
+    var fixed = num(pol.fixed);
+    var rows = allocate(fixed, s.w);
+    var tsumiTotal = rows.reduce(function (a, r) { return a + r.card; }, 0);
+    var growthTotal = rows.reduce(function (a, r) { return a + r.cash; }, 0);
+    $('pol-alloc').innerHTML = '<thead><tr><th>ファンド</th><th>比率</th><th>毎月</th><th>買い方</th></tr></thead><tbody>' +
+      rows.map(function (r) {
+        var how = [];
+        if (r.card > 0) how.push('クレカ積立 ' + mn(r.card) + '（つみたて投資枠）');
+        if (r.cash > 0.04) how.push('現金積立 ' + mn(r.cash) + '（成長投資枠）');
+        return '<tr><td>' + esc(FUNDS[r.k].nm) + '</td><td class="n">' + r.w + '%</td><td class="n">' + (fixed ? mn(r.amt) : '—') + '</td><td>' + (fixed ? how.join('<br>') : '固定積立額を入れると出ます') + '</td></tr>';
+      }).join('') + '</tbody>' +
+      (fixed ? '<tfoot><tr><td colspan="4" class="note">つみたて投資枠 月 ' + mn(tsumiTotal) + '・成長投資枠 月 ' + mn(growthTotal) + '（年 ' + mn(growthTotal * 12) + '、上限 240 万円）' + (growthTotal * 12 > 240 ? '。<b>成長投資枠の年間上限を超えます。超えた分は特定口座で。</b>' : '') + (tsumiTotal * 12 > 120 ? '。<b>つみたて投資枠の年間上限を超えます。</b>' : '') + '</td></tr></tfoot>' : '');
+
+    // 月末の残り
+    var inp = planInput(), net = null;
+    if (inp) { var d = window.JevPlan ? window.JevPlan.derive(inp) : null; if (d) net = d.net / 10000; }
+    var rest = net != null ? net - fixed : null;
+    var low = lowestVsTarget(s.w);
+    $('pol-monthend').innerHTML = '<b>月末に残ったお金</b>' +
+      (rest != null ? '<span>今月の数字では 手取り − 自分の生活費 − 固定積立 = <b class="num">' + mn(rest) + '</b></span>' : '<span>「家計の入力」に今月の数字を入れると、残りを計算します。</span>') +
+      '<span>① まず月 3 万円まで「攻め口座」へ（上限 10% に届いていれば入れない）</span>' +
+      '<span>② 残りは、目標比率より一番少ないファンドへスポット購入' + (low ? '：いまは <b>' + esc(FUNDS[low].nm) + '</b>' : '（台帳にファンドごとの評価額を入れると判定します）') + '。売らずに比率を戻せます。</span>';
+
+    // 年齢ごとの切り替え
+    var age = num(pol.age);
+    var bands = [
+      { nm: '〜38 歳：積極期', ds: '選んだ方針のまま。暴落は安く買える期間。止めない・売らない。', lo: 0, hi: 38 },
+      { nm: '38〜45 歳：移行期', ds: '毎年少しずつ FANG+・半導体を減らし、「やや高」の比率へ近づける。', lo: 38, hi: 45 },
+      { nm: '45 歳〜：判断期', ds: '働き続けるならそのまま。辞めるなら 2〜3 年分の生活費を現金と債券で別に持つ。', lo: 45, hi: 200 }
+    ];
+    $('pol-glide').innerHTML = bands.map(function (b) {
+      var cls = !age ? 'next' : age >= b.hi ? 'done' : age >= b.lo ? 'now' : 'next';
+      return '<li class="' + cls + '"><span class="dot" aria-hidden="true">' + (cls === 'done' ? '✓' : '') + '</span><span class="nm">' + esc(b.nm) + '</span><span class="st">' + ({ done: '済み', now: '今ここ', next: 'この後' })[cls] + '</span><span class="ds">' + esc(b.ds) + '</span></li>';
+    }).join('');
+
+    // 経済的な自由（4% ルール）
+    var own = inp && window.JevPlan ? window.JevPlan.derive(inp).own / 10000 : null;
+    var have = coreValue() + atkValue();
+    if (own) {
+      var target = own * 12 / 0.04, p = Math.min(have / target * 100, 100);
+      var monthly = fixed + Math.max(rest || 0, 0);
+      var yrs = yearsTo(have, monthly, target, 0.05);
+      $('pol-fi').innerHTML = '<div class="fibar" role="img" aria-label="目標の ' + pct(p) + '"><span style="width:' + p.toFixed(1) + '%"></span></div>' +
+        '<div class="fifacts"><span>目標 <b>' + mn(target) + '</b>（自分の生活費 ' + mn(own) + '／月 × 12 ÷ 4%）</span><span>いま <b>' + mn(have) + '</b>（台帳の投資＋攻め口座）</span>' +
+        (yrs != null ? '<span>毎月 ' + mn(monthly) + '、年 5%（物価を除く）なら約 <b>' + yrs + ' 年後</b>' + (age ? '（' + (age + yrs) + ' 歳）' : '') + '</span>' : '') + '</div>' +
+        '<p class="note">4% ルール：資産の 4% を毎年取り崩しても、長い期間で尽きにくいとされる目安。公的年金は含めていません。</p>';
+    } else {
+      $('pol-fi').innerHTML = '<p class="note">「家計の入力」に手取りと生活費を入れると、目標額と到達の目安が出ます。</p>';
+    }
+
+    // やることリスト
+    var y = new Date().getFullYear();
+    var items = [
+      ['desc', 'DESC で積立のファンドを 1 本ずつ確認し、台帳に記録', '最初に'],
+      ['card', 'SBI 証券で三井住友カードのクレカ積立を設定（月 10 万円）', '今月'],
+      ['growth', '成長投資枠の現金積立を設定', '今月'],
+      ['furusato', 'ふるさと納税（源泉徴収票の見込みで上限を確認）', y + ' 年 12 月 31 日まで'],
+      ['ideco', '企業型 DC の有無・マッチング拠出・iDeCo 加入可否を人事に確認', '今月'],
+      ['advance', '立替は当月中に精算する', '毎月'],
+      ['buffer', '生活防衛資金を何か月分にするか決める（6 か月→4 か月で約 40 万円を投資に回せる）', '任意']
+    ];
+    $('pol-checks').innerHTML = items.map(function (it) {
+      var on = !!pol.checks[it[0]];
+      return '<li><label><input type="checkbox" data-ck="' + it[0] + '"' + (on ? ' checked' : '') + '><span class="' + (on ? 'done' : '') + '">' + esc(it[1]) + '<span class="when">' + esc(it[2]) + '</span></span></label></li>';
+    }).join('');
+  }
+
+  function lowestVsTarget(w) {
+    // 台帳の銘柄名にファンド名の語が含まれていれば、その評価額で比率を出す
+    var s = load('jevinvest.ledger.v1', null);
+    if (!s || s.sample || !Array.isArray(s.positions)) return null;
+    var keys = { acwi: /オール|全世界|ｵｰﾙ|オルカン/i, spx: /S&P|ＳＡＰ|S＆P/i, fang: /FANG/i, semi: /半導体/, topix: /TOPIX/i };
+    var val = {}, tot = 0;
+    Object.keys(w).forEach(function (k) { val[k] = 0; });
+    s.positions.forEach(function (p) { Object.keys(w).forEach(function (k) { if (keys[k].test(p.name || '')) { val[k] += num(p.value); tot += num(p.value); } }); });
+    if (!tot) return null;
+    var best = null, gap = -1e9;
+    Object.keys(w).forEach(function (k) { var g = w[k] - val[k] / tot * 100; if (g > gap) { gap = g; best = k; } });
+    return best;
+  }
+  function yearsTo(have, monthly, target, r) {
+    if (have >= target) return 0;
+    if (monthly <= 0) return null;
+    var v = have, rm = Math.pow(1 + r, 1 / 12) - 1;
+    for (var m = 1; m <= 600; m++) { v = v * (1 + rm) + monthly; if (v >= target) return Math.ceil(m / 12); }
+    return null;
+  }
+
+  // ---- 攻め口座 ----
+  function renderAtk() {
+    var core = coreValue(), val = atkValue(), cost = atkCost(), total = core + val;
+    var share = total ? val / total * 100 : 0;
+    var pl = val - cost, plp = cost ? pl / cost * 100 : 0;
+    var realized = atk.positions.filter(function (p) { return p.closed; }).reduce(function (a, p) { return a + num(p.value) - num(p.cost); }, 0);
+    var paidIn = atk.positions.reduce(function (a, p) { return a + num(p.cost); }, 0);
+    var lossAll = Math.min(pl + realized, 0), lossP = paidIn ? -lossAll / paidIn * 100 : 0;
+    var room = Math.max(core / 9 - val, 0);   // 攻め口座 ≤ 全体の 10% ⇔ 攻め ≤ 積立側 ÷ 9
+    function tile(k, v, s, cls) { return '<div class="tile"><div class="k">' + k + '</div><div class="v ' + (cls || '') + '">' + v + '</div><div class="s">' + s + '</div></div>'; }
+    $('atk-tiles').innerHTML =
+      tile('攻め口座の評価額', mn(val), '持っている ' + atk.positions.filter(function (p) { return !p.closed; }).length + ' 銘柄') +
+      tile('投資資産に占める割合', pct(share), '上限 10%・積立側 ' + mn(core), share > 10 ? 'down' : '') +
+      tile('含み損益', (pl >= 0 ? '+' : '') + mn(pl), '元本に対して ' + (pl >= 0 ? '+' : '') + pct(plp), pl >= 0 ? 'up' : 'down') +
+      tile('今月入れられる額', mn(Math.min(3, room)), core ? '月 3 万円まで・10% の上限まで残り ' + mn(room) : '台帳に積立側の評価額を入れると計算します');
+    var al = [];
+    if (!core) al.push(['info', '準備', '「台帳」タブに積立のファンドの評価額を入れると、10% の上限と 1 銘柄の比率を計算できます。']);
+    if (share > 10) al.push(['crit', '上限超え', '攻め口座が投資資産の ' + pct(share) + '。新しく買うのを止め、利益の出ている銘柄を一部売って積立側へ移します。']);
+    if (lossP >= 50) al.push(['crit', '撤退ルール', '損失が入れた元本の ' + pct(lossP) + '。6 か月休み、売った理由と買った理由を振り返ります。']);
+    else if (lossP >= 30) al.push(['warn', '注意', '損失が入れた元本の ' + pct(lossP) + '。50% で 6 か月休むルールです。']);
+    atk.positions.forEach(function (p) {
+      if (p.closed) return;
+      var w = total ? num(p.value || p.cost) / total * 100 : 0;
+      if (w > 5) al.push(['warn', '1 銘柄 5% 超え', (p.name || p.code) + ' が投資資産の ' + pct(w) + '。5% を超えた分を売って積立側へ。']);
+      if (!p.desc) al.push(['crit', 'DESC 未確認', (p.name || p.code) + ' の購入可を DESC で確認していません。']);
+    });
+    $('atk-alerts').innerHTML = al.map(function (a) { return '<li class="' + a[0] + '"><span class="chip">' + esc(a[1]) + '</span><span>' + esc(a[2]) + '</span></li>'; }).join('');
+
+    var open = atk.positions.filter(function (p) { return !p.closed; });
+    var today = new Date();
+    $('atk-table').innerHTML = open.length ? '<thead><tr><th>銘柄</th><th>口座</th><th>元本</th><th>現在額（万円）</th><th>比率</th><th>理由と売る条件</th><th></th></tr></thead><tbody>' +
+      open.map(function (p) {
+        var w = total ? num(p.value || p.cost) / total * 100 : 0, b = [];
+        var held = p.date ? (today - new Date(p.date)) / 864e5 : null;
+        if (held != null && held < 365) b.push('<span class="badge warn">1 年未満（' + Math.floor(held / 30) + ' か月）</span>');
+        if (w > 5) b.push('<span class="badge crit">5% 超え</span>');
+        b.push(p.desc ? '<span class="badge ok">DESC 確認済み</span>' : '<span class="badge crit">DESC 未確認</span>');
+        var g = num(p.value || p.cost) - num(p.cost);
+        return '<tr data-id="' + p.id + '"><td><b>' + esc(p.name) + '</b><br><span class="note">' + esc(p.code) + (p.date ? '・' + esc(p.date) : '') + '</span><br>' + b.join('') + '</td>' +
+          '<td>' + esc(p.acct) + '</td><td class="n">' + mn(num(p.cost)) + '</td>' +
+          '<td><input type="number" inputmode="decimal" step="0.1" data-f="value" value="' + esc(p.value) + '" aria-label="' + esc(p.name) + ' の現在額"><br><span class="note ' + (g >= 0 ? 'up' : 'down') + '">' + (g >= 0 ? '+' : '') + mn(g) + '</span></td>' +
+          '<td class="n">' + pct(w) + '</td>' +
+          '<td class="thesis">' + esc(p.q2) + '<br><b>売る条件：</b>' + esc(p.q5) + '</td>' +
+          '<td><button type="button" data-act="close">売った</button></td></tr>';
+      }).join('') + '</tbody>' : '<tbody><tr><td class="note">まだありません。下の 6 つの質問に答えると追加できます。</td></tr></tbody>';
+
+    var newMax = total * 0.02;
+    $('aq-size').textContent = total ? '新しく買うときの目安：1 銘柄 ' + mn(newMax) + ' まで（投資資産 ' + mn(total) + ' の 2%）。' : '';
+
+    var rv = atk.reviews.slice().sort(function (a, b) { return a.year - b.year; });
+    $('ar-table').innerHTML = rv.length ? '<thead><tr><th>年</th><th>攻め口座</th><th>オルカン</th><th>差</th></tr></thead><tbody>' + rv.map(function (r) {
+      var dlt = r.mine - r.bench; return '<tr><td>' + r.year + '</td><td class="n">' + pct(r.mine) + '</td><td class="n">' + pct(r.bench) + '</td><td class="n ' + (dlt >= 0 ? 'up' : 'down') + '">' + (dlt >= 0 ? '+' : '') + pct(dlt) + '</td></tr>';
+    }).join('') + '</tbody>' : '';
+    var streak = 0; for (var i = rv.length - 1; i >= 0 && rv[i].mine < rv[i].bench; i--) streak++;
+    $('ar-verdict').textContent = !rv.length ? '' : streak >= 3 ? '3 年続けてオルカンに負けています。攻め口座をやめ、積立に合流させる時期です。' :
+      streak ? streak + ' 年続けてオルカンに負けています（3 年でやめるルール）。' : '直近の年はオルカン以上でした。ルールを守って続けます。';
+    $('ipo-pt').value = atk.ipo.pt || ''; $('ipo-n').value = atk.ipo.n || ''; $('ipo-win').value = atk.ipo.win || '';
+  }
+
+  function aqReady() {
+    return ['aq-name', 'aq-cost', 'aq-q1', 'aq-q2', 'aq-q3', 'aq-q5'].every(function (id) { return $(id).value.trim(); }) && $('aq-q4').checked && $('aq-q6').checked;
+  }
+  ['aq-name', 'aq-code', 'aq-cost', 'aq-q1', 'aq-q2', 'aq-q3', 'aq-q5', 'aq-q4', 'aq-q6', 'aq-date'].forEach(function (id) {
+    $(id).addEventListener('input', function () { $('aq-add').disabled = !aqReady(); });
+    $(id).addEventListener('change', function () { $('aq-add').disabled = !aqReady(); });
+  });
+  $('aq-add').addEventListener('click', function () {
+    if (!aqReady()) return;
+    atk.positions.push({ id: 'a' + Date.now().toString(36), name: $('aq-name').value.trim(), code: $('aq-code').value.trim(), acct: $('aq-acct').value,
+      date: $('aq-date').value, cost: $('aq-cost').value, value: $('aq-cost').value, q1: $('aq-q1').value.trim(), q2: $('aq-q2').value.trim(), q3: $('aq-q3').value.trim(), q5: $('aq-q5').value.trim(), desc: true });
+    store(AKEY, atk);
+    ['aq-name', 'aq-code', 'aq-cost', 'aq-q1', 'aq-q2', 'aq-q3', 'aq-q5', 'aq-date'].forEach(function (id) { $(id).value = ''; });
+    $('aq-q4').checked = false; $('aq-q6').checked = false; $('aq-add').disabled = true;
+    $('aq-msg').textContent = '追加しました';
+    renderAtk(); renderPolicy();
+  });
+  $('atk-table').addEventListener('change', function (e) {
+    var tr = e.target.closest('tr'); if (!tr || e.target.dataset.f !== 'value') return;
+    var p = atk.positions.filter(function (x) { return x.id === tr.dataset.id; })[0]; if (!p) return;
+    p.value = e.target.value; store(AKEY, atk); renderAtk(); renderPolicy();
+  });
+  var closeArm = null;
+  $('atk-table').addEventListener('click', function (e) {
+    if (e.target.dataset.act !== 'close') return;
+    var tr = e.target.closest('tr'), id = tr.dataset.id;
+    if (closeArm !== id) { closeArm = id; e.target.textContent = 'もう一度押すと記録'; setTimeout(function () { if (closeArm === id) { closeArm = null; renderAtk(); } }, 4000); return; }
+    var p = atk.positions.filter(function (x) { return x.id === id; })[0];
+    if (p) { p.closed = true; p.closedAt = new Date().toISOString().slice(0, 10); }
+    closeArm = null; store(AKEY, atk); renderAtk(); renderPolicy();
+  });
+  $('ar-year').value = new Date().getFullYear();
+  $('ar-add').addEventListener('click', function () {
+    var y = num($('ar-year').value), a = $('ar-mine').value, b = $('ar-bench').value;
+    if (!y || a === '' || b === '') return;
+    atk.reviews = atk.reviews.filter(function (r) { return r.year !== y; });
+    atk.reviews.push({ year: y, mine: num(a), bench: num(b) });
+    store(AKEY, atk); $('ar-mine').value = ''; $('ar-bench').value = ''; renderAtk();
+  });
+  ['pt', 'n', 'win'].forEach(function (k) { $('ipo-' + k).addEventListener('change', function (e) { atk.ipo[k] = e.target.value; store(AKEY, atk); }); });
+
+  // 方針の入力
+  $('pol-strat').innerHTML = Object.keys(STRATS).map(function (k) { return '<option value="' + k + '">' + esc(STRATS[k].nm) + '</option>'; }).join('');
+  $('pol-strat').value = STRATS[pol.strat] ? pol.strat : 'X';
+  $('pol-age').value = pol.age || ''; $('pol-fixed').value = pol.fixed || '';
+  [['pol-age', 'age'], ['pol-fixed', 'fixed'], ['pol-strat', 'strat']].forEach(function (f) {
+    $(f[0]).addEventListener('input', function (e) { pol[f[1]] = e.target.value; store(PKEY, pol); renderPolicy(); });
+    $(f[0]).addEventListener('change', function (e) { pol[f[1]] = e.target.value; store(PKEY, pol); renderPolicy(); });
+  });
+  $('pol-checks').addEventListener('change', function (e) {
+    var k = e.target.dataset.ck; if (!k) return; pol.checks[k] = e.target.checked; store(PKEY, pol); renderPolicy();
+  });
+  document.addEventListener('jevplan', renderPolicy);
+
+  // 公開時に添えた seed.json に profile があれば、空の項目だけ一度埋める（リポジトリには入れない）
+  fetch('seed.json').then(function (r) { return r.ok ? r.json() : null; }).then(function (s) {
+    if (!s || !s.profile) return;
+    var changed = false;
+    ['age', 'fixed', 'strat'].forEach(function (k) { if (s.profile[k] != null && !pol[k + 'Seeded']) { if (!pol[k] || k === 'strat') pol[k] = String(s.profile[k]); pol[k + 'Seeded'] = true; changed = true; } });
+    if (changed) { store(PKEY, pol); $('pol-strat').value = pol.strat; $('pol-age').value = pol.age; $('pol-fixed').value = pol.fixed; renderPolicy(); }
+  }).catch(function () { /* seed.json がなければ何もしない */ });
+
+  window.JevAtk = { render: function () { renderPolicy(); renderAtk(); }, allocate: allocate, yearsTo: yearsTo };
+  renderPolicy(); renderAtk();
 })();
 </script>
