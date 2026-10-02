@@ -1,5 +1,7 @@
 # AI 投資ツール 16 個の評価（2026-10-01 取得版）
 
+各ツールの構成・仕組み・動かした結果の詳細は [INGEST.md](INGEST.md)。
+
 `bash tools/install_skills.sh` で `vendor/skills/` に取得したソースと README を読んだ結果。
 基準は CLAUDE.md の「税・手数料を引いた後の、長期のリスク調整後リターン」と、独立性・実発注しない方針。
 
@@ -21,7 +23,7 @@
 
 | ツール | 中身 | 言語・ライセンス | 必要なもの |
 |---|---|---|---|
-| OpenBB | 多数のデータ源をまとめる取得ライブラリと API サーバー（`pip install openbb`） | Python／独自（OSS 部分は AGPL 系） | 無料源なら鍵なし。有料源は各社の鍵 |
+| OpenBB | 多数のデータ源をまとめる取得ライブラリと API サーバー（`pip install openbb`） | Python／Apache-2.0 | 無料源なら鍵なし。有料源は各社の鍵 |
 | daily_stock_analysis | A 株・港股・米股などの自選株を毎日 AI 分析して WeChat などに通知 | Python・TS／MIT | LLM の鍵、ニュース検索の鍵 |
 | ai-hedge-fund | 著名投資家を模した複数の AI が売買判断を出す教育用（発注はしない） | Python／MIT | Financial Datasets の鍵＋LLM の鍵（Jev も可） |
 | qlib | Microsoft の定量投資の研究基盤。因子と予測モデル | Python／MIT | 大量の価格データと学習時間 |
