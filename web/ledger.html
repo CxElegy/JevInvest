@@ -2016,19 +2016,22 @@ input[type="checkbox"] { width: auto; flex: none; }
   // ---- 方針（積立の配分）----
   // nisa: つみたて投資枠の対象か（半導体指数は成長投資枠のみとして扱う）
   var FUNDS = {
-    acwi: { nm: '全世界株', tsumi: true },
-    spx: { nm: 'S&P500', tsumi: true },
-    fang: { nm: 'FANG+', tsumi: true },
-    semi: { nm: '半導体（インデックス型）', tsumi: false },
-    topix: { nm: 'TOPIX', tsumi: true }
+    // 商品は SBI 証券で買える、三菱UFJ・SBI 系以外の運用会社のもの。可否は各自 DESC／Pre-Clear で確認する
+    acwi: { nm: '全世界株', fund: 'たわらノーロード 全世界株式', code: '47312197', tsumi: true },
+    spx: { nm: 'S&P500', fund: 'たわらノーロード S&P500', code: '47318233', tsumi: true },
+    fang: { nm: 'FANG+', fund: 'iFreeNEXT FANG+インデックス', code: '04311181', tsumi: true },
+    semi: { nm: '半導体', fund: '野村インデックスファンド・日経半導体株', code: '0131124A', tsumi: false },
+    topix: { nm: 'TOPIX', fund: '（未選定）', code: '', tsumi: true }
   };
   var STRATS = {
-    A: { nm: '標準：オルカン 100%', w: { acwi: 100 }, note: '全世界に 1 本で分散。値動きは一番小さい。' },
-    C: { nm: 'やや高：オルカン 50・S&P 20・FANG+ 20・TOPIX 10', w: { acwi: 50, spx: 20, fang: 20, topix: 10 }, note: '米国の大型テックに少し賭けつつ、円の資産も 1 割持つ。' },
-    X: { nm: '積極：オルカン 30・S&P 30・FANG+ 25・半導体 15', w: { acwi: 30, spx: 30, fang: 25, semi: 15 }, note: 'テックが勝ち続ければ 20 年で大きく伸びる。途中で資産が半分になる確率は約 12%。' },
+    A: { nm: '標準：全世界株 100%', w: { acwi: 100 }, note: '全世界に 1 本で分散。値動きは一番小さい。' },
+    C: { nm: 'やや高：全世界 50・S&P 20・FANG+ 20・TOPIX 10', w: { acwi: 50, spx: 20, fang: 20, topix: 10 }, note: '米国の大型テックに少し賭けつつ、円の資産も 1 割持つ。' },
+    X2: { nm: '積極（全世界株なし）：S&P 60・FANG+ 25・半導体 15', w: { spx: 60, fang: 25, semi: 15 }, note: '全世界株の Pre-Clear が出るまでの積極。米国に偏るので、全世界株が通ったら「積極」に切り替える。' },
+    X: { nm: '積極：全世界 30・S&P 30・FANG+ 25・半導体 15', w: { acwi: 30, spx: 30, fang: 25, semi: 15 }, note: 'テックが勝ち続ければ 20 年で大きく伸びる。途中で資産が半分になる確率は約 12%。' },
     XX: { nm: '超積極：S&P 40・FANG+ 35・半導体 25', w: { spx: 40, fang: 35, semi: 25 }, note: '上振れは最大だが、途中で半分になる確率は約 24%。米国以外を持たない。' }
   };
   var CARD_MAX = 10;   // クレカ積立の上限（万円／月）
+  var CLR = {};        // Pre-Clear の状況。公開時に添える seed.json からだけ読む（リポジトリには入れない）
   var PKEY = 'jevinvest.policy.v1', AKEY = 'jevinvest.attack.v1';
   var pol = load(PKEY, { age: '', fixed: '', strat: 'X', checks: {} });
   if (!pol.checks) pol.checks = {};
@@ -2069,9 +2072,14 @@ input[type="checkbox"] { width: auto; flex: none; }
         var how = [];
         if (r.card > 0) how.push('クレカ積立 ' + mn(r.card) + '（つみたて投資枠）');
         if (r.cash > 0.04) how.push('現金積立 ' + mn(r.cash) + '（成長投資枠）');
-        return '<tr><td>' + esc(FUNDS[r.k].nm) + '</td><td class="n">' + r.w + '%</td><td class="n">' + (fixed ? mn(r.amt) : '—') + '</td><td>' + (fixed ? how.join('<br>') : '固定積立額を入れると出ます') + '</td></tr>';
+        var f = FUNDS[r.k], c = CLR[r.k], badge = '';
+        if (c && c.st === 'ok') badge = '<span class="badge ok">Pre-Clear 済み' + (c.exp ? '（' + esc(c.exp) + ' まで）' : '') + '</span>';
+        else if (c && c.st === 'wait') badge = '<span class="badge warn">結果を確認中</span>';
+        else if (c && c.st === 'ng') badge = '<span class="badge crit">購入不可</span>';
+        else badge = '<span class="badge warn">DESC 未確認</span>';
+        return '<tr><td><b>' + esc(f.nm) + '</b><br><span class="note">' + esc(f.fund) + (f.code ? '（' + f.code + '）' : '') + '</span><br>' + badge + (f.tsumi ? '' : '<br><span class="note">つみたて投資枠の対象外</span>') + '</td><td class="n">' + r.w + '%</td><td class="n">' + (fixed ? mn(r.amt) : '—') + '</td><td>' + (fixed ? how.join('<br>') : '固定積立額を入れると出ます') + '</td></tr>';
       }).join('') + '</tbody>' +
-      (fixed ? '<tfoot><tr><td colspan="4" class="note">つみたて投資枠 月 ' + mn(tsumiTotal) + '・成長投資枠 月 ' + mn(growthTotal) + '（年 ' + mn(growthTotal * 12) + '、上限 240 万円）' + (growthTotal * 12 > 240 ? '。<b>成長投資枠の年間上限を超えます。超えた分は特定口座で。</b>' : '') + (tsumiTotal * 12 > 120 ? '。<b>つみたて投資枠の年間上限を超えます。</b>' : '') + '</td></tr></tfoot>' : '');
+      (fixed ? '<tfoot><tr><td colspan="4" class="note">積立の設定画面の「預り区分」で、クレカ積立は「NISA（つみたて投資枠）」、現金積立は「NISA（成長投資枠）」を選ぶ（特定口座にしない）。<br>つみたて投資枠 月 ' + mn(tsumiTotal) + '・成長投資枠 月 ' + mn(growthTotal) + '（年 ' + mn(growthTotal * 12) + '、上限 240 万円）' + (growthTotal * 12 > 240 ? '。<b>成長投資枠の年間上限を超えます。超えた分は特定口座で。</b>' : '') + (tsumiTotal * 12 > 120 ? '。<b>つみたて投資枠の年間上限を超えます。</b>' : '') + '</td></tr></tfoot>' : '');
 
     // 月末の残り
     var inp = planInput(), net = null;
@@ -2113,7 +2121,9 @@ input[type="checkbox"] { width: auto; flex: none; }
     // やることリスト
     var y = new Date().getFullYear();
     var items = [
-      ['desc', 'DESC で積立のファンドを 1 本ずつ確認し、台帳に記録', '最初に'],
+      ['desc', 'DESC で積立のファンドを 1 本ずつ確認し、Pre-Clear を通す', '最初に'],
+      ['firstbuy', 'Pre-Clear の期限内に最初の買付を約定させる' + (clrExp() ? '（' + clrExp() + ' まで）' : ''), '期限内'],
+      ['recurring', '毎月の積立が Pre-Clear の承認に含まれるか、Independence チームに確認', '今月'],
       ['card', 'SBI 証券で三井住友カードのクレカ積立を設定（月 10 万円）', '今月'],
       ['growth', '成長投資枠の現金積立を設定', '今月'],
       ['furusato', 'ふるさと納税（源泉徴収票の見込みで上限を確認）', y + ' 年 12 月 31 日まで'],
@@ -2127,6 +2137,10 @@ input[type="checkbox"] { width: auto; flex: none; }
     }).join('');
   }
 
+  function clrExp() {
+    var e = Object.keys(CLR).map(function (k) { return CLR[k].st === 'ok' ? CLR[k].exp : null; }).filter(Boolean).sort();
+    return e[0] || '';
+  }
   function lowestVsTarget(w) {
     // 台帳の銘柄名にファンド名の語が含まれていれば、その評価額で比率を出す
     var s = load('jevinvest.ledger.v1', null);
@@ -2263,8 +2277,12 @@ input[type="checkbox"] { width: auto; flex: none; }
 
   // 公開時に添えた seed.json に profile があれば、空の項目だけ一度埋める（リポジトリには入れない）
   fetch('seed.json').then(function (r) { return r.ok ? r.json() : null; }).then(function (s) {
+    if (s && s.clearance) { CLR = s.clearance; renderPolicy(); }
     if (!s || !s.profile) return;
     var changed = false;
+    if (s.profile.v && pol.seedV !== s.profile.v) {   // 方針を見直したときは、選んだ方針だけ seed の値に合わせる
+      pol.seedV = s.profile.v; pol.strat = String(s.profile.strat || pol.strat); changed = true;
+    }
     ['age', 'fixed', 'strat'].forEach(function (k) { if (s.profile[k] != null && !pol[k + 'Seeded']) { if (!pol[k] || k === 'strat') pol[k] = String(s.profile[k]); pol[k + 'Seeded'] = true; changed = true; } });
     if (changed) { store(PKEY, pol); $('pol-strat').value = pol.strat; $('pol-age').value = pol.age; $('pol-fixed').value = pol.fixed; renderPolicy(); }
   }).catch(function () { /* seed.json がなければ何もしない */ });
