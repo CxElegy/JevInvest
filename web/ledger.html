@@ -363,6 +363,24 @@ input[type="checkbox"] { width: auto; flex: none; }
 .lk span { position: absolute; inset: 2px auto 2px 0; background: var(--k-stock); opacity: .35; border-radius: 3px; }
 .lk b { position: relative; font-weight: 500; padding-left: 4px; }
 .sw.m-sp, .sw.m-fang, .sw.m-semi { height: 10px; }
+/* ファンド分析 */
+#dp-pick button { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 8px 14px; min-height: 40px; font-weight: 700; }
+#dp-pick button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.debate { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+.debate > div { border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.debate .bull { border-top: 4px solid var(--good); } .debate .bear { border-top: 4px solid var(--crit); }
+.debate h3 { margin: 0; font-size: 15px; }
+.debate ul { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+.debate .counter { font-size: 13px; color: var(--muted); border-left: 3px solid var(--line); padding-left: 8px; }
+.prob { font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+.prob.hi { color: var(--crit); } .prob.mid { color: var(--warn); } .prob.lo { color: var(--good); }
+.heat td.n { text-align: center; }
+.heat .h-neg { background: var(--crit-soft); } .heat .h-low { background: var(--warn-soft); } .heat .h-ok { background: var(--accent-soft); } .heat .h-cur { outline: 2px solid var(--fg); outline-offset: -2px; }
+.okmark { color: var(--good); font-weight: 700; } .ngmark { color: var(--muted); }
+.instl { display: grid; grid-template-columns: minmax(7em, 12em) 1fr; gap: 6px 12px; margin: 0; font-size: 14px; }
+.instl dd { margin: 0; }
+.calcList { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+@media (max-width: 520px) { .instl { grid-template-columns: 1fr; } .instl dt { margin-top: 4px; } }
 </style>
 
 <div class="wrap">
@@ -370,6 +388,7 @@ input[type="checkbox"] { width: auto; flex: none; }
     <h1>JevInvest 持仓台帳</h1>
     <nav class="tabs" role="tablist" aria-label="表示の切り替え">
       <button type="button" role="tab" id="tabRoad" aria-controls="viewRoad" aria-selected="true">道筋</button>
+      <button type="button" role="tab" id="tabDeep" aria-controls="viewDeep" aria-selected="false">ファンド分析</button>
       <button type="button" role="tab" id="tabPlan" aria-controls="viewPlan" aria-selected="false">家計の入力</button>
       <button type="button" role="tab" id="tabLedger" aria-controls="viewLedger" aria-selected="false">台帳</button>
       <button type="button" role="tab" id="tabAtk" aria-controls="viewAtk" aria-selected="false">攻め口座</button>
@@ -574,6 +593,24 @@ input[type="checkbox"] { width: auto; flex: none; }
       </table></div>
     </section>
     </details>
+  </div>
+
+  <div id="viewDeep" class="view" role="tabpanel" aria-labelledby="tabDeep" hidden>
+    <header class="atkhead">
+      <h2>ファンド分析（8 つの視点）</h2>
+      <p class="sub">機関投資家・強気と弱気・決算・リスク・バフェット流・決算説明会・内部者・DCF の 8 つで、選んだ 3 本を見ます。ファンドは指数に連動するので、会社ごとの分析は各ファンドの上位 10 銘柄で行い、ファンド全体の数字は中の比率で重みを付けて合算しています。</p>
+      <p class="note" id="dp-asof"></p>
+    </header>
+    <nav class="chips" id="dp-pick" aria-label="ファンドを選ぶ"></nav>
+    <section aria-labelledby="h-dp-sum"><h2 id="h-dp-sum">まとめ</h2><div class="tiles" id="dp-tiles"></div><p id="dp-verdict"></p></section>
+    <section aria-labelledby="h-dp1"><h2 id="h-dp1">① 機関投資家の目線：なぜ買う・避けるか、持つ量、入り方、混雑</h2><div id="dp-1"></div></section>
+    <section aria-labelledby="h-dp2"><h2 id="h-dp2">② 強気と弱気の討論</h2><div id="dp-2"></div></section>
+    <section aria-labelledby="h-dp3"><h2 id="h-dp3">③ 決算の読み解き（上位銘柄の直近 5 四半期）</h2><div id="dp-3"></div></section>
+    <section aria-labelledby="h-dp4"><h2 id="h-dp4">④ リスク評価：起きやすさと早期警戒サイン</h2><div id="dp-4"></div></section>
+    <section aria-labelledby="h-dp5"><h2 id="h-dp5">⑤ バフェット流：堀・経営の質・オーナー収益・安全域</h2><div id="dp-5"></div></section>
+    <section aria-labelledby="h-dp6"><h2 id="h-dp6">⑥ 決算説明会：数字が強調していること</h2><div id="dp-6"></div></section>
+    <section aria-labelledby="h-dp7"><h2 id="h-dp7">⑦ 内部者の売買（過去 6 か月）</h2><div id="dp-7"></div></section>
+    <section aria-labelledby="h-dp8"><h2 id="h-dp8">⑧ DCF：3 つのシナリオと感応度</h2><div id="dp-8"></div></section>
   </div>
 
   <div id="viewPlan" class="view" role="tabpanel" aria-labelledby="tabPlan" hidden>
@@ -1196,17 +1233,19 @@ input[type="checkbox"] { width: auto; flex: none; }
   // ---- タブ ----
   function showTab(which) {
     var inv = which === 'investors';
-    [['road', 'viewRoad', 'tabRoad'], ['plan', 'viewPlan', 'tabPlan'], ['ledger', 'viewLedger', 'tabLedger'], ['atk', 'viewAtk', 'tabAtk'], ['investors', 'viewInvestors', 'tabInvestors']].forEach(function (t) {
+    [['road', 'viewRoad', 'tabRoad'], ['deep', 'viewDeep', 'tabDeep'], ['plan', 'viewPlan', 'tabPlan'], ['ledger', 'viewLedger', 'tabLedger'], ['atk', 'viewAtk', 'tabAtk'], ['investors', 'viewInvestors', 'tabInvestors']].forEach(function (t) {
       $(t[1]).hidden = t[0] !== which; $(t[2]).setAttribute('aria-selected', String(t[0] === which));
     });
     try { localStorage.setItem(TAB_KEY, which); } catch (e) { /* 保存できなくても表示はできる */ }
     if (inv) loadData();
     if (which === 'road' && window.JevRoad) window.JevRoad.render();
+    if (which === 'deep' && window.JevDeep) window.JevDeep.show();
     if ((which === 'road' || which === 'atk') && window.JevAtk) window.JevAtk.render();
   }
   $('tabLedger').addEventListener('click', function () { showTab('ledger'); });
   $('tabPlan').addEventListener('click', function () { showTab('plan'); });
   $('tabRoad').addEventListener('click', function () { showTab('road'); });
+  $('tabDeep').addEventListener('click', function () { showTab('deep'); });
   $('tabAtk').addEventListener('click', function () { showTab('atk'); });
   $('tabInvestors').addEventListener('click', function () { showTab('investors'); });
 
@@ -1536,9 +1575,9 @@ input[type="checkbox"] { width: auto; flex: none; }
     $('personDetail').scrollIntoView({ block: 'start', behavior: 'smooth' });
   });
 
-  var start = { '#investors': 'investors', '#plan': 'plan', '#ledger': 'ledger', '#road': 'road', '#atk': 'atk' }[location.hash] || null;
+  var start = { '#investors': 'investors', '#plan': 'plan', '#ledger': 'ledger', '#road': 'road', '#atk': 'atk', '#deep': 'deep' }[location.hash] || null;
   if (!start) { try { start = localStorage.getItem(TAB_KEY); } catch (e) { start = null; } }
-  showTab(['road', 'plan', 'ledger', 'atk', 'investors'].indexOf(start) >= 0 ? start : 'road');
+  showTab(['road', 'deep', 'plan', 'ledger', 'atk', 'investors'].indexOf(start) >= 0 ? start : 'road');
 })();
 </script>
 
@@ -2581,5 +2620,166 @@ input[type="checkbox"] { width: auto; flex: none; }
     fill(D); rshare(D); chart(D); look(D); funds(D); corr(D); risk(D); stocks(D);
     $('sd-calcSub').textContent = D.as_of + ' 時点。公開の市場データ（Yahoo Finance）から tools/strategy_data.py で計算。過去の値動きは将来を約束しない。';
   }).catch(function () { var el = $('sd-calcSub'); if (el) el.textContent = '計算の元データ（strategy.json）を読み込めませんでした。開き直してください。'; });
+})();
+</script>
+
+<script>
+(function () {
+  'use strict';
+  function $(id) { return document.getElementById(id); }
+  function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function pc(x, d) { if (x == null) return '—'; var v = x * 100, t = Math.abs(v).toFixed(d == null ? 1 : d); if (Number(t) === 0) return t + '%'; return (v > 0 ? '+' : '−') + t + '%'; }
+  function pu(x, d) { return x == null ? '—' : (x * 100).toFixed(d == null ? 1 : d) + '%'; }
+  function x1(x, d) { return x == null ? '—' : Number(x).toFixed(d == null ? 1 : d); }
+  var JP = { '285A.T': 'キオクシア', '8035.T': '東京エレクトロン', '6857.T': 'アドバンテスト', '6723.T': 'ルネサス', '6146.T': 'ディスコ', '4063.T': '信越化学', '5016.T': 'JX金属', '6920.T': 'レーザーテック', '7741.T': 'HOYA', '7735.T': 'SCREEN',
+    NVDA: 'NVIDIA', AAPL: 'Apple', MSFT: 'Microsoft', AMZN: 'Amazon', GOOGL: 'Alphabet', GOOG: 'Alphabet（C 株）', AVGO: 'Broadcom', META: 'Meta', MU: 'Micron', TSLA: 'Tesla', NFLX: 'Netflix', PLTR: 'Palantir' };
+  function nm(t) { return JP[t] || t; }
+  var FN = { sp: 'たわら S&P500', fang: 'iFreeNEXT FANG+', semi: '野村 日経半導体株' };
+  var cur = 'sp', D = null;
+
+  // 文章で書く部分（数字は D から差し込む）
+  var TEXT = {
+    sp: {
+      verdict: function (f) { return '土台として持つ価値は高いが、割安ではない。PER ' + x1(f.pe0) + ' 倍は、年 9% のリターンに利益の年 ' + pu(f.req_growth) + ' 成長が必要な水準。3 シナリオの確率加重は年 ' + pc(f.weighted) + '（円の為替は含まない）。期待を下げて、長く持つ前提で使う。'; },
+      inst: [
+        ['買う理由', '年金や運用会社にとって「市場そのもの」。流動性が最も高く、500 社に分散し、手数料が最も安い。成績を測る基準（ベンチマーク）なので、外す理由がない限り持つ。'],
+        ['避ける理由', function (f) { return '株価が利益の ' + x1(f.pe0) + ' 倍と、長い平均（16〜18 倍）より高い。上位 10 社で約 4 割を占め、実態は「米国大型テック＋その他」。'; }],
+        ['持つ量', '機関投資家は株式の中核として 5〜7 割。あなたの戦略の 65% はこの範囲。'],
+        ['入り方', '割安感はないので「待てば安くなる」とも言えない。一括でも積立でもよく、時期を当てに行かない。'],
+        ['混雑（みんなが同じものを持つ危険）', function (f) { return '著名投資家の 13F では、上位銘柄で買い増し ' + f.f13_add + ' 件・減らし ' + f.f13_trim + ' 件と拮抗。売買は偏っていないが、世界中の指数ファンドが同じ銘柄を持つので、売りが出るときは一斉に出る。'; }]
+      ],
+      bull: ['AI への投資で上位企業の利益が急増している（下の決算表のとおり NVIDIA・Broadcom の売上は前年の約 2 倍）。', function (f) { return '上位 10 社の営業利益率は平均 ' + pu(f.op_margin, 0) + '。値上げできる力が強く、景気が落ちても利益が残りやすい。'; }, function (f) { return '強気シナリオ（利益 +11%/年・PER 24 倍）なら年 ' + pc(f.scen.bull.ret) + '。'; }],
+      bear: [function (f) { return 'PER ' + x1(f.pe0) + ' 倍が 19 倍に戻るだけで、利益が年 7% 伸びても年 ' + pc(f.scen.base.ret) + ' にとどまる。'; }, 'AI 設備投資が重く、Amazon・Microsoft の手元に残る現金（FCF 利回り）は 1% 未満。投資が実らなければ利益が落ちる。', '上位 10 社への集中が過去最高水準。1 社の失速が指数全体に響く。'],
+      bullCounter: '弱気側への反論：PER が高いのは利益率と成長が過去より高いから。昔の平均に戻る前提そのものが古い。',
+      bearCounter: '強気側への反論：利益率が高いのは景気のよい時期だから。2000 年も「今回は違う」と言われ、その後 10 年報われなかった。',
+      risks: [
+        ['割高からの調整（PER の低下）', 'mid', function (f) { return 'PER が 28 倍を超える（いま ' + x1(f.pe0) + ' 倍）'; }],
+        ['大型テックへの集中', 'mid', '上位 10 社の比率が 4 割を超える（いま約 38%）'],
+        ['AI 投資の回収の遅れ', 'mid', '大手クラウド 4 社の設備投資の伸びが鈍る・FCF がマイナスになる'],
+        ['景気後退', 'lo', '米国の失業率が 3 か月平均で 0.5 ポイント上がる'],
+        ['円高（円で見た価値の目減り）', 'mid', '1 ドル 140 円を下回る（いま約 158 円）']
+      ]
+    },
+    fang: {
+      verdict: function (f) { return '上を狙う部分として筋はよいが、10 社に同じ金額ずつなので中身の入れ替えと個別の割高さが効く。年 9% に必要な利益成長は年 ' + pu(f.req_growth) + '。確率加重で年 ' + pc(f.weighted) + '。25% 以内で持つ。'; },
+      inst: [
+        ['買う理由', 'ヘッジファンドが最も多く持つ銘柄群で、利益の伸びが市場平均の数倍。10 社なので伸びる会社の効果が薄まらない。'],
+        ['避ける理由', 'みんなが持っているので、悪いニュースの時の下げが大きい（2022 年 −31%）。Palantir のように PER 80 倍の銘柄も同じ 10% の比率で入る。'],
+        ['持つ量', '集中型の扱いで、機関投資家なら株式の 10〜25%。あなたの 25% は上限いっぱい。'],
+        ['入り方', '200 日線から大きく上に離れているときは急落しやすい。一度に買うより、数回に分けるか積立で入る。'],
+        ['混雑', function (f) { return '13F では買い増し ' + f.f13_add + ' 件・減らし ' + f.f13_trim + ' 件。プロの売買は拮抗しているが、保有の集中はきわめて高い。'; }]
+      ],
+      bull: ['AI の需要を最も直接受ける会社がそろう（NVIDIA・Broadcom・Micron）。', function (f) { return '上位銘柄の売上の伸びは加重平均で年 ' + pc(f.rev_growth, 0) + '、営業利益率 ' + pu(f.op_margin, 0) + '。'; }, '四半期ごとに銘柄を入れ替えるので、勢いの落ちた会社は外れていく。'],
+      bear: ['Micron の予想 PER 5 倍は、メモリの好況で利益が一時的に膨らんでいるサイン（好況の天井で PER が最も低く見える）。', 'Palantir（PER 約 80 倍）や Netflix が NVIDIA と同じ比率。割高な銘柄の下落がそのまま効く。', '入れ替えは「上がった銘柄を後から入れる」仕組みで、高値づかみになりやすい。'],
+      bullCounter: '弱気側への反論：入れ替えで負け組を外し続けるのは、指数の強みでもある。過去 10 年は S&P500 を大きく上回った。',
+      bearCounter: '強気側への反論：過去 10 年はテックの黄金期。同じ種類の指数は 2000〜2002 年に約 8 割下落した。',
+      risks: [
+        ['テックの一斉下落（バブル崩壊型）', 'mid', '10 社の平均 PER が 35 倍を超える'],
+        ['メモリの不況（Micron）', 'hi', 'メモリ価格の下落・Micron の売上が前の四半期を下回る'],
+        ['規制・独占禁止', 'mid', '米国・EU で分割や大型罰金の判断が出る'],
+        ['銘柄入れ替えによる高値づかみ', 'mid', '四半期の入れ替えで、直前に急騰した銘柄が入る'],
+        ['円高', 'mid', '1 ドル 140 円を下回る']
+      ]
+    },
+    semi: {
+      verdict: function (f) { return '景気の波に賭ける部分。上位銘柄の PER は合算で ' + x1(f.pe0) + ' 倍と見た目は安いが、メモリの好況で利益が膨らんでいる時期。確率加重は年 ' + pc(f.weighted) + '、弱気シナリオでは年 ' + pc(f.scen.bear.ret) + '。10% 以内で、下がった時に買い足す前提で持つ。'; },
+      inst: [
+        ['買う理由', '半導体の製造装置と材料で世界の上位に入る日本企業がそろう。好況期の利益の伸びが大きい。'],
+        ['避ける理由', 'メモリと装置は好不況の波が大きい。キオクシア 1 社で約 28% と、指数の上限（15%）を超えている。'],
+        ['持つ量', '景気循環に賭ける部分として株式の 5〜10%。あなたの 10% は上限。'],
+        ['入り方', 'いまは高値から約 −25%。天井で買うよりは条件がよいが、メモリの不況入りなら −50% もありうる。一度に入れず、下がったら足す。'],
+        ['混雑', '海外の投資家が短期の売買で出入りしやすく、売りが集中すると 1 か月で 2〜3 割動く。13F（米国の開示）には日本株の保有がほとんど出ないので、混雑は値動きで見る。']
+      ],
+      bull: ['東京エレクトロンは PER 約 9 倍と、利益に対して安い。', 'AI 用のメモリ（HBM など）の需要でキオクシアの売上は前年の数倍、営業利益率は約 7 割。', function (f) { return '強気シナリオ（利益 +15%/年・PER 22 倍）なら年 ' + pc(f.scen.bull.ret) + '。'; }],
+      bear: ['メモリ会社の営業利益率 7〜8 割は歴史的な好況の水準。供給が増えると価格は急落する。', 'アドバンテストは PER 約 75 倍。期待が先に株価に入っている。', 'キオクシア 1 社で 3 割近く。指数の見直し（毎年 11 月）までは 1 社の影響が大きい。'],
+      bullCounter: '弱気側への反論：AI でデータの量が増え続け、メモリの需要の底が上がっている。昔のような深い不況にはなりにくい。',
+      bearCounter: '強気側への反論：「今回は需要の底が上がった」は過去の好況のたびに言われた。2018 年と 2022 年にも主要な半導体株は 2〜3 割下げた。',
+      risks: [
+        ['メモリ不況（価格の急落）', 'hi', 'メモリ価格が 2 か月続けて下がる・キオクシアの営業利益率が 5 割を切る'],
+        ['キオクシアへの集中', 'hi', '11 月の指数見直しで 15% まで下がるか'],
+        ['米中の輸出規制', 'mid', '中国向けの装置の売上の比率が下がる・新しい規制の発表'],
+        ['円高（輸出企業の利益が減る）', 'mid', '1 ドル 140 円を下回る'],
+        ['AI 投資の減速', 'mid', '米国の大手クラウドの設備投資の伸びが鈍る']
+      ]
+    }
+  };
+  function val(v, f) { return typeof v === 'function' ? v(f) : v; }
+
+  function tiles(f, k) {
+    function t(a, b, c) { return '<div class="tile"><div class="k">' + a + '</div><div class="v">' + b + '</div><div class="s">' + c + '</div></div>'; }
+    return t('PER（株価 ÷ 利益）', x1(f.pe0) + ' 倍', esc(f.pe_note)) +
+      t('年 9% に必要な利益成長', pu(f.req_growth), '10 年後の PER を 20 倍と仮定') +
+      t('10 年の期待リターン', pc(f.weighted), '3 シナリオの確率加重（現地通貨）') +
+      t('上位銘柄の営業利益率', pu(f.op_margin, 0), '上位 10 銘柄の加重平均');
+  }
+
+  function render() {
+    if (!D) return;
+    var f = D.funds[cur], T = TEXT[cur], st = D.stocks;
+    $('dp-pick').innerHTML = Object.keys(FN).map(function (k) { return '<button type="button" data-k="' + k + '" aria-pressed="' + (k === cur) + '">' + FN[k] + '</button>'; }).join('');
+    $('dp-tiles').innerHTML = tiles(f, cur);
+    $('dp-verdict').textContent = T.verdict(f);
+    // ①
+    $('dp-1').innerHTML = '<dl class="instl">' + T.inst.map(function (r) { return '<dt><b>' + esc(r[0]) + '</b></dt><dd>' + esc(val(r[1], f)) + '</dd>'; }).join('') + '</dl>' +
+      '<div class="tablewrap"><table class="tools calc"><thead><tr><th>銘柄</th><th>比率</th><th>機関の保有</th><th>アナリスト評価<br><span class="note">1=強い買い 5=売り</span></th><th>目標株価まで</th><th>著名投資家 13F</th></tr></thead><tbody>' +
+      f.top.map(function (h) { var s = st[h.ticker] || {}, f13 = s.f13; return '<tr><td>' + esc(nm(h.ticker)) + '</td><td class="n">' + pu(h.w) + '</td><td class="n">' + pu(s.heldPercentInstitutions, 0) + '</td><td class="n">' + x1(s.recommendationMean, 2) + '</td><td class="n">' + pc(s.upside, 0) + '</td><td>' + (f13 ? f13.holders + ' 人（増 ' + f13.add + '・減 ' + f13.trim + '）' : '—') + '</td></tr>'; }).join('') + '</tbody></table></div>' +
+      '<p class="note">13F は ' + esc(D.f13_report || '') + ' 時点の著名投資家の保有（「市場の参考」タブと同じデータ）。日本株は 13F にほとんど出ない。</p>';
+    // ②
+    $('dp-2').innerHTML = '<div class="debate"><div class="bull"><h3>強気のアナリスト</h3><ul>' + T.bull.map(function (b) { return '<li>' + esc(val(b, f)) + '</li>'; }).join('') + '</ul><p class="counter">' + esc(T.bullCounter) + '</p></div>' +
+      '<div class="bear"><h3>弱気のアナリスト</h3><ul>' + T.bear.map(function (b) { return '<li>' + esc(val(b, f)) + '</li>'; }).join('') + '</ul><p class="counter">' + esc(T.bearCounter) + '</p></div></div>';
+    // ③
+    $('dp-3').innerHTML = '<p class="note">売上と営業利益は会社が発表した四半期の数字。前年同期比は 4 四半期前との比較、利益率は営業利益 ÷ 売上。日本株は取得できない四半期が多い。</p>' +
+      f.top.map(function (h) {
+        var q = (st[h.ticker] || {}).quarters || [];
+        if (!q.some(function (r) { return r.rev; })) return '<p class="note"><b>' + esc(nm(h.ticker)) + '</b>：四半期の数字を取得できませんでした。</p>';
+        var rows = q.map(function (r) { return '<tr><td>' + r.q + '</td><td class="n">' + (r.rev ? x1(r.rev / 1e9, 1) : '—') + '</td><td class="n">' + (r.op ? x1(r.op / 1e9, 1) : '—') + '</td><td class="n">' + (r.rev && r.op ? pu(r.op / r.rev, 0) : '—') + '</td></tr>'; }).join('');
+        var yoy = q[0] && q[4] && q[0].rev && q[4].rev ? q[0].rev / q[4].rev - 1 : null;
+        return '<div class="tablewrap"><table class="tools calc"><caption>' + esc(nm(h.ticker)) + '（10 億、現地通貨）・前年同期比 ' + pc(yoy, 0) + '</caption><thead><tr><th>四半期末</th><th>売上</th><th>営業利益</th><th>利益率</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+      }).join('');
+    // ④
+    $('dp-4').innerHTML = '<div class="tablewrap"><table class="tools"><thead><tr><th>リスク</th><th>起きやすさ<br><span class="note">今後 1〜2 年</span></th><th>早期警戒サイン（これが見えたら比率を見直す）</th></tr></thead><tbody>' +
+      T.risks.map(function (r) { return '<tr><td>' + esc(r[0]) + '</td><td><span class="prob ' + r[1] + '">' + { hi: '高', mid: '中', lo: '低' }[r[1]] + '</span></td><td>' + esc(val(r[2], f)) + '</td></tr>'; }).join('') + '</tbody></table></div>' +
+      '<p class="note">起きやすさは過去の頻度と今の数字からの目安で、確率の予測ではありません。サインが出ても売る合図ではなく、「戦略を続けるルール」の年 1 回の見直しで比率を検討する材料です。</p>';
+    // ⑤
+    $('dp-5').innerHTML = '<p class="note">堀（競争優位）の目安 4 項目：ROE 15% 以上、営業利益率 20% 以上、借入より手元資金が多い、売上が年 10% 以上伸びている。オーナー収益は FCF（本業で入る現金 − 設備投資）÷ 時価総額。安全域は、今の株価で年 9% を得るのに必要な利益成長率が低いほど大きい。</p>' +
+      '<div class="tablewrap"><table class="tools calc"><thead><tr><th>銘柄</th><th>堀</th><th>ROE</th><th>営業利益率</th><th>オーナー収益の利回り</th><th>必要な利益成長</th></tr></thead><tbody>' +
+      f.top.map(function (h) { var s = st[h.ticker] || {}; return '<tr><td>' + esc(nm(h.ticker)) + '</td><td>' + (s.moat || []).map(function (m) { return '<span class="' + (m[1] ? 'okmark' : 'ngmark') + '" title="' + esc(m[0]) + '">' + (m[1] ? '●' : '○') + '</span>'; }).join('') + ' ' + (s.moat_score != null ? s.moat_score + '/4' : '') + '</td><td class="n">' + pu(s.returnOnEquity, 0) + '</td><td class="n">' + pu(s.operatingMargins, 0) + '</td><td class="n">' + pu(s.fcf_yield, 1) + '</td><td class="n">' + pu(s.req_growth, 1) + '</td></tr>'; }).join('') +
+      '</tbody></table></div><p>ファンド全体：堀の点数 ' + x1(f.moat, 1) + '/4、オーナー収益の利回り ' + pu(f.fcf_yield, 1) + '、年 9% に必要な利益成長 ' + pu(f.req_growth) + '（PER ' + x1(f.pe0) + ' 倍から）。バフェットは「すばらしい会社を妥当な値段で」と言う。会社の質は高いが、値段の安全域は小さい。</p>';
+    // ⑥
+    var notes = f.top.map(function (h) {
+      var q = (st[h.ticker] || {}).quarters || [];
+      if (!(q[0] && q[1] && q[0].rev && q[1].rev)) return null;
+      var qoq = q[0].rev / q[1].rev - 1, m0 = q[0].op && q[0].op / q[0].rev, m4 = q[4] && q[4].op && q[4].rev ? q[4].op / q[4].rev : null;
+      return '<li><b>' + esc(nm(h.ticker)) + '</b>：売上は前の四半期から ' + pc(qoq, 0) + (m0 != null && m4 != null ? '、利益率は 1 年前の ' + pu(m4, 0) + ' から ' + pu(m0, 0) + ' へ' + (m0 > m4 ? '上昇（値上げ力・規模の効果を強調する局面）' : '低下（投資や価格競争の説明が増える局面）') : '') + '。</li>';
+    }).filter(Boolean);
+    $('dp-6').innerHTML = '<p class="note">決算説明会の書き起こしはこの環境では取得できません。読みたい会社の書き起こしを貼ってもらえれば、経営陣が強調した点・避けた点・言葉の変化を分析します。下は、数字から「何が強調されやすい局面か」を読んだものです。</p><ul class="calcList">' + (notes.join('') || '<li>四半期の数字がそろう銘柄がありません。</li>') + '</ul>';
+    // ⑦
+    var ins = f.top.filter(function (h) { return st[h.ticker] && st[h.ticker].insider; });
+    $('dp-7').innerHTML = ins.length ? '<div class="tablewrap"><table class="tools calc"><thead><tr><th>銘柄</th><th>買い（件）</th><th>売り（件）</th><th>差し引きの株数<br><span class="note">保有に対する比率</span></th></tr></thead><tbody>' +
+      ins.map(function (h) { var i = st[h.ticker].insider; return '<tr><td>' + esc(nm(h.ticker)) + '</td><td class="n">' + x1(i.buy_n, 0) + '</td><td class="n">' + x1(i.sell_n, 0) + '</td><td class="n ' + ((i.net_pct || 0) >= 0 ? 'up' : 'down') + '">' + pc(i.net_pct, 1) + '</td></tr>'; }).join('') + '</tbody></table></div>' +
+      '<p class="note">米国の開示（Form 4）の過去 6 か月。「買い」にはストックオプションの行使や報酬の株の受け取りも入るので、自分のお金で市場から買った件数ではありません。経営陣は報酬として株を受け取るため、売りが多いのは普通です。注目するのは、複数の役員が同じ時期に市場で買う（クラスター買い）か、普段売らない人が大きく売るか。</p>'
+      : '<p class="note">このファンドの上位銘柄（日本株）は、内部者の売買データをここでは取得できません。日本の大量保有報告書・役員の売買報告は EDINET で確認できます。</p>';
+    // ⑧
+    var sc = f.scen, g = f.grid;
+    function cls(r) { return r < 0 ? 'h-neg' : r < 0.06 ? 'h-low' : 'h-ok'; }
+    $('dp-8').innerHTML = '<p class="note">ファンド全体を 1 つの会社とみなした簡易 DCF。10 年後の価値 = 今の利益 ×（1 + 利益成長率）<sup>10</sup> × 10 年後の PER。年率 =（10 年後の価値 ÷ 今の株価）<sup>1/10</sup> − 1 + 配当利回り ' + pu(f.dy, 1) + '。今の PER は ' + x1(f.pe0) + ' 倍（' + esc(f.pe_note) + '）。現地通貨で、為替と信託報酬は含まない。</p>' +
+      '<div class="tablewrap"><table class="tools calc"><thead><tr><th>シナリオ</th><th>確率</th><th>利益の年成長</th><th>10 年後の PER</th><th>計算</th><th>年率</th></tr></thead><tbody>' +
+      ['bear', 'base', 'bull'].map(function (n) { var s = sc[n]; return '<tr><td>' + { bear: '弱気', base: '基本', bull: '強気' }[n] + '</td><td class="n">' + pu(s.p, 0) + '</td><td class="n">' + pu(s.g, 0) + '</td><td class="n">' + s.pe1 + ' 倍</td><td>((1+' + pu(s.g, 0) + ')<sup>10</sup> × ' + s.pe1 + ' ÷ ' + x1(f.pe0) + ')<sup>1/10</sup> − 1 + ' + pu(f.dy, 1) + '</td><td class="n"><b>' + pc(s.ret) + '</b></td></tr>'; }).join('') +
+      '</tbody><tfoot><tr><td colspan="6">確率加重：' + ['bear', 'base', 'bull'].map(function (n) { return pu(sc[n].p, 0) + ' × ' + pc(sc[n].ret); }).join(' ＋ ') + ' = <b>' + pc(f.weighted) + '</b>（年）</td></tr></tfoot></table></div>' +
+      '<div class="tablewrap"><table class="tools calc heat"><caption>感応度表：利益の年成長（縦）× 10 年後の PER（横）での年率</caption><thead><tr><th></th>' + g.pe.map(function (p) { return '<th>' + p + ' 倍</th>'; }).join('') + '</tr></thead><tbody>' +
+      g.g.map(function (gg, i) { return '<tr><th>' + pu(gg, 0) + '</th>' + g.ret[i].map(function (r) { return '<td class="n ' + cls(r) + '">' + pc(r, 0) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>' +
+      '<p class="note">赤はマイナス、黄は年 6% 未満、緑は年 6% 以上。銘柄ごとの「必要な利益成長」は⑤の表の右端。</p>';
+  }
+
+  $('dp-pick').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; cur = b.dataset.k; render(); });
+  var loaded = false;
+  function load() {
+    if (loaded) return; loaded = true;
+    fetch('deepdive.json').then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).then(function (d) {
+      D = d; $('dp-asof').textContent = d.as_of + ' 時点の公開データ（Yahoo Finance・著名投資家の 13F）から tools/fund_deepdive.py で計算。分析は判断の材料で、売買の推奨ではありません。'; render();
+    }).catch(function () { loaded = false; $('dp-asof').textContent = '分析データ（deepdive.json）を読み込めませんでした。開き直してください。'; });
+  }
+  window.JevDeep = { show: load };
+  if (!$('viewDeep').hidden) load();
 })();
 </script>
