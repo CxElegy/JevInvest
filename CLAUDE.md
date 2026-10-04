@@ -7,10 +7,13 @@
 - `python -m src.cli validate` 台帳の検証 / `quotes` 価格確認 / `report` レポート生成
 - `python -m src.cli plan` 積立計画 / `compliance` 独立性の確認状況 / `transactions` 取引履歴と XIRR
 - 出力した `reports/latest.md` を読んで、集中度・相関・目標配分・為替・税制の観点で判断する
-- スラッシュコマンド: `/review` `/add-trade` `/plan` `/compliance`
+- スラッシュコマンド: `/review` `/add-trade` `/plan` `/compliance` `/influencers`
 - 金額を Claude に渡したくないとき: `web/ledger.html`（ブラウザ内だけに保存）で本人が入力し、
   比率だけの要約を貼ってもらう。金額を聞き出さない。
 
+- 注目アカウント（X の Jukan・Serenity など）: `python tools/influencers.py fetch` → `reports/influencers.md`、
+  `/influencers` でその人の視点の分析。投稿は取り込んだものだけを根拠にし、本人の意見を作らない。
+  取得元（`X_BEARER_TOKEN` / `TWEETS_RSS_URL`）が無ければ投稿を貼ってもらう。対象は `config/influencers.yaml`。
 - 著名投資家の 13F データ更新: `tools/fetch_13f.py` → `tools/export_13f_json.py` → `web/investors.json`。
   SEC の連絡先は環境変数 `SEC_USER_AGENT` で渡し、コードやコミットに書かない。
 

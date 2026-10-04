@@ -92,6 +92,7 @@ Claude Code（ブラウザ・タブレット・スマホのクラウドセッシ
 | `/add-trade` | 「トヨタを 100 株 2800 円で買った」のような文から取引を記録し、台帳に反映する |
 | `/plan` | 積立の割り振りと NISA 枠の消化を説明する |
 | `/compliance` | 独立性の確認状況を整理し、報告された結果だけを記録する |
+| `/influencers` | Jukan・Serenity など X の注目アカウントの最新の投稿から、その人の視点で持仓を分析する |
 
 クラウドセッションでは、環境が回収されると `config/holdings.yaml` などの個人データは消える。
 専用の非公開リポジトリに置くか、更新のたびに手元に控えること。
@@ -275,6 +276,51 @@ BND のような債券 ETF は配当が収益の大半なので、調整前で�
 一般の投資信託は API で基準価額が取れない。
 `price_override` に[投信協会の投信総合検索ライブラリー](https://toushin-lib.fwg.ne.jp/)の
 CSV から転記する。`FUND-` で始まる symbol は価格取得をスキップする。
+
+## 注目アカウント（X）の投稿と持仓の照合
+
+X（旧 Twitter）の注目アカウントの投稿を取り込み、**自分の持仓（ファンドの中身まで透かした分）に触れる投稿**を拾って、
+`/influencers` で「その人の視点ならこの持仓をどう見るか」を Claude Code に書かせる。
+最初の対象は半導体・AI 供給網の 2 人（`config/influencers.yaml` で追加・変更できる）。
+
+| | アカウント | 見方（こちらの要約） |
+|---|---|---|
+| Jukan | [@Jukanlosreve](https://x.com/Jukanlosreve) | 韓国発の半導体ニュース。メモリ（HBM・DRAM・NAND）、ファウンドリ、装置、中国と輸出規制 |
+| Serenity | [@aleabitoreddit](https://x.com/aleabitoreddit) | AI インフラのボトルネックを供給網の上流（光・基板・材料・特殊ファウンドリ）へたどる。ポジションを公表する集中型 |
+
+```bash
+python tools/influencers.py fetch                 # 新しい投稿を取り込み reports/influencers.md を作る
+python tools/influencers.py watch --interval 900  # 15 分ごとに取り込み、持仓に触れる投稿が出たら表示
+python tools/influencers.py import posts.txt --who serenity   # 貼った投稿を取り込む（- で標準入力）
+python tools/influencers.py report --days 30      # 取り込み済みの分から作り直す
+```
+
+照合のしかた:
+
+- 持仓は `web/strategy.json` の 3 本のファンド（目標比率 × ファンド内の上位銘柄）と、`config/holdings.yaml` の個別株。
+  たとえば日経半導体 10% × キオクシア 27.6% = 持仓全体の 2.76%
+- 投稿の言葉を、銘柄名・`$ティッカー`・東証コード・**テーマ**で持ち株に結びつける。テーマは
+  「SK hynix の HBM の話 → Micron・NVIDIA・アドバンテスト・ディスコに効く」のように、持っていない会社の話を
+  持ち株へつなぐ経路（`config/influencers.yaml` の `themes`）
+- 強気・弱気は機械では判定しない。投稿の解釈は `/influencers` で Claude Code が本文を読んで行う
+
+投稿の取得元（上から順に使えるものを使う）:
+
+| 取得元 | 設定 | 注意 |
+|---|---|---|
+| X API v2 | 環境変数 `X_BEARER_TOKEN` | **読み取りは有料プラン**（無料プランは 403）。`since_id` で新着だけ取るので呼び出しは少ない |
+| RSS | 環境変数 `TWEETS_RSS_URL`（例 `https://rsshub.example.com/twitter/user/{handle}`） | 自前の RSSHub・Nitter など。公開インスタンスは止まりやすい |
+| 貼り付け | `import` または `/influencers` に投稿を貼る | 費用ゼロ。X の画面から本文と URL をコピーする |
+
+どれも無いときは理由を出して止まる（0 件として黙って進めない）。取り込んだ投稿は `data/tweets.sqlite`（.gitignore 済み）。
+
+「常に追う」には、常時動く PC で `watch` を回すか、Claude Code の `/loop 30m /influencers` を使う。
+クラウドセッションは回収されると `data/` が消えるので、長く追うなら常時動く環境で動かす。
+
+**この機能の位置づけ。** 1 つの投稿は持仓の比率を変える理由になりにくい。持仓はインデックスファンドが中心なので、
+個別の材料は「ファンドの中で何が起きているか」を知るためのもので、売買の合図ではない。
+推奨銘柄（特に小型株）の後追いは、税制・配分・売買を減らすことより根拠が弱く、推奨後の急騰で高値をつかみやすい。
+個別株を買う話になったら独立性の確認が先。
 
 ## 著名投資家の 13F 集計
 
