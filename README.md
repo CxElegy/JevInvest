@@ -309,6 +309,7 @@ python tools/influencers.py report --days 30      # 取り込み済みの分か�
 | 取得元 | 設定 | 注意 |
 |---|---|---|
 | X API v2 | 環境変数 `X_BEARER_TOKEN` | **読み取りは有料プラン**（無料プランは 403）。`since_id` で新着だけ取るので呼び出しは少ない |
+| X のログイン cookie | 環境変数 `X_AUTH_TOKEN` と `X_CT0`、`bash tools/install_x_timeline.sh` | [x-timeline-archive](https://github.com/Xiao-yun-Hu/x-timeline-archive) の bird-search（X の Web 版の検索）を使う。API 料金は不要だが **X の規約上グレーで、アカウント凍結のおそれ**がある。捨てアカウントの cookie を使う。cookie はパスワードと同じ扱い |
 | RSS | 環境変数 `TWEETS_RSS_URL`（例 `https://rsshub.example.com/twitter/user/{handle}`） | 自前の RSSHub・Nitter など。公開インスタンスは止まりやすい |
 | 貼り付け | `import` または `/influencers` に投稿を貼る | 費用ゼロ。X の画面から本文と URL をコピーする |
 

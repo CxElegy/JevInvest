@@ -11,6 +11,8 @@ Claude Code（/influencers）が reports/influencers.md を読んで行う。LLM
 
 投稿の取得元（上から順に使えるものを使う）:
   1. X API v2         環境変数 X_BEARER_TOKEN。読み取りは有料プランが要る
+  1b. X のログイン cookie  環境変数 X_AUTH_TOKEN と X_CT0（x-timeline-archive の bird-search を使う。
+                      bash tools/install_x_timeline.sh で vendor/ に入れる）。X の規約上グレーなので捨てアカウントで
   2. RSS              環境変数 TWEETS_RSS_URL（例: https://rsshub.example/twitter/user/{handle}）
                       自前の RSSHub・Nitter など。{handle} が置き換わる
   3. 手で貼る          import サブコマンド。テキストか JSON
@@ -26,6 +28,7 @@ import json
 import os
 import re
 import sqlite3
+import subprocess
 import sys
 import time
 import xml.etree.ElementTree as ET
@@ -280,6 +283,53 @@ def fetch_x_api(client, inf: dict, state: dict) -> tuple[list[Post], dict]:
 _TAG = re.compile(r"<[^>]+>")
 
 
+BIRD_DEFAULT = ROOT / "vendor" / "x-timeline-archive" / "scripts" / "vendor" / "bird-search" / "bird-search.mjs"
+
+
+def parse_bird(key: str, handle: str, payload) -> list[Post]:
+    """bird-search（X の Web 版の検索を cookie で呼ぶ）の --json 出力。"""
+    if isinstance(payload, dict):
+        raise SourceUnavailable(f"bird-search: {payload.get('error') or payload}")
+    out = []
+    for t in payload:
+        pid = str(t.get("id") or t.get("id_str") or "")
+        if not pid:
+            continue
+        raw = t.get("createdAt") or t.get("created_at")
+        try:
+            created = _iso(parsedate_to_datetime(raw)) if raw else None
+        except (TypeError, ValueError):
+            created = None
+        user = (t.get("author") or {}).get("username") or handle
+        if user.lower() != handle.lower():
+            continue          # 引用元など本人以外の投稿は入れない
+        text = t.get("text") or ""
+        kind = "reply" if t.get("inReplyToStatusId") else "quote" if t.get("quotedTweet") else "post"
+        out.append(Post(key, pid, created or snowflake_time(pid) or _iso(datetime.now(timezone.utc)),
+                        html.unescape(text), _status_url(handle, pid), "x_cookie", kind))
+    return out
+
+
+def fetch_bird(client, inf: dict, state: dict, run=subprocess.run) -> tuple[list[Post], dict]:
+    token, ct0 = os.getenv("X_AUTH_TOKEN"), os.getenv("X_CT0")
+    if not token or not ct0:
+        raise SourceUnavailable("X_AUTH_TOKEN / X_CT0 が未設定")
+    bird = Path(os.getenv("BIRD_SEARCH_PATH") or BIRD_DEFAULT)
+    if not bird.exists():
+        raise SourceUnavailable(f"bird-search が無い（bash tools/install_x_timeline.sh で入れる）: {bird}")
+    since = (datetime.now(timezone.utc) - timedelta(days=2)).date().isoformat()
+    env = {**os.environ, "AUTH_TOKEN": token, "CT0": ct0}
+    proc = run(["node", str(bird), f"from:{inf['handle']} since:{since}", "--count", "40", "--json"],
+               env=env, text=True, capture_output=True, timeout=120)
+    try:
+        payload = json.loads(proc.stdout or "null")
+    except json.JSONDecodeError:
+        payload = None
+    if payload is None:
+        raise SourceUnavailable(f"bird-search が失敗（終了コード {proc.returncode}）: {(proc.stderr or '')[:200]}")
+    return parse_bird(inf["key"], inf["handle"], payload), state
+
+
 def _clean_html(s: str) -> str:
     s = re.sub(r"<br\s*/?>", "\n", s or "", flags=re.I)
     return html.unescape(_TAG.sub("", s)).strip()
@@ -354,7 +404,7 @@ def fetch_serenitystock(client, inf: dict, state: dict) -> tuple[list[Post], dic
     return posts, state
 
 
-SOURCES = [("X API", fetch_x_api), ("RSS", fetch_rss)]
+SOURCES = [("X API", fetch_x_api), ("X cookie", fetch_bird), ("RSS", fetch_rss)]
 # 本人の投稿が取れないときの代わり。config の archive: で人ごとに指定する
 ARCHIVES = {"serenitystock": ("serenitystock.com", fetch_serenitystock)}
 

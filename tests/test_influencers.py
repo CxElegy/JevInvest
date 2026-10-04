@@ -221,3 +221,46 @@ def test_archive_used_only_when_configured(tmp_path, monkeypatch, cfg):
     new, errors = inf.fetch(inf.init_db(tmp_path / "t.sqlite"), cfg, None, C())
     assert {p.source for p in new} == {"serenitystock"}
     assert len(errors) == 1 and errors[0].startswith("Jukan")
+
+
+def test_parse_bird_keeps_only_own_posts():
+    payload = [
+        {"id": "2105943565918703696", "text": "Micron HBM &amp; DRAM", "createdAt": "Fri Oct 02 08:50:00 +0000 2026",
+         "author": {"username": "Jukanlosreve"}},
+        {"id": "1", "text": "quoted someone", "author": {"username": "someone_else"}},
+        {"id": "2105943565918703697", "text": "reply", "inReplyToStatusId": "5",
+         "author": {"username": "jukanlosreve"}},
+    ]
+    posts = inf.parse_bird("jukan", "Jukanlosreve", payload)
+    assert [p.id for p in posts] == ["2105943565918703696", "2105943565918703697"]
+    assert posts[0].text == "Micron HBM & DRAM" and posts[0].source == "x_cookie"
+    assert posts[0].created_at == "2026-10-02T08:50:00+00:00"
+    assert posts[1].kind == "reply"
+    with pytest.raises(inf.SourceUnavailable):
+        inf.parse_bird("jukan", "Jukanlosreve", {"error": "Unauthorized", "items": []})
+
+
+def test_fetch_bird_passes_cookies_by_env(tmp_path, monkeypatch):
+    bird = tmp_path / "bird-search.mjs"
+    bird.write_text("")
+    monkeypatch.setenv("BIRD_SEARCH_PATH", str(bird))
+    monkeypatch.delenv("X_AUTH_TOKEN", raising=False)
+    with pytest.raises(inf.SourceUnavailable, match="未設定"):
+        inf.fetch_bird(None, {"key": "jukan", "handle": "Jukanlosreve"}, {})
+    monkeypatch.setenv("X_AUTH_TOKEN", "a")
+    monkeypatch.setenv("X_CT0", "c")
+    seen = {}
+
+    class P:
+        returncode, stderr = 0, ""
+        stdout = json.dumps([{"id": "2105943565918703696", "text": "hi", "author": {"username": "Jukanlosreve"}}])
+
+    def run(cmd, env, **kw):
+        seen.update(cmd=cmd, env=env)
+        return P()
+
+    posts, _ = inf.fetch_bird(None, {"key": "jukan", "handle": "Jukanlosreve"}, {}, run=run)
+    assert len(posts) == 1
+    assert seen["env"]["AUTH_TOKEN"] == "a" and seen["env"]["CT0"] == "c"
+    assert seen["cmd"][2].startswith("from:Jukanlosreve since:")
+    assert "a" not in seen["cmd"]                 # cookie はコマンドラインに出さない
