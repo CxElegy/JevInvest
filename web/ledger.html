@@ -332,6 +332,37 @@ ol.advice .how { font-size: 13px; color: var(--muted); }
 .thesis { color: var(--muted); font-size: 12px; max-width: 32em; }
 input[type="checkbox"] { width: auto; flex: none; }
 #aq-q2 { min-height: 3.6em; font-family: var(--f-body); font-size: 14px; }
+/* 戦略（道筋タブの最上部） */
+.strat { background: var(--accent-soft); }
+.strat .eyebrow { font-size: 12px; letter-spacing: .08em; color: var(--accent); font-weight: 700; }
+.stratTitle { font-size: clamp(19px, 4.4vw, 26px); line-height: 1.35; }
+.mixbar { display: flex; height: 34px; border-radius: 8px; overflow: hidden; gap: 2px; font-size: 12px; font-weight: 700; }
+.mixbar span { display: flex; align-items: center; justify-content: center; color: #fff; min-width: 0; white-space: nowrap; overflow: hidden; padding: 0 4px; }
+.mixbar.small { height: 26px; flex: 1; }
+.m-sp { background: var(--k-idx); } .m-fang { background: var(--k-stock); } .m-semi { background: var(--k-gold); }
+.why { margin: 0; padding-left: 1.3em; display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+.why b { display: block; }
+.roles { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+.role { border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 6px; min-width: 0; border-top: 4px solid var(--line); }
+.role.r-sp { border-top-color: var(--k-idx); } .role.r-fang { border-top-color: var(--k-stock); } .role.r-semi { border-top-color: var(--k-gold); }
+.role h3 { margin: 0; font-size: 15px; display: flex; justify-content: space-between; gap: 8px; }
+.role .pct { font-family: var(--f-num); font-weight: 500; }
+.role .job { margin: 0; font-size: 13px; }
+.role dl { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; margin: 0; font-size: 13px; }
+.role dt { color: var(--muted); } .role dd { margin: 0; font-family: var(--f-num); text-align: right; }
+.rshare { display: flex; flex-direction: column; gap: 8px; }
+.rrow { display: flex; gap: 10px; align-items: center; }
+.rlab { width: 7.5em; flex: none; font-size: 13px; }
+.more > summary { cursor: pointer; font-weight: 700; padding: 10px 0; }
+.more[open] > summary { margin-bottom: 8px; }
+.calc caption { text-align: left; font-weight: 700; font-size: 13px; padding: 8px 0 4px; }
+.calc td, .calc th { font-family: var(--f-body); }
+.calc td.n, .calc td b { font-family: var(--f-num); }
+.calc th[colspan] { background: var(--accent-soft); }
+.lk { position: relative; min-width: 7em; height: 18px; display: flex; align-items: center; }
+.lk span { position: absolute; inset: 2px auto 2px 0; background: var(--k-stock); opacity: .35; border-radius: 3px; }
+.lk b { position: relative; font-weight: 500; padding-left: 4px; }
+.sw.m-sp, .sw.m-fang, .sw.m-semi { height: 10px; }
 </style>
 
 <div class="wrap">
@@ -347,7 +378,118 @@ input[type="checkbox"] { width: auto; flex: none; }
   </header>
 
   <div id="viewRoad" class="view" role="tabpanel" aria-labelledby="tabRoad" hidden>
-    <div class="verdict" id="rd-verdict" aria-live="polite"></div>
+    <section class="strat" aria-labelledby="h-strat">
+      <div class="eyebrow">いまの戦略・<span data-v="asof">—</span> 時点のデータ</div>
+      <h2 id="h-strat" class="stratTitle">米国株を土台に、テックと半導体で上を狙う積極型</h2>
+      <div class="mixbar" role="img" aria-label="S&amp;P500 65%、FANG+ 25%、日経半導体 10%">
+        <span class="m-sp" style="flex:65">S&amp;P500 65%</span><span class="m-fang" style="flex:25">FANG+ 25%</span><span class="m-semi" style="flex:10">半導体 10%</span>
+      </div>
+      <ol class="why">
+        <li><b>29 歳で、使う予定まで 15 年以上ある。</b>途中で大きく下がっても取り戻す時間があるので、値動きの大きい株式 100% で上を狙える。</li>
+        <li><b>独立性のルールの中で、通った商品だけで組んだ。</b>三菱UFJ・SBI 系は不可だったため、Pre-Clear が通った大和・AMOne・野村のファンドで同じ考え方を再現した。</li>
+        <li><b>攻める部分は全体の 35% に抑えた。</b>テックと半導体は上振れも下振れも大きい。土台の S&amp;P500 を過半にして、1 本の暴落で計画が崩れないようにした。</li>
+      </ol>
+    </section>
+
+    <section aria-labelledby="h-roles">
+      <h2 id="h-roles">3 本それぞれの役割</h2>
+      <p class="sub">数字は連動する指数の円建て。ファンドの実績はここから信託報酬を引いたものになる。過去の上昇は特に強かった時期の数字で、これからも同じとは限らない。</p>
+      <div class="roles">
+        <article class="role r-sp">
+          <h3>たわらノーロード S&amp;P500 <span class="pct">65%</span></h3>
+          <p class="job">土台。米国の大企業 500 社に分散。</p>
+          <dl>
+            <dt>過去 10 年の年率</dt><dd data-v="sp.long.cagr">—</dd>
+            <dt>値動きの大きさ（年）</dt><dd data-v="sp.long.vol">—</dd>
+            <dt>10 年で最大の下落</dt><dd data-v="sp.long.mdd">—</dd>
+            <dt>信託報酬</dt><dd>0.094%</dd>
+          </dl>
+          <p class="note">選んだ理由：同じ指数の中で手数料が最も低い部類で、つみたて投資枠（クレカ積立）にも使える。注意：株価は利益の約 25 倍で、長い平均（16〜18 倍）より割高。ここ数年ほどの伸びは期待しない。</p>
+        </article>
+        <article class="role r-fang">
+          <h3>iFreeNEXT FANG+ <span class="pct">25%</span></h3>
+          <p class="job">攻め。米国の大型テック 10 社に集中。</p>
+          <dl>
+            <dt>過去 10 年の年率</dt><dd data-v="fang.long.cagr">—</dd>
+            <dt>値動きの大きさ（年）</dt><dd data-v="fang.long.vol">—</dd>
+            <dt>10 年で最大の下落</dt><dd data-v="fang.long.mdd">—</dd>
+            <dt>信託報酬</dt><dd>0.776%</dd>
+          </dl>
+          <p class="note">選んだ理由：S&amp;P500 と違う動きをする度合いが NASDAQ100 より大きい（過去 5 年の月次の連動 0.75。NASDAQ100 は 0.92）。テックが勝ち続けたときの上振れを取りにいく。注意：10 社だけなので、テックが長く低迷すると大きく負ける（2000 年の IT バブル崩壊では同種の指数が 8 割下落）。</p>
+        </article>
+        <article class="role r-semi">
+          <h3>野村 日経半導体株 <span class="pct">10%</span></h3>
+          <p class="job">半導体の好不況に賭ける部分。円建ての資産でもある。</p>
+          <dl>
+            <dt>2024 年 6 月からの年率</dt><dd data-v="semi.common.cagr">—</dd>
+            <dt>値動きの大きさ（年）</dt><dd data-v="semi.common.vol">—</dd>
+            <dt>最大の下落</dt><dd data-v="semi.common.mdd">—</dd>
+            <dt>信託報酬</dt><dd>0.33%</dd>
+          </dl>
+          <p class="note">選んだ理由：独立性で通った半導体の中で手数料が低い。FANG+ とは中身が重ならない（月次の連動 <span data-v="corrm.fang.semi">—</span>）。注意：月単位では米国の半導体とほぼ同じ動き（0.93）で、上位 3 社（キオクシア・東京エレクトロン・アドバンテスト）で約 47%。今は高値から <span data-v="semi.common.from_high">—</span>。</p>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="h-ratio">
+      <h2 id="h-ratio">なぜ 65・25・10 なのか</h2>
+      <p class="sub">お金の割合と、値動き（リスク）の割合は違う。値動きの大きい半導体は、少ない金額でも全体を大きく揺らす。下の棒は、全体の揺れのうち各ファンドが生む割合（週次データ・計算は下の「数字の出し方」）。</p>
+      <div class="rshare" id="sd-rshare"></div>
+      <ul class="dont">
+        <li><b>半導体を 15% → 10% に</b>金額は 15% でも、揺れの <span data-v="ralt.semi">—</span> を生んでいた。10% にすると揺れの割合も <span data-v="r.semi">—</span> とほぼ金額どおりになり、1 本に振り回されにくい。</li>
+        <li><b>FANG+ は 25% のまま</b>10 社集中で揺れは大きいが、テックの上振れを取る中心。これ以上増やすと、S&amp;P500 との重なりで米国テックへの偏りが強くなりすぎる。</li>
+        <li><b>S&amp;P500 を過半に</b>下落時に一番落ち着いている部分。全体の土台として、揺れの <span data-v="r.sp">—</span> を受け持つ。</li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="h-lump">
+      <h2 id="h-lump">今回まとめて買う分</h2>
+      <div class="grid3"><div class="field"><label for="pol-lump">今回の金額（万円）</label><input id="pol-lump" type="number" inputmode="decimal" step="0.1" min="0" placeholder="例 20"></div></div>
+      <div class="tablewrap"><table class="tools" id="pol-lumpTable"></table></div>
+      <p class="note">まとめて買うときはつみたて投資枠は使えない（積立専用）ので、預り区分は「NISA（成長投資枠）」。分けずに一度に買うのが基本（過去の統計では約 3 回に 2 回、一括のほうが結果がよい）。Pre-Clear の期限内に約定させ、約定後は GIMS に保有を登録する。</p>
+    </section>
+
+    <section aria-labelledby="h-notchosen">
+      <h2 id="h-notchosen">選ばなかったものと理由</h2>
+      <div class="tablewrap"><table class="tools">
+        <thead><tr><th>候補</th><th>理由</th></tr></thead>
+        <tbody>
+          <tr><td>eMAXIS Slim（オルカン・S&amp;P500 など）</td><td>独立性で不可（三菱UFJ グループが制限先）</td></tr>
+          <tr><td>SBI・V・S&amp;P500 など SBI 系</td><td>独立性で不可（ファンド自体が監査先）</td></tr>
+          <tr><td>たわら NASDAQ100</td><td>S&amp;P500 と 0.92 連動し、持っても分散がほとんど増えない。FANG+ が使えないときの代わり</td></tr>
+          <tr><td>米国半導体（SOX）ファンド</td><td>日本の半導体と月次で 0.93 連動し（2024 年 6 月〜）、中身は FANG+ と重なる。通るものは手数料も高め</td></tr>
+          <tr><td>レバレッジ型（アドバンスト・レバレッジ、4.3 倍ブルなど）</td><td>下落の後に戻りにくく、過去に −90% もある。積極でも使わない</td></tr>
+          <tr><td>S&amp;P500 配当貴族・バランス型</td><td>守り向き。積極の方針と合わない</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section aria-labelledby="h-keep">
+      <h2 id="h-keep">この戦略を続けるルール</h2>
+      <ul class="rules">
+        <li><b>下がっても売らない</b>FANG+ や半導体は 1 年で半分になることがある。そこで売るのが一番の損（過去 150 年の検証で、下落で売る人の 20 年後は買い続けた人の約 7 割）。</li>
+        <li><b>年 1 回だけ比率を戻す</b>FANG+ が 30%、半導体が 15% を超えたら、超えた分を S&amp;P500 へ。追加のお金で少ないものを買えば売らずに済む。</li>
+        <li><b>38 歳から少しずつ守りへ</b>使う時期が近づいたら、テックと半導体を毎年減らして S&amp;P500・全世界株へ。</li>
+        <li><b>全世界株が通ったら加える</b>米国に偏っている。たわら 全世界株式の Pre-Clear が通ったら、S&amp;P500 の一部を置き換える。</li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="h-look">
+      <h2 id="h-look">全体で見ると、どの会社をどれだけ持つか</h2>
+      <p class="sub">ファンドの比率 × ファンドの中の比率を足し合わせた、ポートフォリオ全体での持ち分。同じ会社が S&amp;P500 と FANG+ の両方に入っているので、実際の集中度はファンド名から見えるより高い。</p>
+      <div id="sd-look"></div>
+      <p class="note" id="sd-lookNote"></p>
+    </section>
+
+    <section aria-labelledby="h-calc">
+      <h2 id="h-calc">数字の出し方</h2>
+      <p class="sub" id="sd-calcSub"></p>
+      <details class="more" open><summary>値動きのグラフ（2024 年 6 月 = 100）</summary><div id="sd-chart"></div><div class="legend" id="sd-chartLegend"></div></details>
+      <details class="more"><summary>① ファンドごとの計算（全体）</summary><div id="sd-funds"></div></details>
+      <details class="more"><summary>② どれだけ一緒に動くか（相関）</summary><div id="sd-corr"></div></details>
+      <details class="more"><summary>③ 組み合わせた全体の揺れと、各ファンドの寄与</summary><div id="sd-risk"></div></details>
+      <details class="more"><summary>④ 1 株ずつ（各ファンドの中身・直近 1 年）</summary><div id="sd-stocks"></div></details>
+    </section>
 
     <section aria-labelledby="h-pol">
       <h2 id="h-pol">全体の計画</h2>
@@ -367,6 +509,11 @@ input[type="checkbox"] { width: auto; flex: none; }
       <h3 class="h3">やることリスト</h3>
       <ul class="checks" id="pol-checks"></ul>
     </section>
+
+    <details class="more">
+      <summary>家計から見た次の一手と、長期の見通し（詳細）</summary>
+    <div class="verdict" id="rd-verdict" aria-live="polite"></div>
+
 
 
     <section aria-labelledby="h-rdTodo">
@@ -426,6 +573,7 @@ input[type="checkbox"] { width: auto; flex: none; }
         </tbody>
       </table></div>
     </section>
+    </details>
   </div>
 
   <div id="viewPlan" class="view" role="tabpanel" aria-labelledby="tabPlan" hidden>
@@ -2026,7 +2174,7 @@ input[type="checkbox"] { width: auto; flex: none; }
   var STRATS = {
     A: { nm: '標準：全世界株 100%', w: { acwi: 100 }, note: '全世界に 1 本で分散。値動きは一番小さい。' },
     C: { nm: 'やや高：全世界 50・S&P 20・FANG+ 20・TOPIX 10', w: { acwi: 50, spx: 20, fang: 20, topix: 10 }, note: '米国の大型テックに少し賭けつつ、円の資産も 1 割持つ。' },
-    X2: { nm: '積極（全世界株なし）：S&P 60・FANG+ 25・半導体 15', w: { spx: 60, fang: 25, semi: 15 }, note: '全世界株の Pre-Clear が出るまでの積極。米国に偏るので、全世界株が通ったら「積極」に切り替える。' },
+    X2: { nm: '積極（いまの戦略）：S&P 65・FANG+ 25・半導体 10', w: { spx: 65, fang: 25, semi: 10 }, note: 'Pre-Clear が通った 3 本で組んだ積極型。理由と計算は上の「なぜ 65・25・10 なのか」と「数字の出し方」。全世界株が通ったら「積極」に切り替える。' },
     X: { nm: '積極：全世界 30・S&P 30・FANG+ 25・半導体 15', w: { acwi: 30, spx: 30, fang: 25, semi: 15 }, note: 'テックが勝ち続ければ 20 年で大きく伸びる。途中で資産が半分になる確率は約 12%。' },
     XX: { nm: '超積極：S&P 40・FANG+ 35・半導体 25', w: { spx: 40, fang: 35, semi: 25 }, note: '上振れは最大だが、途中で半分になる確率は約 24%。米国以外を持たない。' }
   };
@@ -2080,6 +2228,14 @@ input[type="checkbox"] { width: auto; flex: none; }
         return '<tr><td><b>' + esc(f.nm) + '</b><br><span class="note">' + esc(f.fund) + (f.code ? '（' + f.code + '）' : '') + '</span><br>' + badge + (f.tsumi ? '' : '<br><span class="note">つみたて投資枠の対象外</span>') + '</td><td class="n">' + r.w + '%</td><td class="n">' + (fixed ? mn(r.amt) : '—') + '</td><td>' + (fixed ? how.join('<br>') : '固定積立額を入れると出ます') + '</td></tr>';
       }).join('') + '</tbody>' +
       (fixed ? '<tfoot><tr><td colspan="4" class="note">積立の設定画面の「預り区分」で、クレカ積立は「NISA（つみたて投資枠）」、現金積立は「NISA（成長投資枠）」を選ぶ（特定口座にしない）。<br>つみたて投資枠 月 ' + mn(tsumiTotal) + '・成長投資枠 月 ' + mn(growthTotal) + '（年 ' + mn(growthTotal * 12) + '、上限 240 万円）' + (growthTotal * 12 > 240 ? '。<b>成長投資枠の年間上限を超えます。超えた分は特定口座で。</b>' : '') + (tsumiTotal * 12 > 120 ? '。<b>つみたて投資枠の年間上限を超えます。</b>' : '') + '</td></tr></tfoot>' : '');
+
+    // 今回まとめて買う分（一括は成長投資枠）
+    var lump = num(pol.lump);
+    $('pol-lump').value = pol.lump || '';
+    $('pol-lumpTable').innerHTML = lump ? '<thead><tr><th>ファンド</th><th>比率</th><th>金額</th><th>預り区分</th></tr></thead><tbody>' + Object.keys(s.w).map(function (k) {
+      var c = CLR[k], ok = c && c.st === 'ok';
+      return '<tr><td>' + esc(FUNDS[k].fund) + (ok ? '' : '<br><span class="badge warn">Pre-Clear の結果を確認してから</span>') + '</td><td class="n">' + s.w[k] + '%</td><td class="n">' + mn(lump * s.w[k] / 100) + '</td><td>NISA（成長投資枠）</td></tr>';
+    }).join('') + '</tbody>' : '<tbody><tr><td class="note">金額を入れると、戦略の比率で分けた金額が出ます。</td></tr></tbody>';
 
     // 月末の残り
     var inp = planInput(), net = null;
@@ -2266,7 +2422,7 @@ input[type="checkbox"] { width: auto; flex: none; }
   $('pol-strat').innerHTML = Object.keys(STRATS).map(function (k) { return '<option value="' + k + '">' + esc(STRATS[k].nm) + '</option>'; }).join('');
   $('pol-strat').value = STRATS[pol.strat] ? pol.strat : 'X';
   $('pol-age').value = pol.age || ''; $('pol-fixed').value = pol.fixed || '';
-  [['pol-age', 'age'], ['pol-fixed', 'fixed'], ['pol-strat', 'strat']].forEach(function (f) {
+  [['pol-age', 'age'], ['pol-fixed', 'fixed'], ['pol-strat', 'strat'], ['pol-lump', 'lump']].forEach(function (f) {
     $(f[0]).addEventListener('input', function (e) { pol[f[1]] = e.target.value; store(PKEY, pol); renderPolicy(); });
     $(f[0]).addEventListener('change', function (e) { pol[f[1]] = e.target.value; store(PKEY, pol); renderPolicy(); });
   });
@@ -2281,7 +2437,7 @@ input[type="checkbox"] { width: auto; flex: none; }
     if (!s || !s.profile) return;
     var changed = false;
     if (s.profile.v && pol.seedV !== s.profile.v) {   // 方針を見直したときは、選んだ方針だけ seed の値に合わせる
-      pol.seedV = s.profile.v; pol.strat = String(s.profile.strat || pol.strat); changed = true;
+      pol.seedV = s.profile.v; pol.strat = String(s.profile.strat || pol.strat); if (s.profile.lump != null && !pol.lump) pol.lump = String(s.profile.lump); changed = true;
     }
     ['age', 'fixed', 'strat'].forEach(function (k) { if (s.profile[k] != null && !pol[k + 'Seeded']) { if (!pol[k] || k === 'strat') pol[k] = String(s.profile[k]); pol[k + 'Seeded'] = true; changed = true; } });
     if (changed) { store(PKEY, pol); $('pol-strat').value = pol.strat; $('pol-age').value = pol.age; $('pol-fixed').value = pol.fixed; renderPolicy(); }
@@ -2289,5 +2445,141 @@ input[type="checkbox"] { width: auto; flex: none; }
 
   window.JevAtk = { render: function () { renderPolicy(); renderAtk(); }, allocate: allocate, yearsTo: yearsTo };
   renderPolicy(); renderAtk();
+})();
+</script>
+
+<script>
+(function () {
+  'use strict';
+  function $(id) { return document.getElementById(id); }
+  function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function pc(x, d) { if (x == null) return '—'; var v = x * 100, s = v.toFixed(d == null ? 1 : d); return (v > 0 ? '+' : v < 0 ? '−' : '') + s.replace('-', '') + '%'; }
+  function pu(x, d) { return x == null ? '—' : (x * 100).toFixed(d == null ? 1 : d) + '%'; }   // 符号なし（値動き・比率）
+  function nf(x, d) { return Number(x).toLocaleString('ja-JP', { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 }); }
+  var NAMES = { sp: 'S&P500', fang: 'FANG+', semi: '日経半導体' };
+  var CLS = { sp: 'm-sp', fang: 'm-fang', semi: 'm-semi' };
+  var KEYS = ['sp', 'fang', 'semi'];
+  var JP = { '285A.T': 'キオクシア', '8035.T': '東京エレクトロン', '6857.T': 'アドバンテスト', '6723.T': 'ルネサス', '6146.T': 'ディスコ', '4063.T': '信越化学', '5016.T': 'JX金属', '6920.T': 'レーザーテック', '7741.T': 'HOYA', '7735.T': 'SCREEN',
+    NVDA: 'NVIDIA', AAPL: 'Apple', MSFT: 'Microsoft', AMZN: 'Amazon', GOOGL: 'Alphabet', GOOG: 'Alphabet（C 株）', AVGO: 'Broadcom', META: 'Meta', MU: 'Micron', TSLA: 'Tesla', NFLX: 'Netflix', PLTR: 'Palantir' };
+  function nm(t) { return JP[t] || t; }
+
+  function fill(D) {
+    var ctx = { asof: D.as_of };
+    KEYS.forEach(function (k) { ctx[k] = D.funds[k]; });
+    var vals = {
+      'asof': D.as_of,
+      'corrm.fang.semi': D.corr_monthly.fang.semi.toFixed(2),
+      'r.sp': pu(D.risk.share.sp, 0), 'r.semi': pu(D.risk.share.semi, 0), 'ralt.semi': pu(D.risk_alt.share.semi, 0)
+    };
+    KEYS.forEach(function (k) {
+      ['long', 'common'].forEach(function (p) {
+        var s = D.funds[k][p]; if (!s) return;
+        vals[k + '.' + p + '.cagr'] = pc(s.cagr); vals[k + '.' + p + '.vol'] = pu(s.vol, 0); vals[k + '.' + p + '.mdd'] = pc(s.mdd, 0); vals[k + '.' + p + '.from_high'] = pc(s.from_high, 0);
+      });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-v]'), function (el) { if (vals[el.dataset.v] != null) el.textContent = vals[el.dataset.v]; });
+  }
+
+  function bar(w, labels) {
+    return '<div class="mixbar small">' + KEYS.map(function (k) { return '<span class="' + CLS[k] + '" style="flex:' + Math.max(w[k] * 100, 0.5).toFixed(1) + '" title="' + NAMES[k] + '">' + (labels ? labels[k] : pu(w[k], 0)) + '</span>'; }).join('') + '</div>';
+  }
+  function rshare(D) {
+    function lab(w) { return KEYS.map(function (k) { return Math.round(w[k] * 100); }).join('・'); }
+    $('sd-rshare').innerHTML =
+      '<div class="rrow"><span class="rlab">以前の案<br><span class="note">' + lab(D.alt_weights) + '</span></span>' + bar(D.risk_alt.share) + '</div>' +
+      '<div class="rrow"><span class="rlab"><b>いまの戦略</b><br><span class="note">' + lab(D.weights) + '</span></span>' + bar(D.risk.share) + '</div>' +
+      '<div class="legend">' + KEYS.map(function (k) { return '<span><span class="sw ' + CLS[k] + '"></span>' + NAMES[k] + '</span>'; }).join('') + '</div>';
+  }
+
+  function chart(D) {
+    var s = D.series, n = s.dates.length, W = 640, H = 240, L = 40, R = 70, T = 10, B = 24;
+    var all = []; KEYS.concat(['port']).forEach(function (k) { all = all.concat(s[k]); });
+    var lo = Math.min.apply(null, all), hi = Math.max.apply(null, all);
+    lo = Math.floor(lo / 50) * 50; hi = Math.ceil(hi / 50) * 50;
+    function x(i) { return L + (W - L - R) * i / (n - 1); }
+    function y(v) { return T + (H - T - B) * (1 - (v - lo) / (hi - lo)); }
+    var svg = '<svg class="prj" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="2024 年 6 月を 100 とした値動き">';
+    for (var g = lo; g <= hi; g += 50) svg += '<line class="grid" x1="' + L + '" x2="' + (W - R) + '" y1="' + y(g).toFixed(1) + '" y2="' + y(g).toFixed(1) + '"/><text x="' + (L - 4) + '" y="' + (y(g) + 4).toFixed(1) + '" text-anchor="end">' + g + '</text>';
+    [0, Math.floor((n - 1) / 2), n - 1].forEach(function (i) { svg += '<text x="' + x(i).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="middle">' + s.dates[i].slice(0, 7) + '</text>'; });
+    var cl = { sp: 'var(--k-idx)', fang: 'var(--k-stock)', semi: 'var(--k-gold)', port: 'var(--fg)' };
+    var ends = [];
+    KEYS.concat(['port']).forEach(function (k) {
+      svg += '<path fill="none" stroke="' + cl[k] + '" stroke-width="' + (k === 'port' ? 3 : 2) + '"' + (k === 'port' ? ' stroke-dasharray="6 3"' : '') + ' d="' + s[k].map(function (v, i) { return (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1); }).join(' ') + '"/>';
+      ends.push({ k: k, y: y(s[k][n - 1]), v: s[k][n - 1] });
+    });
+    ends.sort(function (a, b) { return a.y - b.y; });
+    for (var e = 1; e < ends.length; e++) if (ends[e].y - ends[e - 1].y < 13) ends[e].y = ends[e - 1].y + 13;
+    ends.forEach(function (o) { svg += '<text x="' + (W - R + 6) + '" y="' + (o.y + 4).toFixed(1) + '" style="fill:' + cl[o.k] + '">' + Math.round(o.v) + '</text>'; });
+    $('sd-chart').innerHTML = svg + '</svg>';
+    $('sd-chartLegend').innerHTML = KEYS.map(function (k) { return '<span><span class="sw ' + CLS[k] + '"></span>' + NAMES[k] + '</span>'; }).join('') + '<span><span class="sw" style="background:var(--fg)"></span>組み合わせ（' + KEYS.map(function (k) { return Math.round(D.weights[k] * 100); }).join('・') + '）</span>';
+  }
+
+  function funds(D) {
+    function block(k, s, label) {
+      return '<tr><th colspan="2">' + esc(NAMES[k]) + '・' + label + '（' + s.start + '〜' + s.end + '、' + s.years + ' 年）</th></tr>' +
+        '<tr><td>年率</td><td>(' + nf(s.p1, 2) + ' ÷ ' + nf(s.p0, 2) + ')<sup>1/' + s.years + '</sup> − 1 = <b>' + pc(s.cagr) + '</b></td></tr>' +
+        '<tr><td>値動きの大きさ</td><td>週次の変化率の標準偏差 ' + pu(s.sd, 2) + '（' + s.n + ' 週）× √52 = <b>' + pu(s.vol) + '</b></td></tr>' +
+        '<tr><td>最大の下落</td><td>' + s.peak_date + ' の ' + nf(s.peak, 2) + ' → ' + s.trough_date + ' の ' + nf(s.trough, 2) + '：' + nf(s.trough, 2) + ' ÷ ' + nf(s.peak, 2) + ' − 1 = <b>' + pc(s.mdd) + '</b></td></tr>' +
+        '<tr><td>高値から</td><td><b>' + pc(s.from_high) + '</b></td></tr>';
+    }
+    $('sd-funds').innerHTML = '<p class="note">' + esc(D.notes) + ' 表の値は指数の水準で、ファンドの基準価額ではない。</p>' +
+      KEYS.map(function (k) {
+        var f = D.funds[k];
+        return '<div class="tablewrap"><table class="tools calc"><caption>' + esc(f.name) + '（' + esc(f.index) + '・代わりに使った値：' + esc(f.proxy) + '・信託報酬 ' + f.fee + '%）</caption>' +
+          (f.long ? block(k, f.long, '10 年') : '') + block(k, f.common, '3 本がそろう期間') + '</table></div>';
+      }).join('');
+  }
+
+  function corr(D) {
+    function tbl(c, n, unit) {
+      return '<div class="tablewrap"><table class="tools calc"><caption>' + unit + '（' + n + ' 個の変化率から）</caption><thead><tr><th></th>' + KEYS.map(function (k) { return '<th>' + NAMES[k] + '</th>'; }).join('') + '</tr></thead><tbody>' +
+        KEYS.map(function (a) { return '<tr><th>' + NAMES[a] + '</th>' + KEYS.map(function (b) { return '<td class="n">' + c[a][b].toFixed(2) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>';
+    }
+    $('sd-corr').innerHTML = '<p class="note">1 なら完全に同じ向きに動き、0 なら無関係。東京とニューヨークは取引時間がずれるので、日次で測ると日本株と米国株の連動が実際より低く出る。そのため週次と月次で測っている。</p>' +
+      tbl(D.corr_weekly, D.n_weekly, '週次') + tbl(D.corr_monthly, D.n_monthly, '月次');
+  }
+
+  function risk(D) {
+    function one(r, title) {
+      var w = r.w;
+      var rows = KEYS.map(function (k) {
+        return '<tr><th>' + NAMES[k] + '</th><td class="n">' + pu(w[k], 0) + '</td><td class="n">' + r.sigma_w[k].toFixed(4) + '</td><td>' + pu(w[k], 0) + ' × ' + r.sigma_w[k].toFixed(4) + ' ÷ ' + r.pvol.toFixed(4) + ' = ' + r.rc[k].toFixed(4) + '</td><td class="n"><b>' + pu(r.share[k], 0) + '</b></td></tr>';
+      }).join('');
+      return '<div class="tablewrap"><table class="tools calc"><caption>' + title + '</caption><thead><tr><th>ファンド</th><th>比率 w</th><th>(Σw)</th><th>寄与 = w ×(Σw)÷ σ</th><th>揺れの割合</th></tr></thead><tbody>' + rows + '</tbody>' +
+        '<tfoot><tr><td colspan="5">全体の揺れ σ = √(wᵀΣw) = √' + r.pvar.toFixed(4) + ' = <b>' + pu(r.pvol) + '</b>（年）。寄与の合計は σ と一致する。</td></tr></tfoot></table></div>';
+    }
+    var cov = '<div class="tablewrap"><table class="tools calc"><caption>Σ：年率に直した共分散（＝値動き × 値動き × 相関、週次 × 52）</caption><thead><tr><th></th>' + KEYS.map(function (k) { return '<th>' + NAMES[k] + '</th>'; }).join('') + '</tr></thead><tbody>' +
+      KEYS.map(function (a) { return '<tr><th>' + NAMES[a] + '</th>' + KEYS.map(function (b) { return '<td class="n">' + D.cov[a][b].toFixed(4) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>';
+    $('sd-risk').innerHTML = '<p class="note">揺れ（標準偏差）は足し算できないので、相関を含めた共分散から出す。各ファンドの寄与は「そのファンドを少し増やしたとき全体の揺れがどれだけ増えるか」× 比率。</p>' + cov +
+      one(D.risk, 'いまの戦略') + one(D.risk_alt, '以前の案');
+  }
+
+  function stocks(D) {
+    var title = { sp: 'S&P500 の上位 10 銘柄（全 500 社のうち）', fang: 'FANG+ の 10 銘柄（同じ金額ずつ）', semi: '日経半導体の上位 10 銘柄（全 30 社のうち）' };
+    $('sd-stocks').innerHTML = '<p class="note">1 年の騰落と値動きは円建て。ファンドへの寄与 ＝ ファンド内の比率 × 1 年の騰落（そのファンドの 1 年の上昇のうち、その銘柄が生んだ分の目安）。</p>' +
+      KEYS.map(function (k) {
+        var v = D.stocks[k], sum = 0;
+        var rows = v.rows.map(function (x) { sum += x.contrib; return '<tr><td>' + esc(nm(x.ticker)) + '<br><span class="note">' + esc(x.ticker) + '</span></td><td class="n">' + pu(x.w) + '</td><td class="n ' + (x.ret1y >= 0 ? 'up' : 'down') + '">' + pc(x.ret1y, 0) + '</td><td class="n">' + pu(x.vol1y, 0) + '</td><td class="n">' + pc(x.mdd1y, 0) + '</td><td class="n">' + pc(x.contrib) + '</td></tr>'; }).join('');
+        return '<div class="tablewrap"><table class="tools calc"><caption>' + title[k] + '</caption><thead><tr><th>銘柄</th><th>比率</th><th>1 年の騰落</th><th>値動き</th><th>最大下落</th><th>寄与</th></tr></thead><tbody>' + rows + '</tbody>' +
+          '<tfoot><tr><td colspan="6">表の銘柄でファンドの ' + pu(v.covered, 0) + '。この銘柄だけで 1 年に ' + pc(sum) + ' 分の上昇を生んでいる。</td></tr></tfoot></table></div>';
+      }).join('');
+  }
+
+  function look(D) {
+    var L = D.lookthrough, max = L.rows[0].total;
+    $('sd-look').innerHTML = '<div class="tablewrap"><table class="tools calc"><thead><tr><th>会社</th><th>S&P500 から</th><th>FANG+ から</th><th>半導体から</th><th>全体での比率</th></tr></thead><tbody>' +
+      L.rows.map(function (e) {
+        function p(k) { return e.parts[k] ? pu(e.parts[k], 2) : '—'; }
+        return '<tr><td>' + esc(nm(e.ticker)) + '</td><td class="n">' + p('sp') + '</td><td class="n">' + p('fang') + '</td><td class="n">' + p('semi') + '</td><td><div class="lk"><span style="width:' + (e.total / max * 100).toFixed(1) + '%"></span><b>' + pu(e.total, 2) + '</b></div></td></tr>';
+      }).join('') + '</tbody></table></div>';
+    var top5 = L.rows.slice(0, 5).reduce(function (a, e) { return a + e.total; }, 0);
+    $('sd-lookNote').textContent = '計算例：NVIDIA ＝ S&P500 の比率 ' + pu(D.weights.sp, 0) + ' × S&P500 内の NVIDIA の比率 ＋ FANG+ の比率 ' + pu(D.weights.fang, 0) + ' × 10%。上位 5 社だけで全体の ' + pu(top5, 0) + '。' +
+      '通貨で見ると米ドルの資産が ' + pu(L.usd_share, 0) + '、円の資産が ' + pu(L.jpy_share, 0) + '。表は各ファンドの上位銘柄だけを足したもの（合計 ' + pu(L.named_total, 0) + '）で、残りは S&P500 のほかの約 490 社と日経半導体のほかの 20 社。';
+  }
+
+  fetch('strategy.json').then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).then(function (D) {
+    fill(D); rshare(D); chart(D); look(D); funds(D); corr(D); risk(D); stocks(D);
+    $('sd-calcSub').textContent = D.as_of + ' 時点。公開の市場データ（Yahoo Finance）から tools/strategy_data.py で計算。過去の値動きは将来を約束しない。';
+  }).catch(function () { var el = $('sd-calcSub'); if (el) el.textContent = '計算の元データ（strategy.json）を読み込めませんでした。開き直してください。'; });
 })();
 </script>
