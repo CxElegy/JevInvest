@@ -226,6 +226,14 @@ def _status_url(handle: str, pid: str) -> str:
     return f"https://x.com/{handle}/status/{pid}"
 
 
+def snowflake_time(pid: str) -> str | None:
+    """X の投稿 ID には投稿時刻が入っている（上位ビット = 2010-11-04 からのミリ秒）。"""
+    if not re.fullmatch(r"\d{15,20}", str(pid)):
+        return None
+    ms = (int(pid) >> 22) + 1288834974657
+    return _iso(datetime.fromtimestamp(ms / 1000, timezone.utc))
+
+
 def parse_x_api(key: str, handle: str, payload: dict) -> list[Post]:
     out = []
     for t in payload.get("data") or []:
@@ -305,7 +313,50 @@ def fetch_rss(client, inf: dict, state: dict) -> tuple[list[Post], dict]:
     return parse_rss(inf["key"], inf["handle"], r.text), state
 
 
+SERENITYSTOCK = "https://serenitystock.com/"
+
+
+def parse_serenitystock(key: str, handle: str, page: str) -> list[Post]:
+    """serenitystock.com（Serenity の言及を第三方がまとめた記録）のトップページの最新言及カード。
+
+    本文は投稿そのものではなく、記録者の要約と立場（bullish など）。投稿時刻はリンク先の投稿 ID から出す。
+    robots.txt が /api/ を禁止しているので、公開ページだけを読む。
+    """
+    start = page.find("md:hidden")
+    cards = page[start:].split('aria-label="Open ')[1:] if start >= 0 else []
+    out, seen = [], set()
+    for c in cards:
+        tm = re.search(r"<span>\$(?:<!-- -->)?([A-Z0-9.\-]+)</span>", c)
+        xm = re.search(r'href="https://x\.com/\w+/status/(\d+)"', c)
+        if not tm or not xm:
+            continue
+        ticker, pid = tm.group(1), xm.group(1)
+        if (ticker, pid) in seen:
+            continue
+        seen.add((ticker, pid))
+        stance = re.search(r"uppercase tracking-normal[^\"]*\">([a-z ]+)</span>", c)
+        summary = re.search(r'<p class="mt-3[^"]*">(.*?)</p>', c, re.S)
+        text = f"${ticker} [{stance.group(1) if stance else '?'}] " + _clean_html(summary.group(1) if summary else "")
+        created = snowflake_time(pid) or _iso(datetime.now(timezone.utc))
+        out.append(Post(key, f"{pid}-{ticker}", created, text + "（serenitystock.com の要約）",
+                        _status_url(handle, pid), "serenitystock"))
+    return out
+
+
+def fetch_serenitystock(client, inf: dict, state: dict) -> tuple[list[Post], dict]:
+    r = client.get(SERENITYSTOCK, timeout=TIMEOUT, follow_redirects=True,
+                   headers={"User-Agent": "Mozilla/5.0 (JevInvest personal research)"})
+    if r.status_code != 200:
+        raise SourceUnavailable(f"serenitystock.com が {r.status_code} を返した")
+    posts = parse_serenitystock(inf["key"], inf["handle"], r.text)
+    if not posts:
+        raise SourceUnavailable("serenitystock.com の形式が変わり、言及を読めなかった")
+    return posts, state
+
+
 SOURCES = [("X API", fetch_x_api), ("RSS", fetch_rss)]
+# 本人の投稿が取れないときの代わり。config の archive: で人ごとに指定する
+ARCHIVES = {"serenitystock": ("serenitystock.com", fetch_serenitystock)}
 
 
 def fetch(con: sqlite3.Connection, cfg: dict, only: list[str] | None = None,
@@ -321,7 +372,8 @@ def fetch(con: sqlite3.Connection, cfg: dict, only: list[str] | None = None,
         row = con.execute("SELECT user_id, since_id FROM state WHERE key=?", (inf["key"],)).fetchone()
         state = {"user_id": row[0], "since_id": row[1]} if row else {}
         reasons = []
-        for label, fn in SOURCES:
+        sources = SOURCES + [ARCHIVES[a] for a in inf.get("archives") or [] if a in ARCHIVES]
+        for label, fn in sources:
             try:
                 posts, state = fn(client, inf, state)
             except SourceUnavailable as e:
@@ -373,6 +425,8 @@ def parse_pasted(key: str, handle: str, text: str) -> list[Post]:
         d = re.search(r"\b(20\d\d-\d\d-\d\d)(?:[ T](\d\d:\d\d))?", block)
         created = (_iso(datetime.fromisoformat(f"{d.group(1)}T{d.group(2) or '00:00'}+00:00")) if d
                    else _iso(datetime.now(timezone.utc)))
+        if m and snowflake_time(m.group(1)):
+            created = snowflake_time(m.group(1))   # URL があれば ID の時刻が一番正確
         out.append(Post(key, pid, created, block, _status_url(handle, pid) if m else "", "import"))
     return out
 
@@ -395,7 +449,7 @@ def build_report(posts: list[Post], cfg: dict, exposure: dict[str, Exposure], ex
     matcher = Matcher(cfg, exposure)
     now = datetime.now(timezone.utc)
     L = [f"# 注目アカウントの投稿と持仓の照合（{_fmt_time(_iso(now))}）", ""]
-    L += [f"- 対象期間: 直近 {days:g} 日", f"- 持仓の出所: {exp_note}",
+    L += [(f"- 対象期間: 直近 {days * 24:g} 時間" if days < 1 else f"- 対象期間: 直近 {days:g} 日"), f"- 持仓の出所: {exp_note}",
           "- 比率は「持仓全体に占める比率」。ファンドは上位銘柄だけを透かしているので下限の見積り",
           "- 照合は言葉の一致（銘柄名・$ティッカー・テーマ）。言及があっても強気か弱気かは判定していない", ""]
     if errors:
@@ -478,7 +532,11 @@ def _resolve(cfg: dict, who: str) -> dict:
 def write_report(con, cfg, days: float, errors=None, only=None) -> Path:
     exposure, note = load_exposure()
     since = datetime.now(timezone.utc) - timedelta(days=days)
-    text = build_report(load_posts(con, since, only), cfg, exposure, note, days, errors)
+    posts = load_posts(con, since, only)
+    text = build_report(posts, cfg, exposure, note, days, errors)
+    matcher = Matcher(cfg, exposure)
+    n = sum(1 for p in posts if matcher.match(p.text))
+    print(f"期間内の投稿 {len(posts)} 件、持仓に触れるもの {n} 件")
     REPORT.parent.mkdir(parents=True, exist_ok=True)
     REPORT.write_text(text, encoding="utf-8")
     return REPORT
@@ -504,19 +562,25 @@ def main(argv=None) -> int:
     f = sub.add_parser("fetch", help="新しい投稿を取り込んでレポートを作る")
     f.add_argument("--only", nargs="*")
     f.add_argument("--days", type=float, default=7)
+    f.add_argument("--hours", type=float, help="--days の代わりに時間で指定（定期実行で新着だけ見る）")
     i = sub.add_parser("import", help="貼り付けた投稿を取り込む（ファイル、または - で標準入力）")
     i.add_argument("file")
     i.add_argument("--who", required=True)
     i.add_argument("--days", type=float, default=7)
+    i.add_argument("--hours", type=float, help="--days の代わりに時間で指定（定期実行で新着だけ見る）")
     r = sub.add_parser("report", help="取り込み済みの投稿からレポートを作る")
     r.add_argument("--days", type=float, default=7)
+    r.add_argument("--hours", type=float, help="--days の代わりに時間で指定（定期実行で新着だけ見る）")
     r.add_argument("--only", nargs="*")
     w = sub.add_parser("watch", help="一定間隔で取り込み、持仓に触れる新しい投稿を出す")
     w.add_argument("--interval", type=int, default=900, help="秒（既定 900。短くしすぎると X API の上限に当たる）")
     w.add_argument("--days", type=float, default=7)
+    w.add_argument("--hours", type=float, help="--days の代わりに時間で指定（定期実行で新着だけ見る）")
     w.add_argument("--only", nargs="*")
     a = ap.parse_args(argv)
 
+    if a.hours:
+        a.days = a.hours / 24
     cfg = load_config()
     con = init_db()
 

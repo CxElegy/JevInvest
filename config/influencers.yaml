@@ -28,6 +28,8 @@ influencers:
     name: Serenity
     handle: aleabitoreddit
     user_id:
+    # X API も RSS も無いときに使う第三方の言及記録（本文ではなく要約と立場）
+    archives: [serenitystock]
     lens:
       summary: >-
         AI インフラの「ボトルネック」を供給網の上流へたどって探す。ハイパースケーラーの設備投資から

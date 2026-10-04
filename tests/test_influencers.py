@@ -176,3 +176,48 @@ def test_report_lists_touched_holdings(cfg, exposure):
     assert "285A.T Kioxia | 10.00% | 1" in md
     assert "投稿 2 件のうち、持仓に触れるもの 1 件" in md
     assert "## Serenity（@aleabitoreddit）" in md and "この期間の投稿は取り込まれていない" in md
+
+
+def test_snowflake_time():
+    # 2105943565918703696 は 2026-10-02 08:50 UTC の投稿
+    assert inf.snowflake_time("2105943565918703696").startswith("2026-10-02T08:50")
+    assert inf.snowflake_time("abc") is None
+
+
+def test_parse_pasted_prefers_status_id_time():
+    [p] = inf.parse_pasted("jukan", "Jukanlosreve", "hi https://x.com/Jukanlosreve/status/2105943565918703696")
+    assert p.created_at.startswith("2026-10-02T08:50")
+
+
+SS_CARD = ('<div class="grid gap-3 p-3 md:hidden"><div><a class="absolute inset-0" aria-label="Open LITE detail" '
+           'href="/stocks/NMS/LITE"></a><span><span>$<!-- -->LITE</span><span>NasdaqGS</span></span>'
+           '<span class="inline-flex h-6 px-2 text-[11px] font-semibold uppercase tracking-normal border-zinc-600/40">'
+           'neutral</span><p class="mt-3 break-words text-sm">CEO says CPO demand &amp; supply gap.</p>'
+           '<a href="https://x.com/aleabitoreddit/status/2105943565918703696">View on X</a></div>')
+
+
+def test_parse_serenitystock_cards(cfg, exposure):
+    posts = inf.parse_serenitystock("serenity", "aleabitoreddit", SS_CARD + SS_CARD.replace("md:hidden", "x"))
+    assert len(posts) == 1                       # 同じカードの重複は 1 件
+    p = posts[0]
+    assert p.text.startswith("$LITE [neutral] CEO says CPO demand & supply gap.")
+    assert p.url == "https://x.com/aleabitoreddit/status/2105943565918703696"
+    assert p.created_at.startswith("2026-10-02T08:50")
+    assert "NVDA" in {h.ticker for h in inf.Matcher(cfg, exposure).match(p.text)}   # テーマ optics 経由
+
+
+def test_archive_used_only_when_configured(tmp_path, monkeypatch, cfg):
+    monkeypatch.delenv("X_BEARER_TOKEN", raising=False)
+    monkeypatch.delenv("TWEETS_RSS_URL", raising=False)
+
+    class R:
+        status_code, text = 200, SS_CARD
+
+    class C:
+        def get(self, url, **kw):
+            assert url == inf.SERENITYSTOCK
+            return R()
+
+    new, errors = inf.fetch(inf.init_db(tmp_path / "t.sqlite"), cfg, None, C())
+    assert {p.source for p in new} == {"serenitystock"}
+    assert len(errors) == 1 and errors[0].startswith("Jukan")
