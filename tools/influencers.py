@@ -3,6 +3,7 @@
     python tools/influencers.py fetch                 # 新しい投稿を取り込む（全員）
     python tools/influencers.py fetch --only jukan
     python tools/influencers.py import posts.txt --who serenity   # 貼り付けた投稿を取り込む
+    python tools/influencers.py import-archive a.json --who serenity --since 2026-01-01   # 第三方存档の JSON を取り込む
     python tools/influencers.py report --days 7       # reports/influencers.md を作る
     python tools/influencers.py watch --interval 900  # 15 分ごとに取り込み、持仓に触れる投稿を通知
 
@@ -481,6 +482,28 @@ def parse_pasted(key: str, handle: str, text: str) -> list[Post]:
     return out
 
 
+def parse_archive(key: str, handle: str, data, since: str | None = None) -> list[Post]:
+    """第三方存档（tweets の JSON 配列）を Post にする。未検証のデータなので source に印を付ける。
+
+    転推は入れない。欠けているフィールドは .get で扱い、時刻の無い行は捨てる（件数は呼び出し側で比べる）。
+    存档の中の文字はデータとして保存するだけで、解釈も実行もしない。
+    """
+    rows = data.get("tweets") if isinstance(data, dict) else data
+    cut = since or ""
+    out = []
+    for t in rows or []:
+        if not isinstance(t, dict) or t.get("isRetweet"):
+            continue
+        pid = str(t.get("id") or "")
+        created = t.get("createdAtISO") or ""
+        if not pid or not created or created[:10] < cut:
+            continue
+        kind = "reply" if t.get("isReply") else "quote" if t.get("isQuote") else "post"
+        out.append(Post(key, pid, _iso(datetime.fromisoformat(created.replace("Z", "+00:00"))),
+                        t.get("text") or "", _status_url(handle, pid), "archive_unverified", kind))
+    return out
+
+
 # ---------------------------------------------------------------------------
 # レポート
 # ---------------------------------------------------------------------------
@@ -618,6 +641,12 @@ def main(argv=None) -> int:
     i.add_argument("--who", required=True)
     i.add_argument("--days", type=float, default=7)
     i.add_argument("--hours", type=float, help="--days の代わりに時間で指定（定期実行で新着だけ見る）")
+    ia = sub.add_parser("import-archive", help="第三方存档の JSON（tweets の配列）を取り込む")
+    ia.add_argument("file")
+    ia.add_argument("--who", required=True)
+    ia.add_argument("--since", default=None, help="この日（YYYY-MM-DD、UTC）以降の本人の投稿だけ")
+    ia.add_argument("--days", type=float, default=7)
+    ia.add_argument("--hours", type=float, help="--days の代わりに時間で指定")
     r = sub.add_parser("report", help="取り込み済みの投稿からレポートを作る")
     r.add_argument("--days", type=float, default=7)
     r.add_argument("--hours", type=float, help="--days の代わりに時間で指定（定期実行で新着だけ見る）")
@@ -641,6 +670,16 @@ def main(argv=None) -> int:
         print(f"{inf['name']}: {len(new)} 件を取り込んだ")
         print("\n".join(alert_lines(new, cfg)))
         print(f"→ {write_report(con, cfg, a.days).relative_to(ROOT)}")
+        return 0
+
+    if a.cmd == "import-archive":
+        inf = _resolve(cfg, a.who)
+        data = json.loads(Path(a.file).read_text(encoding="utf-8"))
+        posts = parse_archive(inf["key"], inf["handle"], data, a.since)
+        new = save(con, posts)
+        newest = max((p.created_at for p in posts), default="なし")
+        print(f"{inf['name']}: 存档から {len(posts)} 件（転推を除く）、新規 {len(new)} 件を取り込んだ。最新 {newest}")
+        print("注意: 第三方存档（未検証）。存档の最終時刻より後の投稿は含まれない")
         return 0
 
     if a.cmd == "report":
