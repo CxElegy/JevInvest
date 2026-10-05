@@ -381,6 +381,31 @@ input[type="checkbox"] { width: auto; flex: none; }
 .instl dd { margin: 0; }
 .calcList { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
 @media (max-width: 520px) { .instl { grid-template-columns: 1fr; } .instl dt { margin-top: 4px; } }
+/* 注目アカウント：月ごとの投稿の量 → 主題の移り変わり → 持仓との重なり → 月を選んで投稿を読む */
+.fmon { display: grid; grid-template-columns: 4.6em 1fr 7.5em; gap: 8px; align-items: center; font-size: 13px; min-height: 26px; border-radius: 4px; }
+.fmon:hover, .fmon:focus-visible { background: var(--accent-soft); outline: none; }
+.fmon .m { font-family: var(--f-num); }
+.fmon .track { display: flex; height: 16px; min-width: 0; }
+.fmon .track span { height: 100%; min-width: 0; }
+.fmon .track span:first-child { border-radius: 4px 0 0 4px; } .fmon .track span:last-child { border-radius: 0 4px 4px 0; }
+.fmon .v { font-family: var(--f-num); font-size: 12px; color: var(--muted); text-align: right; white-space: nowrap; }
+.f-dir { background: var(--accent); } .f-thm { background: var(--k-oetf); } .f-oth { background: var(--line); }
+.fheat { border-collapse: separate; border-spacing: 2px; }
+.fheat td.n { text-align: center; border: 0; border-radius: 4px; font-size: 12px; padding: 6px 4px; color: var(--fg); }
+.fheat th { text-align: center; }
+.fheat th:first-child { text-align: left; }
+.spark { display: flex; align-items: flex-end; gap: 2px; height: 22px; min-width: 80px; }
+.spark i { display: block; width: 7px; background: var(--k-oetf); border-radius: 2px 2px 0 0; min-height: 1px; }
+.spark i.d { background: var(--accent); }
+.posts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.posts li { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.posts .tx { font-size: 14px; overflow-wrap: anywhere; margin: 0; }
+.posts .meta { display: flex; gap: 4px 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); align-items: center; }
+.posts .meta b { font-family: var(--f-num); font-weight: 500; color: var(--fg); }
+.posts a { color: var(--accent); }
+.tkline { display: flex; gap: 6px; flex-wrap: wrap; }
+.tkline span { font-family: var(--f-num); font-size: 12px; border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; }
+.tkline span.own { border-color: var(--accent); color: var(--accent); font-weight: 500; }
 </style>
 
 <div class="wrap">
@@ -393,6 +418,7 @@ input[type="checkbox"] { width: auto; flex: none; }
       <button type="button" role="tab" id="tabLedger" aria-controls="viewLedger" aria-selected="false">台帳</button>
       <button type="button" role="tab" id="tabAtk" aria-controls="viewAtk" aria-selected="false">攻め口座</button>
       <button type="button" role="tab" id="tabInvestors" aria-controls="viewInvestors" aria-selected="false">市場の参考</button>
+      <button type="button" role="tab" id="tabFollow" aria-controls="viewFollow" aria-selected="false">注目アカウント</button>
     </nav>
   </header>
 
@@ -933,6 +959,49 @@ input[type="checkbox"] { width: auto; flex: none; }
       <div class="tablewrap"><table id="groupConsensus"></table></div>
     </section>
   </div>
+
+  <div id="viewFollow" class="view" role="tabpanel" aria-labelledby="tabFollow" hidden>
+    <header class="atkhead">
+      <h2 id="fl-title">注目アカウントの投稿履歴</h2>
+      <p class="sub" id="fl-sub">読み込み中…</p>
+      <p class="privacy"><b>投稿は取り込んだものだけを根拠にしています。</b>本人の意見を作らず、強気・弱気も判定していません。ここに出る銘柄は買い推奨ではなく、個別株を買う前には独立性の確認（DESC と事前承認）が必要です。</p>
+    </header>
+
+    <div class="tiles" id="fl-tiles"></div>
+
+    <section aria-labelledby="h-flMon">
+      <h2 id="h-flMon">月ごとの投稿と、持仓に触れた割合</h2>
+      <p class="sub">棒の長さが投稿数。色は、持っている銘柄の名前・ティッカーを直接書いた投稿、銘柄の事業テーマ（光通信・メモリなど）だけに触れた投稿、それ以外。行を押すとその月の投稿が下に出ます。</p>
+      <div class="legend2"><span><i class="f-dir"></i>銘柄を直接</span><span><i class="f-thm"></i>テーマだけ</span><span><i class="f-oth"></i>それ以外</span></div>
+      <div class="chart" id="fl-months"></div>
+    </section>
+
+    <section aria-labelledby="h-flTopic">
+      <h2 id="h-flTopic">話題の移り変わり</h2>
+      <p class="sub">その月の投稿のうち、各テーマに触れた割合。濃いほど多い。</p>
+      <div class="tablewrap"><table class="fheat" id="fl-topics"></table></div>
+    </section>
+
+    <section aria-labelledby="h-flHold">
+      <h2 id="h-flHold">いまの戦略の銘柄との重なり</h2>
+      <p class="sub" id="fl-holdSub"></p>
+      <div class="tablewrap"><table class="tools" id="fl-hold"></table></div>
+    </section>
+
+    <section aria-labelledby="h-flTk">
+      <h2 id="h-flTk">よく書かれた銘柄（期間全体）</h2>
+      <p class="sub">$ティッカーで書かれた回数。緑の枠は、いまの戦略のファンドに入っている銘柄。</p>
+      <div class="chart" id="fl-tickers"></div>
+    </section>
+
+    <section aria-labelledby="h-flPosts">
+      <h2 id="h-flPosts">月を選んで投稿を読む</h2>
+      <nav class="chips" id="fl-pick" aria-label="月を選ぶ"></nav>
+      <div class="tkline" id="fl-monthTk"></div>
+      <ul class="posts" id="fl-posts"></ul>
+      <details class="limits"><summary>このデータの限界</summary><ul id="fl-caveats"></ul></details>
+    </section>
+  </div>
 </div>
 <div id="toast" role="status" aria-live="polite"></div>
 <div id="vtip" role="tooltip"></div>
@@ -1233,13 +1302,14 @@ input[type="checkbox"] { width: auto; flex: none; }
   // ---- タブ ----
   function showTab(which) {
     var inv = which === 'investors';
-    [['road', 'viewRoad', 'tabRoad'], ['deep', 'viewDeep', 'tabDeep'], ['plan', 'viewPlan', 'tabPlan'], ['ledger', 'viewLedger', 'tabLedger'], ['atk', 'viewAtk', 'tabAtk'], ['investors', 'viewInvestors', 'tabInvestors']].forEach(function (t) {
+    [['road', 'viewRoad', 'tabRoad'], ['deep', 'viewDeep', 'tabDeep'], ['plan', 'viewPlan', 'tabPlan'], ['ledger', 'viewLedger', 'tabLedger'], ['atk', 'viewAtk', 'tabAtk'], ['investors', 'viewInvestors', 'tabInvestors'], ['follow', 'viewFollow', 'tabFollow']].forEach(function (t) {
       $(t[1]).hidden = t[0] !== which; $(t[2]).setAttribute('aria-selected', String(t[0] === which));
     });
     try { localStorage.setItem(TAB_KEY, which); } catch (e) { /* 保存できなくても表示はできる */ }
     if (inv) loadData();
     if (which === 'road' && window.JevRoad) window.JevRoad.render();
     if (which === 'deep' && window.JevDeep) window.JevDeep.show();
+    if (which === 'follow' && window.JevFollow) window.JevFollow.show();
     if ((which === 'road' || which === 'atk') && window.JevAtk) window.JevAtk.render();
   }
   $('tabLedger').addEventListener('click', function () { showTab('ledger'); });
@@ -1248,6 +1318,7 @@ input[type="checkbox"] { width: auto; flex: none; }
   $('tabDeep').addEventListener('click', function () { showTab('deep'); });
   $('tabAtk').addEventListener('click', function () { showTab('atk'); });
   $('tabInvestors').addEventListener('click', function () { showTab('investors'); });
+  $('tabFollow').addEventListener('click', function () { showTab('follow'); });
 
   // ---- データ ----
   var data = null, loading = false, style = 'all', current = null;
@@ -1575,9 +1646,9 @@ input[type="checkbox"] { width: auto; flex: none; }
     $('personDetail').scrollIntoView({ block: 'start', behavior: 'smooth' });
   });
 
-  var start = { '#investors': 'investors', '#plan': 'plan', '#ledger': 'ledger', '#road': 'road', '#atk': 'atk', '#deep': 'deep' }[location.hash] || null;
+  var start = { '#investors': 'investors', '#plan': 'plan', '#ledger': 'ledger', '#road': 'road', '#atk': 'atk', '#deep': 'deep', '#follow': 'follow' }[location.hash] || null;
   if (!start) { try { start = localStorage.getItem(TAB_KEY); } catch (e) { start = null; } }
-  showTab(['road', 'deep', 'plan', 'ledger', 'atk', 'investors'].indexOf(start) >= 0 ? start : 'road');
+  showTab(['road', 'deep', 'plan', 'ledger', 'atk', 'investors', 'follow'].indexOf(start) >= 0 ? start : 'road');
 })();
 </script>
 
@@ -2781,5 +2852,106 @@ input[type="checkbox"] { width: auto; flex: none; }
   }
   window.JevDeep = { show: load };
   if (!$('viewDeep').hidden) load();
+})();
+</script>
+
+<script>
+(function () {
+  'use strict';
+  function $(id) { return document.getElementById(id); }
+  function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function pu(x, d) { return x == null ? '—' : (x * 100).toFixed(d == null ? 0 : d) + '%'; }
+  function nf(n) { return Number(n || 0).toLocaleString('ja-JP'); }
+  function big(n) { n = Number(n || 0); return n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1) + 'K' : String(n); }
+  function mlab(m) { return Number(m.slice(5)) + '月'; }
+  var JP = { '285A.T': 'キオクシア', '8035.T': '東京エレクトロン', '6857.T': 'アドバンテスト', '6723.T': 'ルネサス', '6146.T': 'ディスコ', '4063.T': '信越化学', '5016.T': 'JX金属', '6920.T': 'レーザーテック', '7741.T': 'HOYA', '7735.T': 'SCREEN',
+    NVDA: 'NVIDIA', AAPL: 'Apple', MSFT: 'Microsoft', AMZN: 'Amazon', GOOGL: 'Alphabet', AVGO: 'Broadcom', META: 'Meta', MU: 'Micron', TSLA: 'Tesla', NFLX: 'Netflix', PLTR: 'Palantir' };
+  var WHO = { serenity: 'Serenity' };
+  var H = null, cur = null, loaded = false;
+
+  function render() {
+    var months = H.months, owned = {};
+    H.holdings.forEach(function (h) { owned[h.ticker] = 1; });
+    $('fl-title').textContent = (WHO[H.who] || H.who) + '（@' + H.handle + '）の投稿履歴';
+    $('fl-sub').textContent = H.since + ' 〜 ' + String(H.last || '').slice(0, 10) + ' の本人の投稿（転推を除く）を月ごとにまとめました。集計 ' + (H.built || '') + '。';
+
+    var tot = 0, any = 0, dir = 0;
+    months.forEach(function (m) { tot += m.posts; any += m.touch_any; dir += m.touch_direct; });
+    var peak = months.slice().sort(function (a, b) { return b.posts - a.posts; })[0];
+    function tile(k, v, s) { return '<div class="tile"><div class="k">' + k + '</div><div class="v">' + v + '</div><div class="s">' + s + '</div></div>'; }
+    $('fl-tiles').innerHTML =
+      tile('投稿数', nf(tot), months.length + ' か月・月平均 ' + nf(Math.round(tot / months.length))) +
+      tile('持仓に触れた投稿', pu(tot ? any / tot : 0), '銘柄名かテーマのどちらか') +
+      tile('銘柄を直接書いた投稿', pu(tot ? dir / tot : 0), nf(dir) + ' 件') +
+      tile('一番多かった月', mlab(peak.month), nf(peak.posts) + ' 件');
+
+    // 月ごとの棒
+    var max = Math.max.apply(null, months.map(function (m) { return m.posts; }));
+    $('fl-months').innerHTML = months.map(function (m) {
+      var d = m.touch_direct, t = Math.max(m.touch_any - d, 0), o = Math.max(m.posts - m.touch_any, 0), w = m.posts / max * 100;
+      function seg(c, n) { return n ? '<span class="' + c + '" style="width:' + (n / m.posts * w).toFixed(2) + '%"></span>' : ''; }
+      return '<div class="fmon" tabindex="0" role="button" data-m="' + m.month + '" aria-label="' + esc(mlab(m.month) + ' ' + m.posts + ' 件、銘柄を直接 ' + d + ' 件、テーマだけ ' + t + ' 件。押すとこの月の投稿') + '">' +
+        '<span class="m">' + m.month + '</span><span class="track">' + seg('f-dir', d) + seg('f-thm', t) + seg('f-oth', o) + '</span>' +
+        '<span class="v">' + nf(m.posts) + ' 件・' + pu(m.touch_ratio) + '</span></div>';
+    }).join('');
+
+    // 話題
+    var keys = Object.keys(H.topic_labels);
+    var tmax = 0;
+    months.forEach(function (m) { keys.forEach(function (k) { tmax = Math.max(tmax, (m.topics[k] || 0) / m.posts); }); });
+    $('fl-topics').innerHTML = '<thead><tr><th>テーマ</th>' + months.map(function (m) { return '<th>' + mlab(m.month) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+      keys.map(function (k) {
+        return '<tr><th scope="row">' + esc(H.topic_labels[k]) + '</th>' + months.map(function (m) {
+          var r = (m.topics[k] || 0) / m.posts, a = tmax ? Math.round(r / tmax * 85) : 0;
+          return '<td class="n" style="background:color-mix(in srgb, var(--accent) ' + a + '%, var(--surface))" title="' + esc(H.topic_labels[k] + '：' + mlab(m.month) + ' ' + (m.topics[k] || 0) + ' 件') + '"><span' + (a > 55 ? ' style="color:var(--accent-fg)"' : '') + '>' + pu(r) + '</span></td>';
+        }).join('') + '</tr>';
+      }).join('') + '</tbody>';
+
+    // 持仓との重なり
+    var cov = H.coverage || {};
+    $('fl-holdSub').textContent = '比率は、いまの戦略（S&P500・FANG+・日経半導体）を中身の会社まで分けたときの持ち分（各ファンドの上位銘柄だけ・金額は使っていない）。直接はその銘柄の名前を書いた投稿、テーマは事業の話題だけの投稿。直接書かれた銘柄で戦略の ' + pu(cov.named_directly) + ' 分。小さな棒は月ごとの件数（濃い色が直接）。';
+    var mkeys = months.map(function (m) { return m.month; });
+    var hmax = Math.max.apply(null, H.holdings.map(function (h) { return Math.max.apply(null, mkeys.map(function (k) { return h.by_month[k] || 0; })); }).concat([1]));
+    $('fl-hold').innerHTML = '<thead><tr><th>銘柄</th><th class="n">戦略での比率</th><th class="n">直接</th><th class="n">テーマ</th><th>月ごと（' + mlab(mkeys[0]) + '〜' + mlab(mkeys[mkeys.length - 1]) + '）</th></tr></thead><tbody>' +
+      H.holdings.map(function (h) {
+        var sp = mkeys.map(function (k) { var n = h.by_month[k] || 0, dn = (h.direct_by_month || {})[k] || 0; return '<i class="' + (dn && dn * 2 >= n ? 'd' : '') + '" style="height:' + Math.max(n / hmax * 100, n ? 6 : 0).toFixed(0) + '%" title="' + esc(mlab(k) + ' ' + n + ' 件（直接 ' + dn + '）') + '"></i>'; }).join('');
+        return '<tr><td><b>' + esc(JP[h.ticker] || h.name) + '</b><br><span class="note">' + esc(h.ticker) + '</span></td><td class="n">' + pu(h.weight, 1) + '</td><td class="n">' + nf(h.direct) + '</td><td class="n">' + nf(h.theme) + '</td><td><div class="spark" aria-hidden="true">' + sp + '</div></td></tr>';
+      }).join('') + '</tbody>';
+
+    // よく書かれた銘柄
+    var top = H.tickers_all.slice(0, 15), tkmax = top.length ? top[0].n : 1;
+    $('fl-tickers').innerHTML = top.map(function (x) {
+      return '<div class="hbar"><span class="t"><span class="tk"' + (owned[x.t] ? ' style="color:var(--accent)"' : '') + '>$' + esc(x.t) + '</span>' + (owned[x.t] ? '<span class="tag new">保有</span>' : '') + '</span>' +
+        '<span style="display:flex;align-items:center;gap:6px;min-width:0"><span class="b" style="width:' + (x.n / tkmax * 72).toFixed(1) + '%;' + (owned[x.t] ? 'background:var(--accent)' : '') + '"></span><span class="val" title="' + esc(String(x.first).slice(0, 10) + '〜' + String(x.last).slice(0, 10)) + '">' + nf(x.n) + ' 回</span></span></div>';
+    }).join('');
+
+    $('fl-caveats').innerHTML = (H.caveats || []).concat(H.source && H.source.health ? ['取得元の状態：' + H.source.health + '（確認 ' + String(H.source.checked_time || '').slice(0, 10) + '）'] : []).map(function (c) { return '<li>' + esc(c) + '</li>'; }).join('');
+    if (!cur) cur = months[months.length - 1].month;
+    renderMonth();
+  }
+
+  function renderMonth() {
+    var owned = {}; H.holdings.forEach(function (h) { owned[h.ticker] = 1; });
+    var m = H.months.filter(function (x) { return x.month === cur; })[0]; if (!m) return;
+    $('fl-pick').innerHTML = H.months.map(function (x) { return '<button type="button" data-m="' + x.month + '" aria-pressed="' + (x.month === cur) + '">' + mlab(x.month) + '</button>'; }).join('');
+    $('fl-monthTk').innerHTML = '<span class="note" style="border:0;padding:0">' + mlab(m.month) + 'によく出た銘柄：</span>' + (m.tickers || []).slice(0, 12).map(function (x) { return '<span class="' + (owned[x.t] ? 'own' : '') + '">$' + esc(x.t) + ' ' + x.n + '</span>'; }).join('');
+    $('fl-posts').innerHTML = (m.top || []).map(function (p) {
+      return '<li><p class="tx">' + esc(p.text) + (String(p.text || '').length >= 270 ? '…' : '') + '</p><div class="meta"><span>' + esc(String(p.at).slice(0, 10)) + '</span><span>いいね <b>' + big(p.likes) + '</b></span><span>表示 <b>' + big(p.views) + '</b></span><span>リポスト <b>' + big(p.retweets) + '</b></span>' +
+        (p.url ? '<a href="' + esc(p.url) + '" target="_blank" rel="noopener noreferrer">X で全文を開く</a>' : '') + '</div></li>';
+    }).join('') || '<li class="note">この月の抜粋はありません。</li>';
+  }
+
+  function pick(mm) { if (!mm) return; cur = mm; renderMonth(); }
+  $('fl-pick').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) pick(b.dataset.m); });
+  $('fl-months').addEventListener('click', function (e) { var r = e.target.closest('[data-m]'); if (r) { pick(r.dataset.m); $('h-flPosts').scrollIntoView({ block: 'start', behavior: 'smooth' }); } });
+  $('fl-months').addEventListener('keydown', function (e) { if (e.key !== 'Enter' && e.key !== ' ') return; var r = e.target.closest('[data-m]'); if (r) { e.preventDefault(); pick(r.dataset.m); } });
+
+  function load() {
+    if (loaded) return; loaded = true;
+    fetch('serenity_history.json').then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).then(function (d) { H = d; render(); })
+      .catch(function () { loaded = false; $('fl-sub').textContent = '投稿履歴（serenity_history.json）を読み込めませんでした。開き直してください。'; });
+  }
+  window.JevFollow = { show: load };
+  if (!$('viewFollow').hidden) load();
 })();
 </script>
