@@ -8,7 +8,8 @@
 influencers:
   - key: jukan
     name: Jukan
-    handle: Jukanlosreve
+    # 2026 年に @Jukanlosreve から改名（同じアカウント。旧 URL も新しい方へ転送される）
+    handle: jukan05
     # X API の user id。空なら handle から引く（1 回分の API 呼び出しが増えるだけ）
     user_id:
     lens:

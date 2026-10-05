@@ -16,6 +16,8 @@ Claude Code（/influencers）が reports/influencers.md を読んで行う。LLM
                       bash tools/install_x_timeline.sh で vendor/ に入れる）。X の規約上グレーなので捨てアカウントで
   2. RSS              環境変数 TWEETS_RSS_URL（例: https://rsshub.example/twitter/user/{handle}）
                       自前の RSSHub・Nitter など。{handle} が置き換わる
+  2b. FxTwitter       設定不要。api.fxtwitter.com（埋め込み用の公開 API）から本人の直近 20 件前後を取る。
+                      第三者のサービスなので止まることがある。FXTWITTER_API=off で使わない
   3. 手で貼る          import サブコマンド。テキストか JSON
 どれも無いときは、取れない理由を出して止まる（黙って 0 件にしない）。
 """
@@ -364,6 +366,57 @@ def fetch_rss(client, inf: dict, state: dict) -> tuple[list[Post], dict]:
     return parse_rss(inf["key"], inf["handle"], r.text), state
 
 
+FXTWITTER_API = "https://api.fxtwitter.com"
+
+
+def parse_fxtwitter(key: str, handle: str, payload: dict) -> list[Post]:
+    """FxTwitter（埋め込み用の公開 API）の /2/profile/{handle}/statuses。本人の本文がそのまま入る。
+
+    リポストは元の投稿者の本文なので kind=repost にして元の URL を付ける。引用は引用元の本文を後ろに添える。
+    """
+    if not isinstance(payload, dict) or "results" not in payload:
+        raise SourceUnavailable(f"FxTwitter の形式が想定外: {str(payload)[:200]}")
+    out = []
+    for t in payload["results"]:
+        pid = str(t.get("id") or "")
+        if not pid:
+            continue
+        author = ((t.get("author") or {}).get("screen_name") or "")
+        ts = t.get("created_timestamp")
+        created = (_iso(datetime.fromtimestamp(ts, timezone.utc)) if isinstance(ts, (int, float))
+                   else snowflake_time(pid) or _iso(datetime.now(timezone.utc)))
+        text = t.get("text") or ""
+        q = t.get("quote") or {}
+        if author.lower() != handle.lower():
+            kind, text = "repost", f"RT @{author}: {text}"
+        elif t.get("replying_to"):
+            kind = "reply"
+        elif q:
+            kind = "quote"
+        else:
+            kind = "post"
+        if q:
+            qa = (q.get("author") or {}).get("screen_name") or "?"
+            text += f"\n\n[引用 @{qa}] {q.get('text') or ''}"
+        url = t.get("url") if kind == "repost" and t.get("url") else _status_url(handle, pid)
+        out.append(Post(key, pid, created, html.unescape(text).strip(), url, "fxtwitter", kind))
+    return out
+
+
+def fetch_fxtwitter(client, inf: dict, state: dict) -> tuple[list[Post], dict]:
+    """認証なしで本人の直近の投稿（1 ページ、20 件前後）を取る。FXTWITTER_API=off で使わない。"""
+    base = os.getenv("FXTWITTER_API", FXTWITTER_API).rstrip("/")
+    if base.lower() in ("off", "0", "none", ""):
+        raise SourceUnavailable("FXTWITTER_API=off")
+    url = f"{base}/2/profile/{inf['handle']}/statuses"
+    r = client.get(url, timeout=TIMEOUT, follow_redirects=True)
+    if r.status_code == 404:
+        raise SourceUnavailable(f"FxTwitter が 404（ハンドル @{inf['handle']} が変わった可能性）")
+    if r.status_code != 200:
+        raise SourceUnavailable(f"FxTwitter が {r.status_code} を返した")
+    return parse_fxtwitter(inf["key"], inf["handle"], r.json()), state
+
+
 SERENITYSTOCK = "https://serenitystock.com/"
 
 
@@ -405,7 +458,7 @@ def fetch_serenitystock(client, inf: dict, state: dict) -> tuple[list[Post], dic
     return posts, state
 
 
-SOURCES = [("X API", fetch_x_api), ("X cookie", fetch_bird), ("RSS", fetch_rss)]
+SOURCES = [("X API", fetch_x_api), ("X cookie", fetch_bird), ("RSS", fetch_rss), ("FxTwitter", fetch_fxtwitter)]
 # 本人の投稿が取れないときの代わり。config の archive: で人ごとに指定する
 ARCHIVES = {"serenitystock": ("serenitystock.com", fetch_serenitystock)}
 

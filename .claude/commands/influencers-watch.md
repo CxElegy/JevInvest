@@ -8,10 +8,11 @@ description: 定期実行用。直近の新着投稿だけを見て、持仓に�
 
 1. 準備: `pip install -q -r requirements.txt`。環境変数 `X_AUTH_TOKEN` があれば `bash tools/install_x_timeline.sh` も実行する。
 2. 取り込む: `python tools/influencers.py fetch --hours <窓>`。
-   - Serenity は X API / RSS が無ければ serenitystock.com（第三方の要約）から自動で取る。
-   - X cookie（`X_AUTH_TOKEN` / `X_CT0`）があれば 2 人とも本人の投稿を直接取る。cookie の値は表示しない。
-   - **Jukan は X API / X cookie / RSS が無いと取れない。** そのときは WebSearch で `Jukanlosreve` の最近の投稿を探し、
-     `https://x.com/Jukanlosreve/status/<数字>` の URL と、検索結果に出ている本文がそろうものだけを、
+   - 設定が無くても FxTwitter（api.fxtwitter.com、認証不要の公開 API）から 2 人とも本人の投稿本文を取る。
+   - X cookie（`X_AUTH_TOKEN` / `X_CT0`）があればそちらが優先。cookie の値は表示しない。
+   - FxTwitter も止まっていれば、Serenity は serenitystock.com（第三方の要約）から自動で取る。
+   - **Jukan まで取れなかったときだけ** WebSearch で `jukan05`（旧 `Jukanlosreve`）の最近の投稿を探し、
+     `https://x.com/jukan05/status/<数字>` の URL と、検索結果に出ている本文がそろうものだけを、
      1 件ずつ「本文 + 空行 + URL」の形にして、ブロックの間を `---` の行で区切り
      `python tools/influencers.py import - --who jukan --hours <窓>` に標準入力で渡す。
      本文が分からないもの・別人の投稿は入れない。時刻は URL の ID から自動で出る。

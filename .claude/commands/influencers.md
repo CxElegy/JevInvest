@@ -9,8 +9,8 @@ description: Jukan・Serenity など注目アカウントの最新の投稿を�
    - 引数や会話に投稿の本文・URL が貼られていれば、それを `python tools/influencers.py import - --who <key>` に
      標準入力で渡して取り込む（key は config/influencers.yaml の jukan / serenity など）。
    - 貼られていなければ `python tools/influencers.py fetch`（特定の人だけなら `--only serenity`）。
-   - どの取得元も使えない（`X_BEARER_TOKEN` も `TWEETS_RSS_URL` も無い）と出たら、黙って進めない。
-     理由を伝え、X のプロフィール（https://x.com/Jukanlosreve 、https://x.com/aleabitoreddit ）から
+   - どの取得元も使えない（X API・cookie・RSS が無く、FxTwitter も止まっている）と出たら、黙って進めない。
+     理由を伝え、X のプロフィール（https://x.com/jukan05 、https://x.com/aleabitoreddit ）から
      最新の投稿を貼ってもらうよう頼んで止まる。Web 検索の断片で本人の意見を組み立てない。
 2. `reports/influencers.md` を読む。「取り込めなかったもの」があれば先に伝える。
 3. 人ごとに次を書く。

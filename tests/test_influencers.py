@@ -40,7 +40,7 @@ def exposure(tmp_path):
 
 def test_config_has_jukan_and_serenity(cfg):
     handles = {i["handle"] for i in cfg["influencers"]}
-    assert {"Jukanlosreve", "aleabitoreddit"} <= handles
+    assert {"jukan05", "aleabitoreddit"} <= handles
     for i in cfg["influencers"]:
         assert i["lens"]["summary"]
 
@@ -136,7 +136,7 @@ def test_fetch_x_api_uses_since_id_and_falls_back(tmp_path, monkeypatch, cfg):
     monkeypatch.delenv("TWEETS_RSS_URL", raising=False)
 
     def routes(url, params):
-        if "/users/by/username/Jukanlosreve" in url:
+        if "/users/by/username/jukan05" in url:
             return FakeResp(200, {"data": {"id": "42"}})
         if url.endswith("/users/42/tweets"):
             return FakeResp(200, {"data": [{"id": "7", "text": "Micron HBM",
@@ -264,3 +264,44 @@ def test_fetch_bird_passes_cookies_by_env(tmp_path, monkeypatch):
     assert seen["env"]["AUTH_TOKEN"] == "a" and seen["env"]["CT0"] == "c"
     assert seen["cmd"][2].startswith("from:Jukanlosreve since:")
     assert "a" not in seen["cmd"]                 # cookie はコマンドラインに出さない
+
+
+FX_PAYLOAD = {"code": 200, "results": [
+    {"id": "2106907946890457304", "created_timestamp": 1791160973, "text": "Micron HBM &amp; DRAM",
+     "author": {"screen_name": "jukan05"}, "replying_to": None},
+    {"id": "2106851949400469887", "created_timestamp": 1791147622, "text": "AI drug discovery",
+     "url": "https://x.com/FredaDuan/status/2106851949400469887", "author": {"screen_name": "FredaDuan"}},
+    {"id": "2106909462141542687", "created_timestamp": 1791161334, "text": "optical fiber too?",
+     "author": {"screen_name": "jukan05"}, "quote": {"text": "SPCX 10GW", "author": {"screen_name": "elonmusk"}}},
+    {"id": "2106149598532415787", "created_timestamp": 1790980169, "text": "link",
+     "author": {"screen_name": "jukan05"}, "replying_to": {"status": "2106149596418470138"}},
+]}
+
+
+def test_parse_fxtwitter_kinds_and_text():
+    posts = inf.parse_fxtwitter("jukan", "jukan05", FX_PAYLOAD)
+    assert [p.kind for p in posts] == ["post", "repost", "quote", "reply"]
+    assert posts[0].text == "Micron HBM & DRAM" and posts[0].source == "fxtwitter"
+    assert posts[0].url == "https://x.com/jukan05/status/2106907946890457304"
+    assert posts[0].created_at == "2026-10-05T00:42:53+00:00"
+    assert posts[1].text.startswith("RT @FredaDuan: ") and "FredaDuan" in posts[1].url
+    assert "[引用 @elonmusk] SPCX 10GW" in posts[2].text
+    with pytest.raises(inf.SourceUnavailable):
+        inf.parse_fxtwitter("jukan", "jukan05", {"code": 404, "message": "Not found"})
+
+
+def test_fetch_falls_back_to_fxtwitter_without_credentials(tmp_path, monkeypatch, cfg):
+    for k in ("X_BEARER_TOKEN", "X_AUTH_TOKEN", "X_CT0", "TWEETS_RSS_URL", "FXTWITTER_API"):
+        monkeypatch.delenv(k, raising=False)
+
+    def routes(url, params):
+        if url == "https://api.fxtwitter.com/2/profile/jukan05/statuses":
+            return FakeResp(200, FX_PAYLOAD)
+        return FakeResp(404, {"code": 404})
+
+    new, errors = inf.fetch(inf.init_db(tmp_path / "t.sqlite"), cfg, ["jukan"], FakeClient(routes))
+    assert {p.source for p in new} == {"fxtwitter"} and len(new) == 4
+    assert errors == []
+    monkeypatch.setenv("FXTWITTER_API", "off")
+    new, errors = inf.fetch(inf.init_db(tmp_path / "u.sqlite"), cfg, ["jukan"], FakeClient(routes))
+    assert new == [] and "FxTwitter: FXTWITTER_API=off" in errors[0]

@@ -285,7 +285,7 @@ X（旧 Twitter）の注目アカウントの投稿を取り込み、**自分の
 
 | | アカウント | 見方（こちらの要約） |
 |---|---|---|
-| Jukan | [@Jukanlosreve](https://x.com/Jukanlosreve) | 韓国発の半導体ニュース。メモリ（HBM・DRAM・NAND）、ファウンドリ、装置、中国と輸出規制 |
+| Jukan | [@jukan05](https://x.com/jukan05)（旧 @Jukanlosreve） | 韓国発の半導体ニュース。メモリ（HBM・DRAM・NAND）、ファウンドリ、装置、中国と輸出規制 |
 | Serenity | [@aleabitoreddit](https://x.com/aleabitoreddit) | AI インフラのボトルネックを供給網の上流（光・基板・材料・特殊ファウンドリ）へたどる。ポジションを公表する集中型 |
 
 ```bash
@@ -311,6 +311,7 @@ python tools/influencers.py report --days 30      # 取り込み済みの分か�
 | X API v2 | 環境変数 `X_BEARER_TOKEN` | **読み取りは有料プラン**（無料プランは 403）。`since_id` で新着だけ取るので呼び出しは少ない |
 | X のログイン cookie | 環境変数 `X_AUTH_TOKEN` と `X_CT0`、`bash tools/install_x_timeline.sh` | [x-timeline-archive](https://github.com/Xiao-yun-Hu/x-timeline-archive) の bird-search（X の Web 版の検索）を使う。API 料金は不要だが **X の規約上グレーで、アカウント凍結のおそれ**がある。捨てアカウントの cookie を使う。cookie はパスワードと同じ扱い |
 | RSS | 環境変数 `TWEETS_RSS_URL`（例 `https://rsshub.example.com/twitter/user/{handle}`） | 自前の RSSHub・Nitter など。公開インスタンスは止まりやすい |
+| FxTwitter | 不要（無効にするなら `FXTWITTER_API=off`） | `api.fxtwitter.com`（埋め込み用の公開 API）から本人の直近 20 件前後。第三者のサービスなので止まることがある |
 | 貼り付け | `import` または `/influencers` に投稿を貼る | 費用ゼロ。X の画面から本文と URL をコピーする |
 
 どれも無いときは理由を出して止まる（0 件として黙って進めない）。取り込んだ投稿は `data/tweets.sqlite`（.gitignore 済み）。
