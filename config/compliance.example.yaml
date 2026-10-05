@@ -1,0 +1,36 @@
+# 独立性（independence）の確認記録のひな形。
+# config/compliance.yaml にコピーして使う（.gitignore 済み）。
+#
+# このツールは制限対象かどうかを判定しない。判定の正は DESC と
+# Independence & Conflicts Network。ここには「確認した結果」を転記するだけ。
+# 以下の内容は書式の例で、実在の判定ではない。
+
+recheck_after_days: 90        # DESC の確認がこの日数を超えたら「再確認が必要」にする
+
+securities:
+  # 確認済みで事前承認も取れている → 購入可
+  - symbol: EXAMPLE-A
+    desc_result: clear              # clear / restricted / escalate / unchecked
+    desc_checked: 2026-09-01        # DESC で確認した日
+    preclearance: approved          # approved / not_required / pending / not_submitted
+    preclearance_expires: 2026-12-31   # 任意。過ぎると承認待ちに戻る
+    note: 例
+
+  # 確認は済んだが事前承認が未申請 → 承認待ち
+  - symbol: EXAMPLE-B
+    desc_result: clear
+    desc_checked: 2026-09-10
+    preclearance: not_submitted
+
+  # DESC で制限事業体と確認された → 保有も購入も不可
+  - symbol: EXAMPLE-C
+    desc_result: restricted
+    desc_checked: 2026-09-10
+
+  # 可否が分からず照会中
+  - symbol: EXAMPLE-D
+    desc_result: escalate
+
+  # 候補として挙げただけで、まだ確認していない
+  - symbol: EXAMPLE-E
+    desc_result: unchecked

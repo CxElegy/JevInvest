@@ -1,0 +1,111 @@
+# X（旧 Twitter）で追う人と、その人の「見方」。
+# tools/influencers.py が投稿を取り込み、自分の持仓（ファンドの中身まで透かした分）と照合する。
+# 個人の金額は入らないのでコミットしてよい。
+#
+# lens は「その人の視点で持仓を読む」ときの前提。本人の発言ではなく、こちらが要約した見立て。
+# 分析は必ず取り込んだ実際の投稿を根拠にし、lens だけで本人の意見を作らないこと。
+
+influencers:
+  - key: jukan
+    name: Jukan
+    # 2026 年に @Jukanlosreve から改名（同じアカウント。旧 URL も新しい方へ転送される）
+    handle: jukan05
+    # X API の user id。空なら handle から引く（1 回分の API 呼び出しが増えるだけ）
+    user_id:
+    lens:
+      summary: >-
+        韓国発の半導体ニュースと業界の一次情報（韓国メディアの報道・業界関係者の話）を英語で速く流す。
+        メモリ（HBM・DRAM・NAND）、Samsung・SK hynix・Micron、ファウンドリ（TSMC・Samsung）、
+        製造装置、中国の半導体自給（CXMT・YMTC・SMIC）と米国の輸出規制が中心。
+      cares_about:
+        - メモリの需給と価格（HBM の世代交代・顧客認定、DRAM/NAND の値上げ・減産）
+        - 先端プロセスとパッケージの歩留まり・量産時期（TSMC・Samsung・Intel）
+        - 装置・検査の発注動向（露光・エッチ・テスター）
+        - 中国の自給の進み具合と輸出規制の強化・緩和
+      style: 報道の転載と短いコメントが多い。本人も「投資助言ではない」と明記している。
+      blind_spots: 個別の報道は後で否定・修正されることがある。株価の水準（割高かどうか）はあまり語らない。
+
+  - key: serenity
+    name: Serenity
+    handle: aleabitoreddit
+    user_id:
+    # X API も RSS も無いときに使う第三方の言及記録（本文ではなく要約と立場）
+    archives: [serenitystock]
+    lens:
+      summary: >-
+        AI インフラの「ボトルネック」を供給網の上流へたどって探す。ハイパースケーラーの設備投資から
+        GPU・ASIC、光通信・レーザー、基板、エピウェハ、化合物半導体の材料、特殊な装置・ファウンドリへ。
+        小型株を含めて自分のポジションを公表する、確信度の高いスタイル。
+      cares_about:
+        - 需要に対して供給が追いつかない部材（光部品・InP/GaAs 基板・先端基板・メモリ）
+        - ハイパースケーラーの設備投資の増減とその配分先
+        - 市場が気づいていない上流の小型株（時価総額が小さく、値動きが極端）
+        - 決算での受注・価格転嫁・設備増強の発表
+      style: 長文のスレッドで論拠を示し、ポジションを取ったことを公表する。
+      blind_spots: >-
+        推奨後に急騰する銘柄が多く、後から追うと高値づかみになりやすい。本人のリターンは自己申告。
+        集中投資・高ボラティリティが前提で、インデックス中心の持ち方とは前提が違う。
+
+# 投稿の言葉を、自分が（ファンド経由も含めて）持っている銘柄に結びつける辞書。
+# ticker は web/strategy.json の look-through や config/holdings.yaml の symbol と同じ表記にする。
+# 正規表現は大文字小文字を区別しない。\b は英単語の境界。
+aliases:
+  NVDA: ['\bnvidia\b', '\bnvda\b', '\bblackwell\b', '\brubin\b']
+  AAPL: ['\bapple\b', '\baapl\b', '\biphone\b']
+  MSFT: ['\bmicrosoft\b', '\bmsft\b', '\bazure\b']
+  GOOGL: ['\bgoogle\b', '\balphabet\b', '\bgoogl?\b', '\btpu\b']
+  AMZN: ['\bamazon\b', '\bamzn\b', '\baws\b', '\btrainium\b']
+  META: ['\bmeta\b', '\bfacebook\b', '\bmtia\b']
+  AVGO: ['\bbroadcom\b', '\bavgo\b']
+  TSLA: ['\btesla\b', '\btsla\b']
+  NFLX: ['\bnetflix\b', '\bnflx\b']
+  MU: ['\bmicron\b', '\bmu\b']
+  AMD: ['\bamd\b', '\bmi[34]\d{2}x?\b']
+  CRWD: ['\bcrowdstrike\b', '\bcrwd\b']
+  NOW: ['\bservicenow\b']
+  PLTR: ['\bpalantir\b', '\bpltr\b']
+  ORCL: ['\boracle\b', '\borcl\b']
+  285A.T: ['\bkioxia\b', 'キオクシア']
+  8035.T: ['tokyo electron', '\btel\b', '東京エレクトロン']
+  6857.T: ['\badvantest\b', 'アドバンテスト']
+  6723.T: ['\brenesas\b', 'ルネサス']
+  6146.T: ['\bdisco\b', 'ディスコ']
+  4063.T: ['shin-?etsu', '信越化学']
+  5016.T: ['jx advanced metals', 'jx金属']
+  6920.T: ['\blasertec\b', 'レーザーテック']
+  7741.T: ['\bhoya\b']
+  7735.T: ['\bscreen holdings\b', 'scr[e]?en semiconductor', 'スクリーン']
+
+# 持っていない会社の話でも、持っている銘柄に波及するテーマ。
+# 「この話が出たら、この持ち株に効きうる」という経路を短く書く（照合結果に表示される）。
+themes:
+  hbm:
+    patterns: ['\bhbm\d?e?\b', 'high bandwidth memory']
+    affects: {MU: HBM の供給者, NVDA: HBM の最大の買い手, 6857.T: HBM のテスター, 6146.T: HBM の薄化・切断装置}
+  dram:
+    patterns: ['\bdram\b', '\bddr5\b', '\blpddr\d?x?\b', 'memory price', 'contract price']
+    affects: {MU: DRAM の価格・需給}
+  nand:
+    patterns: ['\bnand\b', '\bssd\b', '\benterprise ssd\b', '\bqlc\b']
+    affects: {MU: NAND の価格・需給, 285A.T: NAND の価格・需給（売上の大半）}
+  korea_memory:
+    patterns: ['sk ?hynix', '\bhynix\b', '\bsamsung\b', 'サムスン']
+    affects: {MU: メモリの競合（シェア・価格）, 285A.T: NAND の競合, NVDA: HBM の調達先}
+  foundry:
+    patterns: ['\btsmc\b', '\bfoundry\b', '\bcowos\b', '\bn2\b', '\b2nm\b', '\b3nm\b', '\bintel foundry\b', '\b18a\b']
+    affects: {NVDA: 製造・パッケージの供給量, AAPL: 先端プロセスの調達, AVGO: ASIC の製造, 8035.T: 装置需要, 6857.T: 検査需要}
+  equipment:
+    patterns: ['\bwfe\b', '\basml\b', '\beuv\b', 'lam research', 'applied materials', '\bkla\b', 'equipment order']
+    affects: {8035.T: 装置の受注, 6920.T: EUV マスク検査, 7735.T: 洗浄装置, 4063.T: ウェハ・材料}
+  china_export:
+    patterns: ['export control', 'entity list', '\bcxmt\b', '\bymtc\b', '\bsmic\b', '\bhuawei\b', 'sanction', '輸出規制']
+    affects: {NVDA: 中国向け販売, 8035.T: 中国向け装置販売, 6920.T: 中国向け装置販売, MU: 中国の競合・規制}
+  hyperscaler_capex:
+    patterns: ['\bcapex\b', 'capital expenditure', 'hyperscaler', 'data ?center']
+    affects: {NVDA: AI 設備投資の受け手, AVGO: カスタム ASIC・ネットワーク, MSFT: 投資する側（利益率）, GOOGL: 投資する側（利益率）, AMZN: 投資する側（利益率）, META: 投資する側（利益率）}
+  optics:
+    patterns: ['\boptic', 'transceiver', '\bcpo\b', 'co-packaged', '\blaser', '\bindium phosphide\b', '\binp\b', '\b1\.6t\b', '\b800g\b']
+    affects: {NVDA: ネットワーク・光接続, AVGO: 光・スイッチ, 7741.T: ガラス・光学部材}
+  substrate:
+    patterns: ['\bsubstrate', '\babf\b', 'glass core', '\bepiwafer', '\bgaas\b', '\bsic\b']
+    affects: {NVDA: パッケージ基板の供給, 4063.T: ウェハ・材料, 5016.T: 化合物半導体材料・スパッタ}

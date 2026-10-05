@@ -1,0 +1,64 @@
+# 13F を集計する運用者の名簿（tools/fetch_13f.py が読む）。
+#
+#   name  : EDGAR の会社名検索に使う名前。ヒットしない場合は cik を直接書く
+#   style : screen_candidates.py の --styles で絞り込むための分類
+#           value / quality / growth / activist / macro / quant / concentrated
+#   person: 画面に出す投資家本人（または運用会社）の名前
+#   cik   : 任意。書くと名前解決を飛ばす（10 桁でなくてよい）。
+#           運用会社は改組で CIK が変わる（例: Greenlight → DME Capital、Pershing Square → Pershing Square Inc.）
+#
+# 名簿は「今有名な人」で作られており、同じ手法で失敗した運用会社は入っていない
+# （生存者バイアス）。フォークして自分の名簿に育てること。
+# 名前が解決できない場合は fetch_13f.py が最後に「未解決」として一覧する。
+
+investors:
+  # --- value / quality ---
+  - {name: Berkshire Hathaway, person: ウォーレン・バフェット, style: quality, cik: "1067983"}
+  - {name: Baupost Group, person: セス・クラーマン, style: value, cik: "1061768"}
+  - {name: Dalal Street LLC (Mohnish Pabrai), person: モニッシュ・パブライ, style: value, cik: "1549575"}
+  - {name: Himalaya Capital Management, person: 李録（リー・ルー）, style: value, cik: "1709323"}
+  - {name: Tweedy Browne, person: トウィーディ・ブラウン, style: value, cik: "732905"}
+  - {name: Davis Selected Advisers, person: クリス・デイビス, style: value, cik: "1036325"}
+  - {name: Southeastern Asset Management, person: メイソン・ホーキンス創業（ロングリーフ）, style: value, cik: "807985"}
+  - {name: Harris Associates, person: オークマーク（ビル・ナイグレン）, style: value, cik: "813917"}
+  - {name: Dodge & Cox, person: ドッジ＆コックス, style: value, cik: "200217"}
+  - {name: DME Capital Management (Greenlight), person: デビッド・アインホーン, style: value, cik: "1489933"}
+  - {name: Akre Capital Management, person: チャック・アクレ創業, style: quality, cik: "1112520"}
+  - {name: Ruane Cunniff & Goldfarb (Sequoia Fund), person: セコイア・ファンド, style: quality, cik: "1720792"}
+  - {name: Fundsmith, person: テリー・スミス, style: quality, cik: "1868537"}
+  - {name: Lindsell Train, person: ニック・トレイン, style: quality, cik: "1484150"}
+  - {name: Polen Capital Management, person: ポーレン・キャピタル, style: quality, cik: "1034524"}
+  - {name: Gardner Russo & Quinn, person: トム・ルッソ, style: quality, cik: "860643"}
+
+  # --- concentrated / growth ---
+  - {name: Pershing Square, person: ビル・アックマン, style: concentrated, cik: "2026053"}
+  - {name: Lone Pine Capital, person: スティーブン・マンデル創業, style: growth, cik: "1061165"}
+  - {name: Viking Global Investors, person: アンドレアス・ハルボルセン, style: growth, cik: "1103804"}
+  - {name: Coatue Management, person: フィリップ・ラフォント, style: growth, cik: "1135730"}
+  - {name: Tiger Global Management, person: チェース・コールマン, style: growth, cik: "1167483"}
+  - {name: Duquesne Family Office, person: スタンレー・ドラッケンミラー, style: macro, cik: "1536411"}
+  - {name: Appaloosa LP, person: デビッド・テッパー, style: macro, cik: "1656456"}
+  - {name: Third Point, person: ダニエル・ローブ, style: activist, cik: "1040273"}
+  - {name: Abrams Capital Management, person: デビッド・エイブラムス, style: concentrated, cik: "1358706"}
+  - {name: Glenview Capital Management, person: ラリー・ロビンス, style: concentrated, cik: "1138995"}
+  - {name: Maverick Capital, person: リー・エインズリー, style: growth, cik: "934639"}
+
+  # --- activist ---
+  - {name: Trian Fund Management, person: ネルソン・ペルツ, style: activist, cik: "1345471"}
+  - {name: Elliott Investment Management, person: ポール・シンガー, style: activist, cik: "1791786"}
+  - {name: ValueAct Holdings, person: バリューアクト, style: activist, cik: "1418814"}
+  - {name: Starboard Value LP, person: ジェフ・スミス, style: activist, cik: "1517137"}
+  - {name: JANA Partners, person: バリー・ローゼンスタイン, style: activist, cik: "1998597"}
+  - {name: Icahn Carl C, person: カール・アイカーン, style: activist, cik: "921669"}
+
+  # --- macro / multi-strategy ---
+  - {name: Soros Fund Management, person: ジョージ・ソロス（ファミリーオフィス）, style: macro, cik: "1029160"}
+  - {name: Tudor Investment Corp, person: ポール・チューダー・ジョーンズ, style: macro, cik: "923093"}
+  - {name: Bridgewater Associates, person: レイ・ダリオ創業, style: macro, cik: "1350694"}
+  - {name: Paulson & Co, person: ジョン・ポールソン, style: macro, cik: "1035674"}
+
+  # --- quant（数千銘柄を持つので、選別型の集計からは自動的に外れる）---
+  - {name: Renaissance Technologies, person: ジム・シモンズ創業, style: quant, cik: "1037389"}
+  - {name: Two Sigma Investments, person: ツー・シグマ, style: quant, cik: "1179392"}
+  - {name: D. E. Shaw & Co, person: デビッド・ショー創業, style: quant, cik: "1009207"}
+  - {name: AQR Capital Management, person: クリフ・アスネス, style: quant, cik: "1167557"}

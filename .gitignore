@@ -1,0 +1,21 @@
+# 金額・個人情報が入るもの
+config/holdings.yaml
+config/compliance.yaml
+config/transactions.yaml
+config/holdings.derived.yaml
+.env
+
+# 生成物・キャッシュ
+data/
+reports/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# 公開時だけ添える個人の明細
+web/seed.json
+seed.json
+vendor/
