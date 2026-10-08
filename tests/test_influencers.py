@@ -178,6 +178,22 @@ def test_report_lists_touched_holdings(cfg, exposure):
     assert "## Serenity（@aleabitoreddit）" in md and "この期間の投稿は取り込まれていない" in md
 
 
+def test_build_web_matches_report_and_keeps_no_opinion(cfg, exposure):
+    now = datetime.now(timezone.utc)
+    posts = [inf.Post("jukan", "1", now.isoformat(timespec="seconds"),
+                      "Kioxia NAND price hike\n$MU too", "https://x.com/jukan05/status/1", "fxtwitter"),
+             inf.Post("jukan", "2", now.isoformat(timespec="seconds"), "lunch", "", "fxtwitter")]
+    d = inf.build_web(posts, cfg, exposure, "test", 7, now=now)
+    jukan = next(p for p in d["people"] if p["key"] == "jukan")
+    serenity = next(p for p in d["people"] if p["key"] == "serenity")
+    assert (jukan["n_posts"], jukan["n_touch"]) == (2, 1)
+    assert {t["ticker"] for t in jukan["touched"]} == {"285A.T", "MU"}
+    assert jukan["covered_weight"] == pytest.approx(0.10 + 0.03)
+    assert jukan["posts"][0]["text"] == "Kioxia NAND price hike $MU too"   # 改行は 1 行にまとめる
+    assert jukan["others"][0]["text"] == "lunch"
+    assert serenity["n_posts"] == 0 and serenity["posts"] == []
+
+
 def test_snowflake_time():
     # 2105943565918703696 は 2026-10-02 08:50 UTC の投稿
     assert inf.snowflake_time("2105943565918703696").startswith("2026-10-02T08:50")

@@ -41,7 +41,7 @@
 body { background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 15px; line-height: 1.65; }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
-.wrap { max-width: 980px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 56px; display: flex; flex-direction: column; gap: 18px; }
+.wrap { max-width: 980px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 56px; display: flex; flex-direction: column; gap: 18px; overflow-x: clip; }
 h1 { font-size: 22px; line-height: 1.3; margin: 0; font-weight: 700; text-wrap: balance; }
 h2 { font-size: 16px; margin: 0; font-weight: 700; text-wrap: balance; }
 .sub { color: var(--muted); font-size: 13px; margin: 0; }
@@ -406,6 +406,14 @@ input[type="checkbox"] { width: auto; flex: none; }
 .tkline { display: flex; gap: 6px; flex-wrap: wrap; }
 .tkline span { font-family: var(--f-num); font-size: 12px; border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; }
 .tkline span.own { border-color: var(--accent); color: var(--accent); font-weight: 500; }
+.fwlist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.fwlist li { display: flex; gap: 10px; align-items: baseline; font-size: 14px; min-width: 0; }
+.fwlist li > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+.fwlist .tag { flex: none; }
+.fwlist a { color: var(--accent); white-space: nowrap; font-size: 12px; margin-left: 6px; }
+.hits { display: flex; gap: 4px 6px; flex-wrap: wrap; }
+.hits span { font-family: var(--f-num); font-size: 11px; border: 1px solid var(--line); border-radius: 999px; padding: 0 7px; color: var(--muted); }
+.hits span.dir { border-color: var(--accent); color: var(--accent); }
 </style>
 
 <div class="wrap">
@@ -1028,9 +1036,34 @@ input[type="checkbox"] { width: auto; flex: none; }
 
   <div id="viewFollow" class="view" role="tabpanel" aria-labelledby="tabFollow" hidden>
     <header class="atkhead">
-      <h2 id="fl-title">注目アカウントの投稿履歴</h2>
+      <h2>注目アカウントの監視</h2>
+      <p class="sub" id="fw-sub">読み込み中…</p>
+      <p class="privacy"><b>投稿は取り込んだものだけを根拠にしています。</b>本人の意見を作らず、強気・弱気も判定していません。「推測」と付いた文は Claude の読みです。ここに出る銘柄は買い推奨ではなく、個別株を買う前には独立性の確認（DESC と事前承認）が必要です。</p>
+    </header>
+
+    <section aria-labelledby="h-fwVerdict">
+      <h2 id="h-fwVerdict">結論：持仓をどうするか</h2>
+      <div class="verdict" id="fw-verdict" aria-live="polite"></div>
+      <h3>次に確認すること</h3>
+      <ul class="points" id="fw-watch"></ul>
+    </section>
+
+    <section aria-labelledby="h-fwOverlap">
+      <h2 id="h-fwOverlap">今週の話題が当たる持ち分</h2>
+      <p class="sub" id="fw-overlapSub"></p>
+      <div class="tablewrap"><table class="tools" id="fw-overlap"></table></div>
+      <p class="note" id="fw-overlapNote"></p>
+    </section>
+
+    <section aria-labelledby="h-fwPeople">
+      <h2 id="h-fwPeople">人ごとの投稿と読み</h2>
+      <nav class="chips" id="fw-pick" aria-label="人を選ぶ"></nav>
+      <div id="fw-person"></div>
+    </section>
+
+    <header class="atkhead">
+      <h2 id="fl-title">Serenity の投稿履歴</h2>
       <p class="sub" id="fl-sub">読み込み中…</p>
-      <p class="privacy"><b>投稿は取り込んだものだけを根拠にしています。</b>本人の意見を作らず、強気・弱気も判定していません。ここに出る銘柄は買い推奨ではなく、個別株を買う前には独立性の確認（DESC と事前承認）が必要です。</p>
     </header>
 
     <div class="tiles" id="fl-tiles"></div>
@@ -3017,7 +3050,95 @@ input[type="checkbox"] { width: auto; flex: none; }
     fetch('serenity_history.json').then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).then(function (d) { H = d; render(); })
       .catch(function () { loaded = false; $('fl-sub').textContent = '投稿履歴（serenity_history.json）を読み込めませんでした。開き直してください。'; });
   }
-  window.JevFollow = { show: load };
+  window.JevFollow = { show: function () { load(); if (window.JevWatch) window.JevWatch.show(); } };
+  if (!$('viewFollow').hidden) load();
+})();
+</script>
+
+<script>
+(function () {
+  'use strict';
+  function $(id) { return document.getElementById(id); }
+  function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function pu(x, d) { return x == null ? '—' : (x * 100).toFixed(d == null ? 1 : d) + '%'; }
+  function jst(iso) {
+    try { return new Date(iso).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }) + ' JST'; } catch (e) { return String(iso).slice(0, 16); }
+  }
+  var W = null, A = null, cur = null, loaded = false, urls = {};
+
+  function sid(u) { var m = /status\/(\d+)/.exec(u || ''); return m ? m[1] : ''; }
+  function links(ids) {
+    return (ids || []).map(function (i) { return urls[i] ? '<a href="' + esc(urls[i]) + '" target="_blank" rel="noopener noreferrer">投稿</a>' : ''; }).join('');
+  }
+
+  function render() {
+    W.people.forEach(function (p) { p.posts.forEach(function (x) { urls[sid(x.url)] = x.url; }); });
+    var an = A || {}, v = an.verdict;
+    var n = W.people.reduce(function (a, p) { return a + p.n_posts; }, 0), t = W.people.reduce(function (a, p) { return a + p.n_touch; }, 0);
+    $('fw-sub').textContent = (an.window || '') + ' に取り込んだ ' + n + ' 件（うち持仓に触れるもの ' + t + ' 件）。集計 ' + jst(W.built) + '。' + (an.as_of ? '読みは ' + an.as_of + ' 時点。' : '');
+
+    if (v) {
+      $('fw-verdict').innerHTML = '<div class="eyebrow">いまの判断</div><p class="big">' + esc(v.action) + '</p><ul class="points">' + v.why.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' +
+        '<p class="note">' + esc(an.basis || '') + '</p>';
+      $('fw-watch').innerHTML = (v.watch || []).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('');
+    } else {
+      $('fw-verdict').innerHTML = '<p>読み（web/influencers_analysis.json）を読み込めませんでした。数字と投稿だけを下に出しています。</p>';
+    }
+
+    var ov = an.overlap, wmap = {};
+    W.exposure.forEach(function (e) { wmap[e.t] = e; });
+    if (ov) {
+      $('fw-overlapSub').textContent = ov.title + '。比率は、戦略のファンドの上位銘柄だけを透かした値で、実際はこれより大きい。';
+      $('fw-overlap').innerHTML = '<thead><tr><th>銘柄</th><th class="n">比率</th><th>どう当たるか</th></tr></thead><tbody>' + ov.rows.map(function (r) {
+        var e = wmap[r.t];
+        return '<tr><td><b>' + esc(r.t) + '</b>' + (e ? '<br><span class="note">' + esc(e.name) + '</span>' : '') + '</td><td class="n">' + (e ? pu(e.weight, 2) : '—') + '</td><td>' + esc(r.note) + '</td></tr>';
+      }).join('') + '</tbody>';
+      $('fw-overlapNote').textContent = ov.sum_note || '';
+    }
+
+    $('fw-pick').innerHTML = W.people.map(function (p) { return '<button type="button" data-k="' + esc(p.key) + '" aria-pressed="' + (p.key === cur) + '">' + esc(p.name) + '（' + p.n_touch + ' / ' + p.n_posts + '）</button>'; }).join('');
+    renderPerson();
+  }
+
+  function renderPerson() {
+    var p = W.people.filter(function (x) { return x.key === cur; })[0]; if (!p) return;
+    var a = ((A || {}).people || {})[p.key] || {};
+    var h = '<div class="who"><span class="p">' + esc(p.name) + '</span><span class="note">@' + esc(p.handle) + ' ・ ' + esc((p.sources || []).join('、') || '取り込みなし') + '</span></div>' +
+      '<div class="facts"><span>投稿 <b>' + p.n_posts + '</b> 件</span><span>持仓に触れる <b>' + p.n_touch + '</b> 件</span><span>話題に入る持ち分の合計 <b>' + pu(p.covered_weight) + '</b></span>' +
+      (p.last ? '<span>最新 <b>' + esc(jst(p.last)) + '</b></span>' : '') + '</div>';
+    if (a.headline) h += '<p><b>' + esc(a.headline) + '</b></p>';
+    h += '<h3>この人の見方（こちらの要約。本人の発言ではない）</h3><p>' + esc(p.lens.summary) + '</p>' +
+      (p.lens.cares_about.length ? '<ul class="points">' + p.lens.cares_about.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : '');
+    if (a.facts) {
+      h += '<h3>投稿に書いてあること</h3><ul class="fwlist">' + a.facts.map(function (f) { return '<li><span class="tag hold">記載</span><span>' + esc(f.text) + links(f.ids) + '</span></li>'; }).join('') + '</ul>';
+    }
+    if (a.lens_reading) {
+      h += '<h3>この人の見方で読むと</h3><ul class="fwlist">' + a.lens_reading.map(function (f) { return '<li><span class="tag ' + (f.inference ? 'trim' : 'hold') + '">' + (f.inference ? '推測' : '記載') + '</span><span>' + esc(f.text) + '</span></li>'; }).join('') + '</ul>';
+    }
+    if (a.blind) h += '<p class="note"><b>注意：</b>' + esc(a.blind) + '</p>';
+    if (p.touched.length) {
+      h += '<h3>触れた持ち株</h3><div class="tablewrap"><table><thead><tr><th>銘柄</th><th class="n">比率</th><th class="n">投稿数</th><th class="n">うち名前を直接</th></tr></thead><tbody>' +
+        p.touched.map(function (t) { return '<tr><td><b>' + esc(t.ticker) + '</b><div class="names">' + esc(t.name) + '</div></td><td class="n">' + pu(t.weight, 2) + '</td><td class="n">' + t.posts + '</td><td class="n">' + t.direct + '</td></tr>'; }).join('') + '</tbody></table></div>';
+    }
+    h += '<h3>持仓に触れる投稿（持ち分が大きい順）</h3>';
+    h += p.posts.length ? '<ul class="posts">' + p.posts.map(function (x) {
+      return '<li><p class="tx">' + esc(x.text) + (x.text.length >= 600 ? '…' : '') + '</p><div class="meta"><span>' + esc(jst(x.at)) + '</span>' + (x.kind !== 'post' ? '<span>' + esc(x.kind) + '</span>' : '') + '<span>触れる比率 <b>' + pu(x.weight, 2) + '</b></span>' +
+        (x.url ? '<a href="' + esc(x.url) + '" target="_blank" rel="noopener noreferrer">X で開く</a>' : '') + '</div>' +
+        '<div class="hits">' + x.hits.map(function (k) { return '<span class="' + (k.reason.indexOf('テーマ') === 0 ? '' : 'dir') + '" title="' + esc(k.reason) + '">' + esc(k.t) + (k.reason.indexOf('テーマ') === 0 ? '（テーマ）' : '') + '</span>'; }).join('') + '</div></li>';
+    }).join('') + '</ul>' : '<p class="note">この期間に取り込まれた、持仓に触れる投稿はありません。</p>';
+    $('fw-person').innerHTML = h;
+  }
+
+  $('fw-pick').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; cur = b.dataset.k; Array.prototype.forEach.call($('fw-pick').children, function (x) { x.setAttribute('aria-pressed', String(x === b)); }); renderPerson(); });
+
+  function getJson(u) { return fetch(u).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }); }
+  function load() {
+    if (loaded) return; loaded = true;
+    Promise.all([getJson('influencers_watch.json'), getJson('influencers_analysis.json').catch(function () { return null; })]).then(function (r) {
+      W = r[0]; A = r[1]; cur = cur || (W.people[0] && W.people[0].key); render();
+    }).catch(function () { loaded = false; $('fw-sub').textContent = '監視データ（influencers_watch.json）を読み込めませんでした。開き直してください。'; });
+  }
+  window.JevWatch = { show: load };
   if (!$('viewFollow').hidden) load();
 })();
 </script>

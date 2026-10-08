@@ -5,6 +5,7 @@
     python tools/influencers.py import posts.txt --who serenity   # 貼り付けた投稿を取り込む
     python tools/influencers.py import-archive a.json --who serenity --since 2026-01-01   # 第三方存档の JSON を取り込む
     python tools/influencers.py report --days 7       # reports/influencers.md を作る
+    python tools/influencers.py export-web --days 7   # web/influencers_watch.json を作る（台帳ページの「注目アカウント」タブ）
     python tools/influencers.py watch --interval 900  # 15 分ごとに取り込み、持仓に触れる投稿を通知
 
 計算と照合はここ（ローカル）で行い、「その人の視点で持仓をどう読むか」の判断は
@@ -668,6 +669,73 @@ def write_report(con, cfg, days: float, errors=None, only=None) -> Path:
     return REPORT
 
 
+WEB_OUT = ROOT / "web" / "influencers_watch.json"
+
+
+def build_web(posts: list[Post], cfg: dict, exposure: dict[str, Exposure], exp_note: str,
+              days: float, max_posts: int = 30, now: datetime | None = None) -> dict:
+    """台帳ページ用の JSON。照合は build_report と同じ Matcher。強気・弱気は判定しない。
+    web/influencers_analysis.json（Claude の読み）は別ファイルで、ここでは触らない。"""
+    matcher = Matcher(cfg, exposure)
+    now = now or datetime.now(timezone.utc)
+    people = []
+    for inf in cfg["influencers"]:
+        mine = [p for p in posts if p.key == inf["key"]]
+        lens = inf.get("lens") or {}
+        scored = [(p, matcher.match(p.text)) for p in mine]
+        rel = [(p, h) for p, h in scored if h]
+        rel.sort(key=lambda x: (matcher.weight(x[1]), x[0].created_at), reverse=True)
+        touched: dict[str, dict] = {}
+        for p, hs in rel:
+            for h in hs:
+                e = touched.setdefault(h.ticker, {"ticker": h.ticker, "name": exposure[h.ticker].name,
+                                                  "weight": exposure[h.ticker].weight, "posts": 0, "direct": 0})
+                e["posts"] += 1
+                if not h.reason.startswith("テーマ"):
+                    e["direct"] += 1
+        rows = sorted(touched.values(), key=lambda e: -(e["weight"] or 0))
+        people.append({
+            "key": inf["key"], "name": inf["name"], "handle": inf["handle"],
+            "sources": sorted({p.source for p in mine}),
+            "lens": {"summary": (lens.get("summary") or "").strip(),
+                     "cares_about": lens.get("cares_about") or [],
+                     "style": (lens.get("style") or "").strip(),
+                     "blind_spots": (lens.get("blind_spots") or "").strip()},
+            "n_posts": len(mine), "n_touch": len(rel),
+            "first": min((p.created_at for p in mine), default=None),
+            "last": max((p.created_at for p in mine), default=None),
+            "touched": rows,
+            "covered_weight": round(sum(e["weight"] or 0 for e in rows), 5),
+            "posts": [{"id": p.id, "at": p.created_at, "kind": p.kind, "url": p.url,
+                       "text": re.sub(r"\s+", " ", p.text).strip()[:600],
+                       "weight": round(matcher.weight(hs), 5),
+                       "hits": [{"t": h.ticker, "reason": h.reason} for h in hs]}
+                      for p, hs in rel[:max_posts]],
+            "others": [{"at": p.created_at, "kind": p.kind, "url": p.url,
+                        "text": re.sub(r"\s+", " ", p.text).strip()[:200]}
+                       for p, h in scored if not h][:8],
+        })
+    big = sorted((e for e in exposure.values() if e.weight), key=lambda e: -e.weight)[:12]
+    return {
+        "built": _iso(now), "days": days, "exposure_note": exp_note,
+        "exposure": [{"t": e.ticker, "name": e.name, "weight": round(e.weight, 5), "via": e.via} for e in big],
+        "caveats": ["照合は言葉の一致（銘柄名・$ティッカー・テーマ）で、強気・弱気は判定していない",
+                    "比率は web/strategy.json の各ファンド上位銘柄だけを透かした下限の見積り。金額は使っていない",
+                    "取得元は公開の埋め込み API（FxTwitter）などで、直近 20 件前後。止まる・抜けることがある",
+                    "Serenity は本人の本文ではなく第三者サイトの要約（立場は不明と表示される）"],
+        "people": people,
+    }
+
+
+def write_web(con, cfg, days: float, only=None) -> Path:
+    exposure, note = load_exposure()
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+    data = build_web(load_posts(con, since, only), cfg, exposure, note, days)
+    WEB_OUT.parent.mkdir(parents=True, exist_ok=True)
+    WEB_OUT.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    return WEB_OUT
+
+
 def alert_lines(new: list[Post], cfg: dict) -> list[str]:
     exposure, _ = load_exposure()
     matcher = Matcher(cfg, exposure)
@@ -704,6 +772,10 @@ def main(argv=None) -> int:
     r.add_argument("--days", type=float, default=7)
     r.add_argument("--hours", type=float, help="--days の代わりに時間で指定（定期実行で新着だけ見る）")
     r.add_argument("--only", nargs="*")
+    x = sub.add_parser("export-web", help="台帳ページ用の web/influencers_watch.json を作る")
+    x.add_argument("--days", type=float, default=7)
+    x.add_argument("--hours", type=float, help="--days の代わりに時間で指定")
+    x.add_argument("--only", nargs="*")
     w = sub.add_parser("watch", help="一定間隔で取り込み、持仓に触れる新しい投稿を出す")
     w.add_argument("--interval", type=int, default=900, help="秒（既定 900。短くしすぎると X API の上限に当たる）")
     w.add_argument("--days", type=float, default=7)
@@ -737,6 +809,10 @@ def main(argv=None) -> int:
 
     if a.cmd == "report":
         print(f"→ {write_report(con, cfg, a.days, only=a.only).relative_to(ROOT)}")
+        return 0
+
+    if a.cmd == "export-web":
+        print(f"→ {write_web(con, cfg, a.days, a.only).relative_to(ROOT)}")
         return 0
 
     if a.cmd == "fetch":
