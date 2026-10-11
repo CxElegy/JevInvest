@@ -269,7 +269,7 @@
       freq: "monthly",
       fn: (p, i) => {
         const v = vol(vals(p, "VT", i), 60);
-        if (v === null) return { VT: 1.0 };
+        if (v === null || v <= 0) return { VT: 1.0 };
         const w = Math.min(1.0, 0.12 / v);
         return w < 1.0 ? { VT: w, BIL: 1.0 - w } : { VT: 1.0 };
       },

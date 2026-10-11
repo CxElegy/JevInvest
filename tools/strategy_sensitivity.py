@@ -66,7 +66,7 @@ def mom_top(k):
 def vol_t(t):
     def fn(h, d=None):
         v = _vol(_vals(h, "VT"), 60)
-        if v is None:
+        if v is None or v <= 0:
             return {"VT": 1.0}
         w = min(1.0, t / v)
         return {"VT": w, "BIL": 1.0 - w} if w < 1.0 else {"VT": 1.0}

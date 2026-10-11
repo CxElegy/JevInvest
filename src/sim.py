@@ -439,7 +439,7 @@ def momentum_top3(hist, day=None):
 def vol_target(hist, day=None):
     """全世界株の直近 60 日の変動率が年 12% を超えたら、その分だけ株を減らして短期国債へ。"""
     v = _vol(_vals(hist, "VT"), 60)
-    if v is None:
+    if v is None or v <= 0:
         return {"VT": 1.0}
     w = min(1.0, 0.12 / v)
     return {"VT": w, "BIL": 1.0 - w} if w < 1.0 else {"VT": 1.0}
