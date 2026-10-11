@@ -169,8 +169,11 @@ table.data td.num { font-family: var(--f-mono); }
       <tr><td><span class="pill new">新</span></td><td>交易前检查</td><td><code>/before-trade</code></td><td>把"不该做的理由"一次列全：independence、目标配置、单只上限、现金下限、NISA 额度、税、24 小时冷静期、交易频率。</td></tr>
       <tr><td><span class="pill new">新</span></td><td>游玩仓记分牌</td><td><code>scoreboard</code></td><td>你自己挑的个股，跟"同一天把同样的钱放进 VT"比。差额就是选股和择时的真实水平。</td></tr>
       <tr><td><span class="pill new">新</span></td><td>模拟盘 + 回测</td><td><code>paper/</code></td><td>你要的：虚拟 500 万，真实数据。外加 2009 年至今的回测，用同一套代码。</td></tr>
+      <tr><td><span class="pill new">新</span></td><td>压力测试</td><td><code>stress</code></td><td>把 2008、2011、2020、2022、2024 年的真实危机套到你的配置上，并拆出汇率造成的部分。你 90% 是美元资产，日元升值是实实在在的风险。</td></tr>
+      <tr><td><span class="pill new">新</span></td><td>每月例行检查</td><td><code>/monthly-check</code></td><td>按 PLAYBOOK 的年度日历，只列出这个月该做的事。检查本身不应该成为买卖的理由。</td></tr>
       <tr><td><span class="pill new">新</span></td><td>Independence 邮件草稿</td><td><code>/independence-mail</code></td><td>你的计划卡在这里。</td></tr>
-      <tr><td><span class="pill fix">修复</span></td><td>9 个代码错误</td><td>自动生效</td><td>其中一个最严重：没通过预审的基金，定投计划照样分钱进去。下面第 03 节有图。</td></tr>
+      <tr><td><span class="pill fix">修复</span></td><td>9 个旧代码错误</td><td>自动生效</td><td>其中一个最严重：没通过预审的基金，定投计划照样分钱进去。下面第 03 节有图。</td></tr>
+      <tr><td><span class="pill fix">修复</span></td><td>今晚新代码的 10 个错误</td><td>自动生效</td><td>写完后另找一个 agent 专门挑错。最严重的一个：模拟盘可能把盘中价格当成收盘价成交。现在只处理所有品种都已收盘、数据齐全的交易日。</td></tr>
       <tr><td><span class="pill doc">调研</span></td><td>基金成本对比</td><td><code>docs/FUNDS.md</code></td><td>NISA 候选基金的信託報酬、实际成本、美国 ETF 的外国税。每个数字都有出处。</td></tr>
       <tr><td><span class="pill doc">调研</span></td><td>大神们的做法 + 你的计划</td><td><code>docs/PLAYBOOK.md</code></td><td>Buffett、Bogle、山崎元等人的原话和数据，游玩仓规则，年度日历，接下来 90 天的清单。</td></tr>
     </tbody>
