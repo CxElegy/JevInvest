@@ -95,8 +95,8 @@ def test_backtest_buy_and_hold_trades_once_and_monthly_rebalances():
                 "1348.T": pd.Series([4000 - i for i in range(n)], index=idx)},
                pd.Series([150.0] * n, index=idx))
     res = backtest(p, idx[0], 10_000_000, costs=ZERO, strategies={
-        "hold": (lambda h: {"VT": 1.0}, "once"),
-        "mix": (lambda h: {"VT": 0.5, "1348.T": 0.5}, "monthly"),
+        "hold": (lambda h, d=None: {"VT": 1.0}, "once"),
+        "mix": (lambda h, d=None: {"VT": 0.5, "1348.T": 0.5}, "monthly"),
     })
     assert res["hold"].trades == 1
     assert res["mix"].trades > 2          # 月初ごとに配分を戻す
@@ -108,7 +108,7 @@ def test_monthly_contributions_are_invested_and_tracked():
     n = len(idx)
     p = Prices({"VT": pd.Series([100.0] * n, index=idx)}, pd.Series([150.0] * n, index=idx))
     res = backtest(p, idx[0], 1_000_000, costs=ZERO, monthly=200_000,
-                   strategies={"hold": (lambda h: {"VT": 1.0}, "once")})
+                   strategies={"hold": (lambda h, d=None: {"VT": 1.0}, "once")})
     r = res["hold"]
     assert -sum(a for _, a in r.flows) == 1_000_000 + 5 * 200_000   # 2〜6 月の 5 回
     assert r.nav.iloc[-1] == pytest.approx(2_000_000)

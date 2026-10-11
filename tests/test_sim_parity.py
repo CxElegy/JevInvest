@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from src.sim import UNIVERSE, Prices, backtest
+from src.sim import ALL_STRATEGIES, UNIVERSE, Prices, backtest
 
 ROOT = Path(__file__).resolve().parents[1]
 pytestmark = pytest.mark.skipif(shutil.which("node") is None, reason="node が無い")
@@ -53,7 +53,8 @@ def test_js_engine_matches_python(tmp_path, monthly):
         ["node", str(ROOT / "tests" / "sim_parity_runner.js"), str(f), start, "5000000", str(monthly)],
         capture_output=True, text=True, check=True).stdout)
 
-    py = backtest(_python_prices(data), pd.Timestamp(start), 5_000_000, monthly=monthly)
+    py = backtest(_python_prices(data), pd.Timestamp(start), 5_000_000, monthly=monthly,
+                  strategies=ALL_STRATEGIES)
     assert set(js) == set(py)
     for k, r in py.items():
         j = js[k]
@@ -67,6 +68,8 @@ def test_js_engine_matches_python(tmp_path, monthly):
             assert j["xirr"] == pytest.approx(r.money_weighted(), abs=1e-6)
     # 戦略が実際に売買していること（何もしないまま一致しているのではない）
     assert len(js["trend"]["trades"]) > 5 and len(js["dual_momentum"]["trades"]) >= 1
+    for k in ("risk_parity", "momentum_top3", "vol_target", "sell_in_may", "ivy_timing"):
+        assert len(js[k]["trades"]) > 3, k
 
 
 def test_real_data_file_matches_python_if_present():
@@ -78,7 +81,8 @@ def test_real_data_file_matches_python_if_present():
     js = json.loads(subprocess.run(
         ["node", str(ROOT / "tests" / "sim_parity_runner.js"), str(f), "2009-07-01", "5000000", "0"],
         capture_output=True, text=True, check=True).stdout)
-    py = backtest(_python_prices(data), pd.Timestamp("2009-07-01"), 5_000_000)
+    py = backtest(_python_prices(data), pd.Timestamp("2009-07-01"), 5_000_000,
+                  strategies=ALL_STRATEGIES)
     for k, r in py.items():
         assert js[k]["nav"][-1][1] == pytest.approx(float(r.nav.iloc[-1]), rel=1e-9)
         assert len(js[k]["trades"]) == r.trades

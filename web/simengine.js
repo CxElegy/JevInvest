@@ -66,19 +66,34 @@
     }
   }
 
-  // シグナル用の小さな道具（Python の _ret / _above_sma と同じ判定）
-  function ret(p, s, i, days) {
+  // シグナル用の道具（src/sim.py の _vals / _ret / _above_sma / _vol と同じ順序で計算する）
+  function vals(p, s, i) {
     const u = p.upto(s, i);
-    if (!u.ix || u.end <= days) return null;
-    const a = u.a, ix = u.ix;
-    return a[ix[u.end - 1]] / a[ix[u.end - 1 - days]] - 1;
+    if (!u.ix) return [];
+    const out = new Array(u.end);
+    for (let k = 0; k < u.end; k++) out[k] = u.a[u.ix[k]];
+    return out;
   }
-  function aboveSma(p, s, i, days = 200) {
-    const u = p.upto(s, i);
-    if (!u.ix || u.end < days) return null;
-    let sum = 0;
-    for (let k = u.end - days; k < u.end; k++) sum += u.a[u.ix[k]];
-    return u.a[u.ix[u.end - 1]] > sum / days;
+  function ret(a, days) {
+    if (a.length <= days) return null;
+    return a[a.length - 1] / a[a.length - 1 - days] - 1;
+  }
+  function aboveSma(a, days = 200) {
+    if (a.length < days) return null;
+    let total = 0;
+    for (let k = a.length - days; k < a.length; k++) total += a[k];
+    return a[a.length - 1] > total / days;
+  }
+  function vol(a, days) {
+    if (a.length <= days) return null;
+    const r = [];
+    for (let k = a.length - days; k < a.length; k++) r.push(a[k] / a[k - 1] - 1);
+    let m = 0;
+    for (const x of r) m += x;
+    m /= r.length;
+    let ss = 0;
+    for (const x of r) ss += (x - m) * (x - m);
+    return Math.sqrt(ss / (r.length - 1)) * Math.sqrt(252);
   }
 
   // ---------------------------------------------------------------- 口座
@@ -171,23 +186,29 @@
   }
 
   // ---------------------------------------------------------------- 戦略（src/sim.py と同じ）
+  // fn(p, i) → 目標ウェイト。null は「今のまま（注文しない）」
 
   const TREND_ASSETS = ["VT", "QQQ", "1348.T", "AGG", "GLD"];
+  const IVY_ASSETS = ["SPY", "VEU", "IEF", "VNQ", "DBC"];
+  const RP_ASSETS = ["VT", "TLT", "GLD", "DBC"];
+  const MOM_ASSETS = ["VT", "QQQ", "1348.T", "AGG", "GLD", "TLT", "VNQ", "DBC"];
+  const fixed = w => () => Object.assign({}, w);
+
   const STRATEGIES = {
-    allcountry: { freq: "once", fn: () => ({ VT: 1.0 }) },
-    core_satellite: { freq: "monthly", fn: () => ({ VT: 0.55, QQQ: 0.20, "1348.T": 0.05, AGG: 0.15 }) },
+    allcountry: { freq: "once", fn: fixed({ VT: 1.0 }) },
+    core_satellite: { freq: "monthly", fn: fixed({ VT: 0.55, QQQ: 0.20, "1348.T": 0.05, AGG: 0.15 }) },
     trend: {
       freq: "monthly",
       fn: (p, i) => {
         const out = {};
-        for (const s of TREND_ASSETS) if (aboveSma(p, s, i) === true) out[s] = 1.0 / TREND_ASSETS.length;
+        for (const s of TREND_ASSETS) if (aboveSma(vals(p, s, i)) === true) out[s] = 1.0 / TREND_ASSETS.length;
         return out;
       },
     },
     dual_momentum: {
       freq: "monthly",
       fn: (p, i) => {
-        const r = { SPY: ret(p, "SPY", i, 252), VEU: ret(p, "VEU", i, 252), BIL: ret(p, "BIL", i, 252) };
+        const r = { SPY: ret(vals(p, "SPY", i), 252), VEU: ret(vals(p, "VEU", i), 252), BIL: ret(vals(p, "BIL", i), 252) };
         if (Object.values(r).some(v => v === null)) return { AGG: 1.0 };
         const best = r.SPY >= r.VEU ? "SPY" : "VEU";
         return r[best] > r.BIL ? { [best]: 1.0 } : { AGG: 1.0 };
@@ -195,7 +216,78 @@
     },
   };
 
+  const MORE_STRATEGIES = {
+    sp500: { freq: "once", fn: fixed({ SPY: 1.0 }) },
+    sixty_forty: { freq: "monthly", fn: fixed({ VT: 0.6, AGG: 0.4 }) },
+    permanent: { freq: "yearly", fn: fixed({ SPY: 0.25, TLT: 0.25, GLD: 0.25, BIL: 0.25 }) },
+    all_weather: { freq: "monthly", fn: fixed({ SPY: 0.30, TLT: 0.40, IEF: 0.15, GLD: 0.075, DBC: 0.075 }) },
+    ivy: { freq: "monthly", fn: () => Object.fromEntries(IVY_ASSETS.map(s => [s, 0.2])) },
+    ivy_timing: { freq: "monthly", fn: (p, i) => Object.fromEntries(IVY_ASSETS.filter(s => aboveSma(vals(p, s, i)) === true).map(s => [s, 0.2])) },
+    risk_parity: {
+      freq: "monthly",
+      fn: (p, i) => {
+        const inv = {};
+        for (const s of RP_ASSETS) {
+          const v = vol(vals(p, s, i), 126);
+          if (v === null || v <= 0) return { VT: 0.6, AGG: 0.4 };
+          inv[s] = 1.0 / v;
+        }
+        let tot = 0;
+        for (const s of RP_ASSETS) tot += inv[s];
+        return Object.fromEntries(RP_ASSETS.map(s => [s, inv[s] / tot]));
+      },
+    },
+    momentum_top3: {
+      freq: "monthly",
+      fn: (p, i) => {
+        const scores = [];
+        for (const s of MOM_ASSETS) {
+          const a = vals(p, s, i);
+          const rs = [21, 63, 126, 252].map(d => ret(a, d));
+          if (rs.some(r => r === null)) continue;
+          scores.push([-(rs[0] + rs[1] + rs[2] + rs[3]) / 4, s]);
+        }
+        // Python の tuple ソートと同じ: スコア、同点なら名前
+        scores.sort((x, y) => x[0] - y[0] || (x[1] < y[1] ? -1 : x[1] > y[1] ? 1 : 0));
+        const out = {};
+        for (const [, s] of scores.slice(0, 3)) if (aboveSma(vals(p, s, i)) === true) out[s] = 1.0 / 3;
+        return out;
+      },
+    },
+    vol_target: {
+      freq: "monthly",
+      fn: (p, i) => {
+        const v = vol(vals(p, "VT", i), 60);
+        if (v === null) return { VT: 1.0 };
+        const w = Math.min(1.0, 0.12 / v);
+        return w < 1.0 ? { VT: w, BIL: 1.0 - w } : { VT: 1.0 };
+      },
+    },
+    spy_timing: { freq: "monthly", fn: (p, i) => aboveSma(vals(p, "SPY", i)) !== false ? { SPY: 1.0 } : { BIL: 1.0 } },
+    buy_the_dip: {
+      freq: "monthly",
+      fn: (p, i) => {
+        const a = vals(p, "VT", i);
+        if (a.length < 252) return null;
+        let hi = -Infinity;
+        for (let k = a.length - 252; k < a.length; k++) hi = Math.max(hi, a[k]);
+        return a[a.length - 1] <= hi * 0.9 ? { VT: 1.0 } : null;
+      },
+    },
+    sell_in_may: { freq: "monthly", fn: (p, i) => { const m = Number(p.dates[i].slice(5, 7)); return m >= 5 && m <= 10 ? { BIL: 1.0 } : { VT: 1.0 }; } },
+    home_bias: { freq: "monthly", fn: fixed({ "1348.T": 0.5, VT: 0.5 }) },
+  };
+  const ALL_STRATEGIES = Object.assign({}, STRATEGIES, MORE_STRATEGIES);
+
   const newMonth = (p, i, prev) => prev === null || p.dates[i].slice(5, 7) !== p.dates[prev].slice(5, 7);
+  const newYear = (p, i, prev) => prev === null || p.dates[i].slice(0, 4) !== p.dates[prev].slice(0, 4);
+  // src/sim.py の is_due と同じ
+  function isDue(freq, p, i, prev, decided, contributing) {
+    const nm = newMonth(p, i, prev);
+    if (freq === "once") return contributing ? nm : !decided;
+    if (freq === "yearly") return contributing ? nm : newYear(p, i, prev);
+    return nm;
+  }
 
   /** strategies: {name: {freq, fn(p, i) -> weights}}。monthly > 0 で毎月初に入金（積立）。 */
   function backtest(p, startDate, capital, opts = {}) {
@@ -212,8 +304,10 @@
         const b = books[k];
         if (monthly && nm && prev !== null) { b.cash += monthly; flows[k].push([i, -monthly]); }
         b.processDay(p, i);
-        const due = (st.freq === "once" && !monthly) ? b.lastDecision === null : nm;
-        if (due) b.decide(p, i, st.fn(p, i), 0.005, k);
+        if (isDue(st.freq, p, i, prev, b.lastDecision !== null, !!monthly)) {
+          const target = st.fn(p, i);
+          if (target !== null) b.decide(p, i, target, 0.005, k);   // null は「今のまま」
+        }
       }
       prev = i;
     }
@@ -256,7 +350,8 @@
     return out;
   }
 
-  const api = { Prices, Book, STRATEGIES, TREND_ASSETS, COSTS, backtest, stats, xirr, windowReturns, ret, aboveSma };
+  const api = { Prices, Book, STRATEGIES, MORE_STRATEGIES, ALL_STRATEGIES, TREND_ASSETS, COSTS, backtest, stats, xirr,
+                windowReturns, vals, ret, aboveSma, vol, isDue };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.SimEngine = api;
 })(typeof window !== "undefined" ? window : globalThis);

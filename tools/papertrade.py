@@ -170,7 +170,9 @@ def cmd_init(args) -> None:
         raise SystemExit(f"{d0.date()} の終値はまだ確定していません（確定済みは {prices.fx.index[-1].date()} まで）")
     books = {n: Book(name=n, cash=args.capital) for n in [*STRATEGIES, "claude"]}
     for name, (fn, _) in STRATEGIES.items():
-        books[name].decide(prices, d0, fn(prices.upto(d0)), reason=name)
+        target = fn(prices.upto(d0), d0)
+        if target is not None:
+            books[name].decide(prices, d0, target, reason=name)
     for b in books.values():
         b.last_day = d0.date().isoformat()
         b.nav.append([b.last_day, float(args.capital)])
@@ -224,7 +226,9 @@ def cmd_run(args) -> None:
             if name in STRATEGIES:
                 fn, freq = STRATEGIES[name]
                 if freq == "monthly" and is_rebalance_day(day, prev):
-                    b.decide(prices, day, fn(prices.upto(day)), reason=name)
+                    target = fn(prices.upto(day), day)
+                    if target is not None:
+                        b.decide(prices, day, target, reason=name)
     _apply_claude(st, prices, upto=None)
     save_state(st)
     write_report(st)

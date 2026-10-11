@@ -27,7 +27,7 @@ TAX_RATE = 0.20315
 
 # 日本株は 1348.T（MAXIS トピックス上場投信）。1306.T は Yahoo の過去データに
 # 未調整の分割（2015-01 に -90% のまま戻らない）があり、バックテストが壊れるため使わない。
-UNIVERSE = ["VT", "QQQ", "SPY", "VEU", "AGG", "BIL", "GLD", "1348.T"]
+UNIVERSE = ["VT", "QQQ", "SPY", "VEU", "AGG", "BIL", "GLD", "1348.T", "TLT", "IEF", "DBC", "VNQ"]
 
 
 def is_jpy(symbol: str) -> bool:
@@ -270,26 +270,53 @@ class Book:
 # 目標に CASH を入れなくてよい（足りない分が現金になる）。
 
 
-def _ret(s: pd.Series, days: int) -> float | None:
-    s = s.dropna()
-    if len(s) <= days:
+def _vals(hist: dict[str, pd.Series], s: str) -> list[float]:
+    """その日までの実際の足（古い順）。計算は Python の素朴な合計で行い、JS 版と同じ順序で足す。"""
+    v = hist.get(s)
+    return [] if v is None else [float(x) for x in v.dropna().values]
+
+
+def _ret(s, days: int) -> float | None:
+    a = s if isinstance(s, list) else [float(x) for x in s.dropna().values]
+    if len(a) <= days:
         return None
-    return float(s.iloc[-1] / s.iloc[-1 - days] - 1)
+    return a[-1] / a[-1 - days] - 1
 
 
-def _above_sma(s: pd.Series, days: int = 200) -> bool | None:
-    s = s.dropna()
-    if len(s) < days:
+def _above_sma(s, days: int = 200) -> bool | None:
+    a = s if isinstance(s, list) else [float(x) for x in s.dropna().values]
+    if len(a) < days:
         return None
-    return bool(s.iloc[-1] > s.iloc[-days:].mean())
+    total = 0.0
+    for x in a[-days:]:
+        total += x
+    return a[-1] > total / days
 
 
-def allcountry(hist: dict[str, pd.Series]) -> dict[str, float]:
+def _vol(a: list[float], days: int) -> float | None:
+    """直近 days 本の日次リターンの標準偏差（不偏）× √252。"""
+    if len(a) <= days:
+        return None
+    r = [a[k] / a[k - 1] - 1 for k in range(len(a) - days, len(a))]
+    m = 0.0
+    for x in r:
+        m += x
+    m /= len(r)
+    ss = 0.0
+    for x in r:
+        ss += (x - m) * (x - m)
+    return math.sqrt(ss / (len(r) - 1)) * math.sqrt(252)
+
+
+# 戦略は fn(hist, day) → 目標ウェイト（足りない分は現金）。None を返すと「今のまま（注文しない）」。
+
+
+def allcountry(hist, day=None):
     """全世界株を 1 本で持ち続ける。NISA の積立と同じ考え方の基準。"""
     return {"VT": 1.0}
 
 
-def core_satellite(hist: dict[str, pd.Series]) -> dict[str, float]:
+def core_satellite(hist, day=None):
     """ユーザーの目標配分（docs/PLAN.md）。個別株 20% は QQQ で代用する。
 
     今の大型株を過去に遡って使うと、勝ち残った銘柄を後から選ぶことになる（生存バイアス）。
@@ -301,25 +328,125 @@ def core_satellite(hist: dict[str, pd.Series]) -> dict[str, float]:
 TREND_ASSETS = ["VT", "QQQ", "1348.T", "AGG", "GLD"]
 
 
-def trend(hist: dict[str, pd.Series]) -> dict[str, float]:
+def trend(hist, day=None):
     """5 資産を均等に持ち、200 日移動平均を下回った資産だけ現金にする（Faber 型）。"""
     out = {}
     for s in TREND_ASSETS:
-        if _above_sma(hist.get(s, pd.Series(dtype=float))):
+        if _above_sma(_vals(hist, s)):
             out[s] = 1.0 / len(TREND_ASSETS)
     return out
 
 
-def dual_momentum(hist: dict[str, pd.Series]) -> dict[str, float]:
+def dual_momentum(hist, day=None):
     """デュアルモメンタム（Antonacci 型）。12 か月リターンで米国株・米国外株・短期債を比べる。
 
     米国株と米国外株の強いほうが短期国債より強ければそれを 100%、弱ければ債券 100%。
     """
-    r = {s: _ret(hist.get(s, pd.Series(dtype=float)), 252) for s in ("SPY", "VEU", "BIL")}
+    r = {s: _ret(_vals(hist, s), 252) for s in ("SPY", "VEU", "BIL")}
     if any(v is None for v in r.values()):
         return {"AGG": 1.0}
     best = "SPY" if r["SPY"] >= r["VEU"] else "VEU"
     return {best: 1.0} if r[best] > r["BIL"] else {"AGG": 1.0}
+
+
+# ---- ここから追加の戦略（出典は STRATEGY_INFO）
+
+
+def sp500(hist, day=None):
+    return {"SPY": 1.0}
+
+
+def sixty_forty(hist, day=None):
+    return {"VT": 0.6, "AGG": 0.4}
+
+
+def permanent(hist, day=None):
+    return {"SPY": 0.25, "TLT": 0.25, "GLD": 0.25, "BIL": 0.25}
+
+
+def all_weather(hist, day=None):
+    return {"SPY": 0.30, "TLT": 0.40, "IEF": 0.15, "GLD": 0.075, "DBC": 0.075}
+
+
+IVY_ASSETS = ["SPY", "VEU", "IEF", "VNQ", "DBC"]
+
+
+def ivy(hist, day=None):
+    return {s: 0.2 for s in IVY_ASSETS}
+
+
+def ivy_timing(hist, day=None):
+    return {s: 0.2 for s in IVY_ASSETS if _above_sma(_vals(hist, s))}
+
+
+RP_ASSETS = ["VT", "TLT", "GLD", "DBC"]
+
+
+def risk_parity(hist, day=None):
+    """直近 126 日の変動率の逆数で配分する（素朴なリスクパリティ）。"""
+    inv = {}
+    for s in RP_ASSETS:
+        v = _vol(_vals(hist, s), 126)
+        if v is None or v <= 0:
+            return {"VT": 0.6, "AGG": 0.4}
+        inv[s] = 1.0 / v
+    tot = 0.0
+    for s in RP_ASSETS:
+        tot += inv[s]
+    return {s: inv[s] / tot for s in RP_ASSETS}
+
+
+MOM_ASSETS = ["VT", "QQQ", "1348.T", "AGG", "GLD", "TLT", "VNQ", "DBC"]
+
+
+def momentum_top3(hist, day=None):
+    """1・3・6・12 か月リターンの平均で上位 3 つ。200 日線を下回るものは現金（Faber GTAA Aggressive）。"""
+    scores = []
+    for s in MOM_ASSETS:
+        a = _vals(hist, s)
+        rs = [_ret(a, d) for d in (21, 63, 126, 252)]
+        if any(r is None for r in rs):
+            continue
+        scores.append((-(rs[0] + rs[1] + rs[2] + rs[3]) / 4, s))
+    scores.sort()
+    out = {}
+    for _, s in scores[:3]:
+        if _above_sma(_vals(hist, s)):
+            out[s] = 1.0 / 3
+    return out
+
+
+def vol_target(hist, day=None):
+    """全世界株の直近 60 日の変動率が年 12% を超えたら、その分だけ株を減らして短期国債へ。"""
+    v = _vol(_vals(hist, "VT"), 60)
+    if v is None:
+        return {"VT": 1.0}
+    w = min(1.0, 0.12 / v)
+    return {"VT": w, "BIL": 1.0 - w} if w < 1.0 else {"VT": 1.0}
+
+
+def spy_timing(hist, day=None):
+    a = _vals(hist, "SPY")
+    return {"SPY": 1.0} if _above_sma(a) is not False else {"BIL": 1.0}
+
+
+def buy_the_dip(hist, day=None):
+    """高値から 10% 下げるまで現金で待ち、下げたら全額買う。買った後は持ち続ける（None = 何もしない）。"""
+    a = _vals(hist, "VT")
+    if len(a) < 252:
+        return None
+    hi = max(a[-252:])
+    return {"VT": 1.0} if a[-1] <= hi * 0.9 else None
+
+
+def sell_in_may(hist, day=None):
+    """5〜10 月は短期国債、11〜4 月は全世界株（格言の検証）。"""
+    m = day.month if day is not None else 1
+    return {"BIL": 1.0} if 5 <= m <= 10 else {"VT": 1.0}
+
+
+def home_bias(hist, day=None):
+    return {"1348.T": 0.5, "VT": 0.5}
 
 
 STRATEGIES = {
@@ -329,18 +456,60 @@ STRATEGIES = {
     "dual_momentum": (dual_momentum, "monthly"),
 }
 
+# 比較用の追加戦略。出典と規則は docs/STRATEGIES.md
+MORE_STRATEGIES = {
+    "sp500": (sp500, "once"),
+    "sixty_forty": (sixty_forty, "monthly"),
+    "permanent": (permanent, "yearly"),
+    "all_weather": (all_weather, "monthly"),
+    "ivy": (ivy, "monthly"),
+    "ivy_timing": (ivy_timing, "monthly"),
+    "risk_parity": (risk_parity, "monthly"),
+    "momentum_top3": (momentum_top3, "monthly"),
+    "vol_target": (vol_target, "monthly"),
+    "spy_timing": (spy_timing, "monthly"),
+    "buy_the_dip": (buy_the_dip, "monthly"),
+    "sell_in_may": (sell_in_may, "monthly"),
+    "home_bias": (home_bias, "monthly"),
+}
+ALL_STRATEGIES = {**STRATEGIES, **MORE_STRATEGIES}
+
 STRATEGY_LABELS = {
     "allcountry": "全世界株 1 本・ほったらかし",
     "core_satellite": "目標配分（コア・サテライト）・毎月リバランス",
     "trend": "トレンドフォロー（200 日線）",
     "dual_momentum": "デュアルモメンタム",
     "claude": "Claude の裁量",
+    "sp500": "S&P500 1 本・ほったらかし",
+    "sixty_forty": "株 60 / 債券 40",
+    "permanent": "パーマネント・ポートフォリオ",
+    "all_weather": "オールウェザー（近似）",
+    "ivy": "アイビー 5 資産・均等",
+    "ivy_timing": "アイビー 5 資産・200 日線",
+    "risk_parity": "リスクパリティ（逆ボラ）",
+    "momentum_top3": "相対モメンタム上位 3",
+    "vol_target": "ボラティリティ・ターゲット",
+    "spy_timing": "S&P500・200 日線",
+    "buy_the_dip": "押し目待ち（-10% で買う）",
+    "sell_in_may": "セル・イン・メイ",
+    "home_bias": "日本株 50 / 全世界 50",
 }
 
 
 def is_rebalance_day(day: pd.Timestamp, prev_day: pd.Timestamp | None) -> bool:
     """月の最初の営業日。"""
     return prev_day is None or day.month != prev_day.month
+
+
+def is_due(freq: str, day: pd.Timestamp, prev_day: pd.Timestamp | None, decided: bool,
+           contributing: bool = False) -> bool:
+    """判断する日か。once は最初だけ（積立中は毎月）、monthly は月初、yearly は年初（積立中は毎月）。"""
+    new_month = is_rebalance_day(day, prev_day)
+    if freq == "once":
+        return new_month if contributing else not decided
+    if freq == "yearly":
+        return new_month if contributing else (prev_day is None or day.year != prev_day.year)
+    return new_month
 
 
 # ------------------------------------------------------------------ バックテスト
@@ -399,12 +568,10 @@ def backtest(prices: Prices, start: pd.Timestamp, capital: float,
                 b.cash += monthly
                 flows[name].append((day.date(), -monthly))
             b.process_day(prices, day, costs)
-            if freq == "once" and not monthly:
-                due = b.last_decision is None
-            else:
-                due = new_month
-            if due:
-                b.decide(prices, day, fn(prices.upto(day)), reason=name)
+            if is_due(freq, day, prev, b.last_decision is not None, bool(monthly)):
+                target = fn(prices.upto(day), day)
+                if target is not None:          # None は「今のまま」（押し目待ちなど）
+                    b.decide(prices, day, target, reason=name)
         prev = day
     out = {}
     for name, b in books.items():
