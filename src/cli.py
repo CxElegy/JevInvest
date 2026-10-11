@@ -6,6 +6,7 @@
     python -m src.cli quotes                  # 価格だけ確認
     python -m src.cli validate                # 台帳の検証だけ
     python -m src.cli import-csv FILE.csv     # 証券会社の取引履歴 CSV を取り込む
+    python -m src.cli taxplan --salary N      # iDeCo の節税額とふるさと納税の上限（概算）
 
 出力した Markdown を Claude Code に読ませて判断させる想定。
 このスクリプト自体は LLM を一切呼ばないので、API クレジットは不要。
@@ -660,6 +661,17 @@ def cmd_plan(args) -> None:
         print(f"  ※ {n}")
 
 
+def cmd_taxplan(args) -> None:
+    """iDeCo の節税額とふるさと納税の上限の目安。年収はファイルに書かない（標準出力だけ）。"""
+    from .taxplan import Household, render
+
+    hh = Household(spouse=args.spouse, dependents=args.dependents,
+                   specific_dependents=args.specific_dependents)
+    print(render(args.salary, social_insurance=args.social_insurance,
+                 ideco_monthly=args.ideco_monthly, company_dc_monthly=args.company_dc_monthly,
+                 household=hh))
+
+
 def cmd_quotes(args) -> None:
     from .marketdata import MarketData
 
@@ -801,6 +813,19 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--out", type=Path, default=ROOT / "config" / "transactions.imported.yaml",
                    help="出力先（既定: config/transactions.imported.yaml）")
     p.set_defaults(func=cmd_import_csv)
+
+    p = sub.add_parser("taxplan", help="iDeCo の節税額とふるさと納税の上限の目安（2026 年分・概算）")
+    p.add_argument("--salary", type=int, required=True, help="給与収入（年額、源泉徴収票の支払金額）")
+    p.add_argument("--social-insurance", type=int, default=None,
+                   help="社会保険料（年額）。省略時は年収 × 15%% の概算")
+    p.add_argument("--ideco-monthly", type=int, default=0, help="iDeCo の掛金（月額）")
+    p.add_argument("--company-dc-monthly", type=int, default=None,
+                   help="企業年金ありの場合: 企業型 DC の事業主掛金 + DB 等の掛金相当額（月額）。"
+                        "省略時は企業年金なし")
+    p.add_argument("--spouse", action="store_true", help="控除対象配偶者あり（70 歳未満、合計所得 62 万円以下）")
+    p.add_argument("--dependents", type=int, default=0, help="一般の控除対象扶養親族の数（16〜18 歳・23〜69 歳）")
+    p.add_argument("--specific-dependents", type=int, default=0, help="特定扶養親族の数（19〜22 歳）")
+    p.set_defaults(func=cmd_taxplan)
 
     p = sub.add_parser("quotes", help="価格と為替の取得を確認する")
     p.add_argument("--force", action="store_true", help="キャッシュを無視して取り直す")
