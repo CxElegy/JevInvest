@@ -1,0 +1,210 @@
+{
+ "capital": 5000000,
+ "start": "2026-10-09",
+ "end": "2026-11-11",
+ "costs": {
+  "fee_rate": 0.001,
+  "slippage": 0.0005,
+  "fx_spread": 0.25,
+  "us_withholding": 0.1
+ },
+ "books": {
+  "allcountry": {
+   "name": "allcountry",
+   "cash": 5000000,
+   "qty": {},
+   "cost": {},
+   "pending": [
+    {
+     "symbol": "VT",
+     "side": "buy",
+     "qty": 197.0,
+     "decided": "2026-10-09",
+     "reason": "allcountry"
+    }
+   ],
+   "trades": [],
+   "nav": [
+    [
+     "2026-10-09",
+     5000000.0
+    ]
+   ],
+   "income": [],
+   "notes": [],
+   "realized": 0.0,
+   "fees": 0.0,
+   "last_day": "2026-10-09",
+   "last_decision": "2026-10-09"
+  },
+  "core_satellite": {
+   "name": "core_satellite",
+   "cash": 5000000,
+   "qty": {},
+   "cost": {},
+   "pending": [
+    {
+     "symbol": "1348.T",
+     "side": "buy",
+     "qty": 58.0,
+     "decided": "2026-10-09",
+     "reason": "core_satellite"
+    },
+    {
+     "symbol": "AGG",
+     "side": "buy",
+     "qty": 50.0,
+     "decided": "2026-10-09",
+     "reason": "core_satellite"
+    },
+    {
+     "symbol": "QQQ",
+     "side": "buy",
+     "qty": 8.0,
+     "decided": "2026-10-09",
+     "reason": "core_satellite"
+    },
+    {
+     "symbol": "VT",
+     "side": "buy",
+     "qty": 108.0,
+     "decided": "2026-10-09",
+     "reason": "core_satellite"
+    }
+   ],
+   "trades": [],
+   "nav": [
+    [
+     "2026-10-09",
+     5000000.0
+    ]
+   ],
+   "income": [],
+   "notes": [],
+   "realized": 0.0,
+   "fees": 0.0,
+   "last_day": "2026-10-09",
+   "last_decision": "2026-10-09"
+  },
+  "trend": {
+   "name": "trend",
+   "cash": 5000000,
+   "qty": {},
+   "cost": {},
+   "pending": [
+    {
+     "symbol": "1348.T",
+     "side": "buy",
+     "qty": 232.0,
+     "decided": "2026-10-09",
+     "reason": "trend"
+    },
+    {
+     "symbol": "QQQ",
+     "side": "buy",
+     "qty": 8.0,
+     "decided": "2026-10-09",
+     "reason": "trend"
+    },
+    {
+     "symbol": "VT",
+     "side": "buy",
+     "qty": 39.0,
+     "decided": "2026-10-09",
+     "reason": "trend"
+    }
+   ],
+   "trades": [],
+   "nav": [
+    [
+     "2026-10-09",
+     5000000.0
+    ]
+   ],
+   "income": [],
+   "notes": [],
+   "realized": 0.0,
+   "fees": 0.0,
+   "last_day": "2026-10-09",
+   "last_decision": "2026-10-09"
+  },
+  "dual_momentum": {
+   "name": "dual_momentum",
+   "cash": 5000000,
+   "qty": {},
+   "cost": {},
+   "pending": [
+    {
+     "symbol": "VEU",
+     "side": "buy",
+     "qty": 381.0,
+     "decided": "2026-10-09",
+     "reason": "dual_momentum"
+    }
+   ],
+   "trades": [],
+   "nav": [
+    [
+     "2026-10-09",
+     5000000.0
+    ]
+   ],
+   "income": [],
+   "notes": [],
+   "realized": 0.0,
+   "fees": 0.0,
+   "last_day": "2026-10-09",
+   "last_decision": "2026-10-09"
+  },
+  "claude": {
+   "name": "claude",
+   "cash": 5000000,
+   "qty": {},
+   "cost": {},
+   "pending": [
+    {
+     "symbol": "1348.T",
+     "side": "buy",
+     "qty": 174.0,
+     "decided": "2026-10-09",
+     "reason": "claude 2026-10-09"
+    },
+    {
+     "symbol": "BIL",
+     "side": "buy",
+     "qty": 51.0,
+     "decided": "2026-10-09",
+     "reason": "claude 2026-10-09"
+    },
+    {
+     "symbol": "QQQ",
+     "side": "buy",
+     "qty": 6.0,
+     "decided": "2026-10-09",
+     "reason": "claude 2026-10-09"
+    },
+    {
+     "symbol": "VT",
+     "side": "buy",
+     "qty": 98.0,
+     "decided": "2026-10-09",
+     "reason": "claude 2026-10-09"
+    }
+   ],
+   "trades": [],
+   "nav": [
+    [
+     "2026-10-09",
+     5000000.0
+    ]
+   ],
+   "income": [],
+   "notes": [],
+   "realized": 0.0,
+   "fees": 0.0,
+   "last_day": "2026-10-09",
+   "last_decision": "2026-10-09"
+  }
+ },
+ "updated_at": "2026-10-11T15:22:00+00:00"
+}
