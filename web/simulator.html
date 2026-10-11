@@ -870,16 +870,17 @@ function runFuture() {
   const w = fRead(); if (!w) return;
   const opts = { weights: w, initial: Math.max(0, Number($("fInit").value) || 0), monthly: Math.max(0, Number($("fMonthly").value) || 0),
                  years: Number($("fYears").value), paths: 2000, block: 12, seed: 20261011, haircut: Number($("fCut").value),
-                 window: WSYMS };   // 所有配置用同一段历史（所有品种都有数据的月份），比较才公平
+                 window: WSYMS, nisa: { annual: 3600000, lifetime: 18000000 } };   // 所有配置用同一段历史（所有品种都有数据的月份），比较才公平
   if (!Object.keys(w).length) { $("fNote").textContent = "全是现金，没有可模拟的。"; return; }
   const r = E.bootstrap(P, opts);
   const yrs = opts.years;
   $("fTitle").textContent = `${yrs} 年后：中位数约 ${man(r.final.p50)}（投入合计 ${man(r.paid)}）`;
-  $("fNote").innerHTML = `<b>怎么算的：</b>把 ${r.from} ～ ${r.to} 共 ${r.months} 个月的真实月度回报（日元计，含分红，扣除这个配置的现金部分），按 12 个月一段随机抽取（首尾相接，每个月被抽到的机会相同）、拼接成 2000 条未来路径。假设每月调回比例、每月的钱在月末投入。这段历史是美股牛市加日元贬值${DATA.fx ? `（日元每年贬值约 ${(DATA.fx.fx_cagr * 100).toFixed(1)}%）` : ""}，照搬会偏乐观，所以默认每年扣 2%，大致相当于去掉日元贬值的那一部分。另外，日本股的数据从 2009 年才有，为了让所有配置用同一段历史，<b>2008 年金融危机最惨的几个月不在里面</b>，回撤数字因此偏小；那种极端情况请看总览页的压力测试（目标配置约 -51%）。这是"如果未来像过去那样波动"的范围，不是预测。这里也没算税：新NISA 终身上限 1,800 万，超出部分放课税账户，卖出时要交 20.315%。`;
+  $("fNote").innerHTML = `<b>怎么算的：</b>把 ${r.from} ～ ${r.to} 共 ${r.months} 个月的真实月度回报（日元计，含分红，扣除这个配置的现金部分），按 12 个月一段随机抽取（首尾相接，每个月被抽到的机会相同）、拼接成 2000 条未来路径。假设每月调回比例、每月的钱在月末投入。这段历史是美股牛市加日元贬值${DATA.fx ? `（日元每年贬值约 ${(DATA.fx.fx_cagr * 100).toFixed(1)}%）` : ""}，照搬会偏乐观，所以默认每年扣 2%，大致相当于去掉日元贬值的那一部分。另外，日本股的数据从 2009 年才有，为了让所有配置用同一段历史，<b>2008 年金融危机最惨的几个月不在里面</b>，回撤数字因此偏小；那种极端情况请看总览页的压力测试（目标配置约 -51%）。这是"如果未来像过去那样波动"的范围，不是预测。新NISA 每年 360 万、终身 1,800 万，超出的部分放课税账户；"税后"一栏是最后全部卖出时对课税账户的收益交 20.315% 之后的金额（NISA 里的部分免税）。`;
   const f = r.final;
   $("fTiles").innerHTML = [
     ["中位数（一半路径高于它）", man(f.p50), `是投入的 ${(f.p50 / r.paid).toFixed(2)} 倍`],
     ["最差 5% 的路径", man(f.p05), `是投入的 ${(f.p05 / r.paid).toFixed(2)} 倍`],
+    ["期末全部卖出后的税后中位数", man(r.afterTax.p50), `NISA 终身 1,800 万用满后的钱放课税账户，卖出时对收益交 20.315%，少了 ${man(f.p50 - r.afterTax.p50)}`],
     ["最好 5% 的路径", man(f.p95), `是投入的 ${(f.p95 / r.paid).toFixed(2)} 倍`],
     ["途中最大回撤（最差 5%）", pct(r.dd.p05, 0), "资产从最高点往下跌的幅度。这时你能不卖吗？"],
     ["途中最大回撤（中位）", pct(r.dd.p50, 0), "一半的路径会经历这么深的下跌"],
@@ -891,9 +892,9 @@ function runFuture() {
   const rows = Object.entries(F_PRESETS).map(([name, pw]) => {
     const ww = Object.fromEntries(Object.entries(pw).map(([s, v]) => [s, v / 100]));
     const x = E.bootstrap(P, Object.assign({}, opts, { weights: ww, paths: 1000 }));
-    return `<tr><td>${name}</td><td class="num">${man(x.final.p05)}</td><td class="num">${man(x.final.p50)}</td><td class="num">${man(x.final.p95)}</td><td class="num">${(x.pLoss * 100).toFixed(1)}%</td><td class="num">${pct(x.dd.p05, 0)}</td></tr>`;
+    return `<tr><td>${name}</td><td class="num">${man(x.final.p05)}</td><td class="num">${man(x.final.p50)}</td><td class="num">${man(x.afterTax.p50)}</td><td class="num">${man(x.final.p95)}</td><td class="num">${(x.pLoss * 100).toFixed(1)}%</td><td class="num">${pct(x.dd.p05, 0)}</td></tr>`;
   }).join("");
-  $("fCompare").innerHTML = `<thead><tr><th>配置</th><th>最差 5%</th><th>中位数</th><th>最好 5%</th><th>亏本概率</th><th>回撤（最差 5%）</th></tr></thead><tbody>${rows}</tbody>`;
+  $("fCompare").innerHTML = `<thead><tr><th>配置</th><th>最差 5%</th><th>中位数</th><th>中位数（税后）</th><th>最好 5%</th><th>亏本概率</th><th>回撤（最差 5%）</th></tr></thead><tbody>${rows}</tbody>`;
 }
 // 回撤预算：股票比例 0..100% × 另一半（美国债券 / 日元现金）
 let ddGrid = null, ddKey = "";
@@ -1008,8 +1009,8 @@ function runCheck() {
   $("cCrisisNote").textContent = "2008-07～2009-06，每月调回比例，按日元计算（日元在这期间大幅升值，外币资产跌得更多）。总览页的压力测试从 2007-10 的高点算起、不调回比例，所以那边是约 -51%，比这里更深。" + (w["1348.T"] ? "日本股那时还没有数据，这部分用全球股代替。" : "");
   const worst = Math.min(sm.maxDD, cs.maxDD);
   // 3) 未来
-  const f = E.bootstrap(P, { weights: w, initial: init, monthly, years: 20, paths: 2000, seed: 20261011, haircut: 0.02, window: WSYMS });
-  $("cFuture").innerHTML = [["20 年后中位数", man(f.final.p50), `投入 ${man(f.paid)}`], ["最差 5%", man(f.final.p05), `是投入的 ${(f.final.p05 / f.paid).toFixed(2)} 倍`], ["途中回撤（最差 5%）", pct(f.dd.p05, 0), "资产从最高点往下跌的幅度"]].map(([k, v, x]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${x}</div></div>`).join("");
+  const f = E.bootstrap(P, { weights: w, initial: init, monthly, years: 20, paths: 2000, seed: 20261011, haircut: 0.02, window: WSYMS, nisa: { annual: 3600000, lifetime: 18000000 } });
+  $("cFuture").innerHTML = [["20 年后中位数", man(f.final.p50), `投入 ${man(f.paid)}`], ["期末全部卖出后（税后）", man(f.afterTax.p50), `NISA 用满后的部分要交税，少 ${man(f.final.p50 - f.afterTax.p50)}`], ["最差 5%", man(f.final.p05), `是投入的 ${(f.final.p05 / f.paid).toFixed(2)} 倍`], ["途中回撤（最差 5%）", pct(f.dd.p05, 0), "资产从最高点往下跌的幅度"]].map(([k, v, x]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${x}</div></div>`).join("");
   // 4) NISA
   const yearIn = monthly * 12, room = 3600000, life = 18000000;
   const yearsToFill = (life - Math.min(init, life)) / Math.max(1, Math.min(yearIn, room));

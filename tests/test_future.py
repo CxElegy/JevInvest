@@ -84,3 +84,26 @@ const m=E.monthlyReturns(p,['1348.T']);console.log(JSON.stringify(m.months.slice
                          capture_output=True, text=True, check=True).stdout
     last_data_month = d["dates"][-1][:7]
     assert json.loads(out)[0] < last_data_month
+
+
+def test_nisa_lifetime_cap_taxes_only_the_overflow(tmp_path):
+    """毎月 1% 上がる資産。枠を超えた投入だけが課税口座に入り、その含み益にだけ課税される。"""
+    f = _data(tmp_path, 0.01)
+    r = json.loads(subprocess.run(["node", "-e", f"""
+const E=require({json.dumps(str(ROOT / 'web' / 'simengine.js'))});
+const p=new E.Prices(JSON.parse(require('fs').readFileSync({json.dumps(str(f))},'utf8')));
+const r=E.bootstrap(p,{{weights:{{'1348.T':1}},initial:0,monthly:100000,years:10,paths:50,seed:1,haircut:0,nisa:{{annual:1200000,lifetime:3000000}}}});
+console.log(JSON.stringify({{f:r.final.p50,a:r.afterTax.p50}}));"""], capture_output=True, text=True, check=True).stdout)
+    # 手計算: 30 か月目までが NISA（月 10 万 × 30 = 300 万）、以降の 90 か月分が課税口座
+    nv = tv = cost = 0.0
+    for m in range(120):
+        nv *= 1.01
+        tv *= 1.01
+        if m < 30:
+            nv += 100_000
+        else:
+            tv += 100_000
+            cost += 100_000
+    expect = nv + tv - (tv - cost) * 0.20315
+    assert r["a"] == pytest.approx(expect, rel=1e-9)
+    assert r["f"] == pytest.approx(nv + tv, rel=1e-9)

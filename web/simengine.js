@@ -442,15 +442,29 @@
     const rnd = mulberry32(opts.seed || 1);
     const values = Array.from({ length: T + 1 }, () => new Float64Array(N));
     const paidAt = k => opts.initial + opts.monthly * k;
-    const finals = new Float64Array(N), dds = new Float64Array(N);
+    const finals = new Float64Array(N), dds = new Float64Array(N), afterTax = new Float64Array(N);
+    // NISA の枠（opts.nisa = {annual, lifetime}）: 投入は枠に収まる分だけ NISA へ、残りは課税口座へ。
+    // 両方とも同じ配分・同じリターンで動かし、最後に課税口座の含み益に 20.315% を掛ける（売却は最後だけ）
+    const nisa = opts.nisa || null;
     for (let j = 0; j < N; j++) {
       let v = opts.initial, peakRatio = 1, worst = 0, t = 0;
+      let nv = 0, tv = 0, tcost = 0, used = 0, yearUsed = 0;
+      const put = amt => {
+        if (!nisa) return;
+        const room = Math.max(0, Math.min(nisa.annual - yearUsed, nisa.lifetime - used));
+        const toN = Math.min(amt, room);
+        nv += toN; used += toN; yearUsed += toN;
+        tv += amt - toN; tcost += amt - toN;
+      };
+      put(opts.initial);
       values[0][j] = v;
       while (t < T) {
         // 円環ブロック: 期間の最初と最後の月も、真ん中の月と同じ頻度で選ばれるようにする
         const start = Math.floor(rnd() * n);
         for (let b = 0; b < B && t < T; b++, t++) {
-          v = v * (1 + port[(start + b) % n] - hc) + opts.monthly;
+          const g = 1 + port[(start + b) % n] - hc;
+          v = v * g + opts.monthly;
+          if (nisa) { nv *= g; tv *= g; if ((t + 1) % 12 === 0) yearUsed = 0; put(opts.monthly); }
           values[t + 1][j] = v;
           const ratio = v / paidAt(t + 1);           // 入れた額に対する倍率で下落を測る（積立で見かけが膨らむのを除く）
           peakRatio = Math.max(peakRatio, ratio);
@@ -458,6 +472,7 @@
         }
       }
       finals[j] = v; dds[j] = worst;
+      afterTax[j] = nisa ? nv + tv - Math.max(tv - tcost, 0) * TAX_RATE : v;
     }
     const q = (arr, f) => { const a = Array.from(arr).sort((x, y) => x - y); return a[Math.min(a.length - 1, Math.max(0, Math.floor(f * (a.length - 1))))]; };
     const bands = values.map(col => { const a = Array.from(col).sort((x, y) => x - y); const at = f => a[Math.floor(f * (a.length - 1))]; return [at(0.05), at(0.25), at(0.5), at(0.75), at(0.95)]; });
@@ -466,6 +481,7 @@
     return { months: n, from: months[0], to: months[n - 1], bands, paid, pLoss: loss / N,
              final: { p05: q(finals, 0.05), p25: q(finals, 0.25), p50: q(finals, 0.5), p75: q(finals, 0.75), p95: q(finals, 0.95) },
              dd: { p50: q(dds, 0.5), p05: q(dds, 0.05) },
+             afterTax: nisa ? { p05: q(afterTax, 0.05), p50: q(afterTax, 0.5), p95: q(afterTax, 0.95) } : null,
              histMean: port.reduce((a, x) => a + x, 0) / n };
   }
 
