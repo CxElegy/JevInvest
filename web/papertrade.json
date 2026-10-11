@@ -14610,7 +14610,7 @@
   "start": "2026-10-09",
   "end": "2026-11-11",
   "capital": 5000000,
-  "updated_at": "2026-10-11T15:21:39+00:00",
+  "updated_at": "2026-10-11T15:22:00+00:00",
   "books": {
    "allcountry": {
     "label": "全世界株 1 本・ほったらかし",
@@ -14623,7 +14623,18 @@
     "trades": [],
     "qty": {},
     "cash": 5000000,
-    "fees": 0.0
+    "fees": 0.0,
+    "pending": [
+     {
+      "symbol": "VT",
+      "side": "buy",
+      "qty": 197.0,
+      "decided": "2026-10-09",
+      "reason": "allcountry"
+     }
+    ],
+    "income": [],
+    "notes": []
    },
    "core_satellite": {
     "label": "目標配分（コア・サテライト）・毎月リバランス",
@@ -14636,7 +14647,39 @@
     "trades": [],
     "qty": {},
     "cash": 5000000,
-    "fees": 0.0
+    "fees": 0.0,
+    "pending": [
+     {
+      "symbol": "1348.T",
+      "side": "buy",
+      "qty": 58.0,
+      "decided": "2026-10-09",
+      "reason": "core_satellite"
+     },
+     {
+      "symbol": "AGG",
+      "side": "buy",
+      "qty": 50.0,
+      "decided": "2026-10-09",
+      "reason": "core_satellite"
+     },
+     {
+      "symbol": "QQQ",
+      "side": "buy",
+      "qty": 8.0,
+      "decided": "2026-10-09",
+      "reason": "core_satellite"
+     },
+     {
+      "symbol": "VT",
+      "side": "buy",
+      "qty": 108.0,
+      "decided": "2026-10-09",
+      "reason": "core_satellite"
+     }
+    ],
+    "income": [],
+    "notes": []
    },
    "trend": {
     "label": "トレンドフォロー（200 日線）",
@@ -14649,7 +14692,32 @@
     "trades": [],
     "qty": {},
     "cash": 5000000,
-    "fees": 0.0
+    "fees": 0.0,
+    "pending": [
+     {
+      "symbol": "1348.T",
+      "side": "buy",
+      "qty": 232.0,
+      "decided": "2026-10-09",
+      "reason": "trend"
+     },
+     {
+      "symbol": "QQQ",
+      "side": "buy",
+      "qty": 8.0,
+      "decided": "2026-10-09",
+      "reason": "trend"
+     },
+     {
+      "symbol": "VT",
+      "side": "buy",
+      "qty": 39.0,
+      "decided": "2026-10-09",
+      "reason": "trend"
+     }
+    ],
+    "income": [],
+    "notes": []
    },
    "dual_momentum": {
     "label": "デュアルモメンタム",
@@ -14662,7 +14730,18 @@
     "trades": [],
     "qty": {},
     "cash": 5000000,
-    "fees": 0.0
+    "fees": 0.0,
+    "pending": [
+     {
+      "symbol": "VEU",
+      "side": "buy",
+      "qty": 381.0,
+      "decided": "2026-10-09",
+      "reason": "dual_momentum"
+     }
+    ],
+    "income": [],
+    "notes": []
    },
    "claude": {
     "label": "Claude の裁量",
@@ -14675,7 +14754,39 @@
     "trades": [],
     "qty": {},
     "cash": 5000000,
-    "fees": 0.0
+    "fees": 0.0,
+    "pending": [
+     {
+      "symbol": "1348.T",
+      "side": "buy",
+      "qty": 174.0,
+      "decided": "2026-10-09",
+      "reason": "claude 2026-10-09"
+     },
+     {
+      "symbol": "BIL",
+      "side": "buy",
+      "qty": 51.0,
+      "decided": "2026-10-09",
+      "reason": "claude 2026-10-09"
+     },
+     {
+      "symbol": "QQQ",
+      "side": "buy",
+      "qty": 6.0,
+      "decided": "2026-10-09",
+      "reason": "claude 2026-10-09"
+     },
+     {
+      "symbol": "VT",
+      "side": "buy",
+      "qty": 98.0,
+      "decided": "2026-10-09",
+      "reason": "claude 2026-10-09"
+     }
+    ],
+    "income": [],
+    "notes": []
    }
   },
   "claude": [

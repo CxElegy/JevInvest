@@ -1,0 +1,549 @@
+<title>JevInvest 夜班报告</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@600;800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* 版式：一列阅读宽度的账本，图和表可以比正文宽；新增部分用墨蓝描边标出 */
+:root {
+  --bg: #f5f7f6;
+  --surface: #ffffff;
+  --sunk: #eaefec;
+  --fg: #15201b;
+  --muted: #56635d;
+  --line: #d3dbd6;
+  --accent: #19628a;
+  --accent-soft: #e1eef5;
+  --good: #1a7f4b;
+  --warn: #9a6400;
+  --stop: #b8322a;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4;
+  --f-display: "Noto Serif SC", "Songti SC", "SimSun", serif;
+  --f-body: "Noto Sans SC", "PingFang SC", "Hiragino Sans", "Microsoft YaHei", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111614; --surface: #19201d; --sunk: #202825; --fg: #e7ece9; --muted: #a1ada7;
+    --line: #313b37; --accent: #6db7dc; --accent-soft: #1b3442;
+    --good: #4cc18a; --warn: #e2a63b; --stop: #f07a70;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111614; --surface: #19201d; --sunk: #202825; --fg: #e7ece9; --muted: #a1ada7;
+  --line: #313b37; --accent: #6db7dc; --accent-soft: #1b3442;
+  --good: #4cc18a; --warn: #e2a63b; --stop: #f07a70;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 15.5px; line-height: 1.75; }
+.wrap { max-width: 1040px; margin: 0 auto; padding-inline: 20px; padding-block: 40px 80px; }
+.prose { max-width: 42em; }
+h1, h2, h3 { font-family: var(--f-display); line-height: 1.3; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(30px, 5vw, 44px); font-weight: 800; letter-spacing: .01em; }
+h2 { font-size: 24px; font-weight: 800; margin-top: 64px; padding-top: 18px; border-top: 2px solid var(--fg); display: flex; gap: 14px; align-items: baseline; }
+h2 .no { font-family: var(--f-mono); font-size: 14px; font-weight: 500; color: var(--muted); }
+h3 { font-size: 18px; font-weight: 600; margin-top: 32px; }
+p { margin: 12px 0; }
+a { color: var(--accent); }
+code, .mono { font-family: var(--f-mono); font-size: .9em; }
+code { background: var(--sunk); padding: 1px 6px; border-radius: 4px; }
+.eyebrow { font-family: var(--f-mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.lede { font-size: 17px; color: var(--muted); max-width: 40em; margin-top: 14px; }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 18px; font-size: 13px; color: var(--muted); font-family: var(--f-mono); }
+
+/* 先看这里 */
+.todo { list-style: none; padding: 0; margin: 20px 0 0; display: grid; gap: 10px; }
+.todo li { display: grid; grid-template-columns: 34px 1fr; gap: 12px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+.todo .rank { font-family: var(--f-mono); font-size: 20px; color: var(--accent); line-height: 1.3; }
+.todo b { display: block; }
+.todo span { color: var(--muted); font-size: 14px; }
+.todo > li > div { min-width: 0; }
+
+/* 交付清单 */
+.deliver { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 14.5px; }
+.deliver td, .deliver th { padding: 10px 10px; border-bottom: 1px solid var(--line); vertical-align: top; text-align: left; }
+.deliver th { font-size: 12px; color: var(--muted); font-weight: 500; letter-spacing: .06em; }
+.pill { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 1px 8px; border-radius: 99px; white-space: nowrap; letter-spacing: .04em; }
+.pill.new { background: var(--accent-soft); color: var(--accent); }
+.pill.fix { background: color-mix(in srgb, var(--stop) 14%, transparent); color: var(--stop); }
+.pill.doc { background: var(--sunk); color: var(--muted); }
+.scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* 图 */
+figure { margin: 24px 0 8px; }
+figure .canvas { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; overflow-x: auto; }
+figure svg { display: block; width: 100%; height: auto; min-width: 640px; }
+figcaption { font-size: 13.5px; color: var(--muted); margin-top: 10px; max-width: 46em; }
+figcaption b { color: var(--fg); }
+.dg text { fill: currentColor; font-family: var(--f-body); font-size: 13px; }
+.dg .small { font-size: 11.5px; fill: var(--muted); }
+.dg .tag { font-size: 11px; font-weight: 700; fill: var(--accent); font-family: var(--f-mono); }
+.dg .node { fill: var(--surface); stroke: var(--line); stroke-width: 1.5; }
+.dg .node.new { stroke: var(--accent); stroke-width: 2; fill: var(--accent-soft); }
+.dg .node.fix { stroke: var(--stop); stroke-width: 2; }
+.dg .group { fill: var(--sunk); stroke: none; }
+.dg .edge { stroke: currentColor; stroke-width: 1.4; fill: none; }
+.dg .edge.new { stroke: var(--accent); stroke-width: 2; }
+.dg .edge.bad { stroke: var(--stop); stroke-width: 1.6; stroke-dasharray: 5 4; }
+.dg .edge.ok { stroke: var(--good); stroke-width: 2; }
+.dg .ah { fill: currentColor; }
+.dg .ah-new { fill: var(--accent); }
+.dg .ah-bad { fill: var(--stop); }
+.dg .ah-ok { fill: var(--good); }
+.dg .stoptxt { fill: var(--stop); font-weight: 700; }
+.dg .oktxt { fill: var(--good); font-weight: 700; }
+.dg .panel { fill: none; stroke: var(--line); stroke-width: 1; }
+.dg .h { font-family: var(--f-display); font-size: 15px; font-weight: 600; }
+
+/* 数据 */
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top: 18px; }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+.tile .k { font-size: 12.5px; color: var(--muted); }
+.tile .v { font-family: var(--f-mono); font-size: 22px; font-variant-numeric: tabular-nums; margin-top: 2px; }
+.tile .s { font-size: 12.5px; color: var(--muted); }
+table.data { border-collapse: collapse; width: 100%; font-size: 14px; font-variant-numeric: tabular-nums; }
+table.data th, table.data td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+table.data th:first-child, table.data td:first-child { text-align: left; }
+table.data th { font-weight: 500; font-size: 12.5px; color: var(--muted); }
+table.data td.num { font-family: var(--f-mono); }
+.sw { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 8px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--muted); margin: 6px 0 0; }
+.chart-wrap { position: relative; }
+.tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; font-size: 12.5px; box-shadow: 0 4px 14px rgb(0 0 0 / .12); min-width: 190px; }
+.tip .d { font-family: var(--f-mono); color: var(--muted); margin-bottom: 4px; }
+.tip .r { display: flex; justify-content: space-between; gap: 14px; font-family: var(--f-mono); }
+.chart text { fill: var(--muted); font-size: 11.5px; font-family: var(--f-mono); }
+.chart .grid { stroke: var(--line); stroke-width: 1; }
+.chart .axis { stroke: var(--muted); stroke-width: 1; }
+.note { border-left: 3px solid var(--warn); background: var(--surface); padding: 10px 14px; margin: 18px 0; font-size: 14.5px; border-radius: 0 6px 6px 0; }
+.note.blue { border-left-color: var(--accent); }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.two > * { min-width: 0; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; }
+.card h4 { margin: 0 0 6px; font-size: 15px; }
+.card ul { margin: 6px 0 0; padding-left: 18px; font-size: 14px; }
+.cmds { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 8px 20px; margin-top: 14px; }
+.cmds div { font-size: 14px; display: grid; grid-template-columns: minmax(0, 1fr); }
+.cmds code { justify-self: start; }
+.cmds span { color: var(--muted); font-size: 13.5px; }
+.fixes { counter-reset: f; list-style: none; padding: 0; margin: 14px 0 0; display: grid; gap: 8px; }
+.fixes li { counter-increment: f; display: grid; grid-template-columns: 30px 1fr; gap: 8px; font-size: 14.5px; }
+.fixes li::before { content: counter(f); font-family: var(--f-mono); color: var(--stop); font-weight: 500; }
+.sev { font-size: 11.5px; font-family: var(--f-mono); color: var(--muted); }
+.rationale { white-space: pre-wrap; font-size: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin-top: 10px; }
+@media (max-width: 560px) {
+  body { font-size: 15px; }
+  .wrap { padding-inline: 16px; }
+  h2 { margin-top: 48px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .tip { transition: opacity .08s; }
+}
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">JevInvest · 2026-10-11 夜间</div>
+    <h1>你睡觉的时候，我做了这些</h1>
+    <p class="lede">目标没变：提高你扣税扣费之后的长期回报。所以先做见效最大的（税制、手续费、independence 卡点），再做"手痒"时的安全阀，最后做你要的模拟盘。下面每一块都配了结构图，代码都已推到分支 <code>claude/compassionate-heisenberg-buk8d0</code>。</p>
+    <div class="meta" id="meta"></div>
+  </header>
+
+  <h2><span class="no">00</span>醒来先做这三件事</h2>
+  <ol class="todo">
+    <li><div class="rank">1</div><div><b>发 independence 咨询邮件</b><span>你的计划卡在这一步：核心那 55% 的指数基金能不能先买、要不要每支都预审，都等这封邮件的回复。运行 <code>/independence-mail</code> 会生成英日对照草稿，只起草，不发送。</span></div></li>
+    <li><div class="rank">2</div><div><b>查公司有没有企业型 DC，决定 iDeCo 要不要加额</b><span>从 2026 年 12 月那期起，没有企业年金的上班族 iDeCo 上限从每月 2.3 万涨到 6.2 万日元（厚劳省资料）。这是全部内容里节税效果最大的一项，而且有截止日。详见 <code>docs/PLAYBOOK.md</code> 第 3-4 节。</span></div></li>
+    <li><div class="rank">3</div><div><b>看一眼模拟盘，然后别管它</b><span>5 个虚拟账户各 500 万日元，用真实收盘价自动跑到 11 月 12 日。每个交易日东京时间早上 7:07 自动更新。一个月的输赢大多靠运气，下面第 04 节会说明怎么看。</span></div></li>
+  </ol>
+
+  <h2><span class="no">01</span>做了什么</h2>
+  <div class="scroll">
+  <table class="deliver">
+    <thead><tr><th>类型</th><th>东西</th><th>怎么用</th><th>为什么值得做</th></tr></thead>
+    <tbody>
+      <tr><td><span class="pill new">新</span></td><td>券商 CSV 导入</td><td><code>/import-csv</code></td><td>台账是空的，所有分析都出不来。SBI、乐天的成交记录 CSV 直接导入，屏幕上只显示笔数和代码，不显示金额。</td></tr>
+      <tr><td><span class="pill new">新</span></td><td>交易前检查</td><td><code>/before-trade</code></td><td>把"不该做的理由"一次列全：independence、目标配置、单只上限、现金下限、NISA 额度、税、24 小时冷静期、交易频率。</td></tr>
+      <tr><td><span class="pill new">新</span></td><td>游玩仓记分牌</td><td><code>scoreboard</code></td><td>你自己挑的个股，跟"同一天把同样的钱放进 VT"比。差额就是选股和择时的真实水平。</td></tr>
+      <tr><td><span class="pill new">新</span></td><td>模拟盘 + 回测</td><td><code>paper/</code></td><td>你要的：虚拟 500 万，真实数据。外加 2009 年至今的回测，用同一套代码。</td></tr>
+      <tr><td><span class="pill new">新</span></td><td>Independence 邮件草稿</td><td><code>/independence-mail</code></td><td>你的计划卡在这里。</td></tr>
+      <tr><td><span class="pill fix">修复</span></td><td>9 个代码错误</td><td>自动生效</td><td>其中一个最严重：没通过预审的基金，定投计划照样分钱进去。下面第 03 节有图。</td></tr>
+      <tr><td><span class="pill doc">调研</span></td><td>基金成本对比</td><td><code>docs/FUNDS.md</code></td><td>NISA 候选基金的信託報酬、实际成本、美国 ETF 的外国税。每个数字都有出处。</td></tr>
+      <tr><td><span class="pill doc">调研</span></td><td>大神们的做法 + 你的计划</td><td><code>docs/PLAYBOOK.md</code></td><td>Buffett、Bogle、山崎元等人的原话和数据，游玩仓规则，年度日历，接下来 90 天的清单。</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h2><span class="no">02</span>整体结构</h2>
+  <p class="prose">计算全在你本地的 Python 里做，判断交给 Claude Code。带金额的文件只留在本地，不提交到 GitHub。蓝色描边的是今晚新加的，红色描边的是今晚修过的。</p>
+  <figure>
+    <div class="canvas">
+    <svg class="dg" viewBox="0 0 1000 560" role="img" aria-label="系统结构：四种输入经本地文件进入 src 计算模块，再产出报告、交易判定和模拟盘结果">
+      <defs>
+        <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0,0 L10,5 L0,10 z"/></marker>
+        <marker id="a1n" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-new" d="M0,0 L10,5 L0,10 z"/></marker>
+      </defs>
+      <!-- 列标题 -->
+      <text x="20" y="22" class="small">输入</text>
+      <text x="270" y="22" class="small">转换 / 本地文件</text>
+      <text x="800" y="22" class="small">产出</text>
+
+      <!-- 输入 -->
+      <rect class="node" x="20" y="40" width="180" height="54" rx="6"/><text x="110" y="64" text-anchor="middle">券商成交 CSV</text><text x="110" y="82" text-anchor="middle" class="small">SBI · 乐天</text>
+      <rect class="node" x="20" y="150" width="180" height="54" rx="6"/><text x="110" y="174" text-anchor="middle">你（对话 · 命令）</text><text x="110" y="192" text-anchor="middle" class="small">/add-trade 等</text>
+      <rect class="node" x="20" y="260" width="180" height="54" rx="6"/><text x="110" y="284" text-anchor="middle">DESC · 预审结果</text><text x="110" y="302" text-anchor="middle" class="small">你确认后告诉我</text>
+      <rect class="node" x="20" y="440" width="180" height="54" rx="6"/><text x="110" y="464" text-anchor="middle">Yahoo Finance</text><text x="110" y="482" text-anchor="middle" class="small">真实收盘价 · 汇率</text>
+
+      <!-- 第二列 -->
+      <rect class="node new" x="270" y="40" width="180" height="54" rx="6"/><text x="360" y="64" text-anchor="middle">importers 导入</text><text x="360" y="82" text-anchor="middle" class="tag">NEW</text>
+      <rect class="group" x="262" y="128" width="196" height="200" rx="8"/>
+      <text x="270" y="146" class="small">本地文件（不提交）</text>
+      <rect class="node" x="270" y="156" width="180" height="44" rx="6"/><text x="360" y="183" text-anchor="middle" class="mono">transactions.yaml</text>
+      <rect class="node" x="270" y="210" width="180" height="44" rx="6"/><text x="360" y="237" text-anchor="middle" class="mono">holdings.yaml</text>
+      <rect class="node" x="270" y="264" width="180" height="44" rx="6"/><text x="360" y="291" text-anchor="middle" class="mono">compliance.yaml</text>
+
+      <!-- 输入 → 第二列 -->
+      <path class="edge new" d="M200,67 H268" marker-end="url(#a1n)"/><text x="234" y="60" text-anchor="middle" class="small">转换</text>
+      <path class="edge new" d="M360,94 V154" marker-end="url(#a1n)"/><text x="368" y="128" class="small">追加</text>
+      <path class="edge" d="M200,177 H268" marker-end="url(#a1)"/>
+      <path class="edge" d="M200,287 H268" marker-end="url(#a1)"/><text x="234" y="280" text-anchor="middle" class="small">转记</text>
+
+      <!-- 计算模块 -->
+      <rect class="group" x="520" y="20" width="230" height="520" rx="8"/>
+      <text x="535" y="40" class="small">src/ 计算（本地 Python，不调 LLM）</text>
+      <rect class="node" x="535" y="52" width="200" height="48" rx="6"/><text x="635" y="81" text-anchor="middle">analytics 估值 · 风险</text>
+      <rect class="node fix" x="535" y="117" width="200" height="48" rx="6"/><text x="635" y="146" text-anchor="middle">plan 定投 · NISA 额度</text>
+      <rect class="node fix" x="535" y="182" width="200" height="48" rx="6"/><text x="635" y="211" text-anchor="middle">compliance 闸门</text>
+      <rect class="node new" x="535" y="290" width="200" height="48" rx="6"/><text x="635" y="319" text-anchor="middle">pretrade 交易前检查</text>
+      <rect class="node new" x="535" y="355" width="200" height="48" rx="6"/><text x="635" y="384" text-anchor="middle">scoreboard 游玩仓</text>
+      <rect class="node new" x="535" y="440" width="200" height="54" rx="6"/><text x="635" y="464" text-anchor="middle">sim 模拟盘引擎</text><text x="635" y="482" text-anchor="middle" class="small">回测 · 实盘同一套代码</text>
+      <text x="635" y="522" text-anchor="middle" class="small">每个交易日 07:07（东京）自动推进</text>
+      <!-- 闸门 -->
+      <path class="edge" d="M635,182 V167" marker-end="url(#a1)"/>
+      <path class="edge" d="M635,230 V288" marker-end="url(#a1)"/><text x="645" y="262" class="small">只放行已批准</text>
+
+      <!-- 文件 → 模块，价格 → 模块 -->
+      <path class="edge" d="M458,228 H518" marker-end="url(#a1)"/><text x="488" y="221" text-anchor="middle" class="small">读取</text>
+      <path class="edge" d="M200,467 H533" marker-end="url(#a1)"/><text x="360" y="459" text-anchor="middle" class="small">收盘价（判断后第二天成交）</text>
+      <path class="edge" d="M490,467 V76 H533" marker-end="url(#a1)"/><text x="482" y="400" text-anchor="end" class="small">时价</text>
+
+      <!-- 产出 -->
+      <rect class="node" x="800" y="52" width="180" height="48" rx="6"/><text x="890" y="73" text-anchor="middle" class="mono">reports/latest.md</text><text x="890" y="91" text-anchor="middle" class="small">→ Claude 判断</text>
+      <rect class="node" x="800" y="117" width="180" height="48" rx="6"/><text x="890" y="146" text-anchor="middle">每月分配表</text>
+      <rect class="node new" x="800" y="290" width="180" height="48" rx="6"/><text x="890" y="319" text-anchor="middle">⛔ / ⚠ / ✅ 判定</text>
+      <rect class="node new" x="800" y="355" width="180" height="48" rx="6"/><text x="890" y="384" text-anchor="middle">对 VT 的差额</text>
+      <rect class="node new" x="800" y="440" width="180" height="54" rx="6"/><text x="890" y="464" text-anchor="middle" class="mono">paper/REPORT.md</text><text x="890" y="482" text-anchor="middle" class="small">+ 这个页面</text>
+      <path class="edge" d="M735,76 H798" marker-end="url(#a1)"/>
+      <path class="edge" d="M735,141 H798" marker-end="url(#a1)"/>
+      <path class="edge new" d="M735,314 H798" marker-end="url(#a1n)"/>
+      <path class="edge new" d="M735,379 H798" marker-end="url(#a1n)"/>
+      <path class="edge new" d="M735,467 H798" marker-end="url(#a1n)"/>
+    </svg>
+    </div>
+    <figcaption><b>数据只往一个方向流：</b>输入 → 本地文件 → 计算 → 产出。compliance 是闸门：定投计划和交易前检查都要先过它。Yahoo 的价格分两路：估值用最新价；模拟盘只能用"判断之后的下一个收盘价"成交。</figcaption>
+  </figure>
+
+  <h2><span class="no">03</span>最严重的那个错误：independence 闸门漏了</h2>
+  <p class="prose">原来的定投计划只对"个股"类检查预审。全球股基金和债券基金就算 DESC 还没查，也照样每月分钱。更糟的是，个股因为没批准而暂停的那部分钱，又被转到了同样没查过的全球股基金里。按 CLAUDE.md，这是最不能出错的地方。</p>
+  <figure>
+    <div class="canvas">
+    <svg class="dg" viewBox="0 0 960 330" role="img" aria-label="修复前每月资金流向未确认的基金类；修复后只流向已批准的类别，其余保留为现金">
+      <defs>
+        <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="ah" d="M0,0 L10,5 L0,10 z"/></marker>
+        <marker id="a2b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="ah-bad" d="M0,0 L10,5 L0,10 z"/></marker>
+        <marker id="a2g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="ah-ok" d="M0,0 L10,5 L0,10 z"/></marker>
+      </defs>
+      <rect class="panel" x="6" y="6" width="458" height="318" rx="8"/>
+      <rect class="panel" x="496" y="6" width="458" height="318" rx="8"/>
+      <text x="24" y="34" class="h">修复前</text>
+      <text x="514" y="34" class="h">修复后</text>
+
+      <!-- 修复前 -->
+      <rect class="node" x="24" y="140" width="120" height="54" rx="6"/><text x="84" y="164" text-anchor="middle">每月 20 万</text><text x="84" y="182" text-anchor="middle" class="small">定投</text>
+      <rect class="node" x="290" y="60" width="156" height="50" rx="6"/><text x="368" y="81" text-anchor="middle">全球股基金</text><text x="368" y="99" text-anchor="middle" class="small stoptxt">DESC 未查</text>
+      <rect class="node" x="290" y="142" width="156" height="50" rx="6"/><text x="368" y="163" text-anchor="middle">债券基金</text><text x="368" y="181" text-anchor="middle" class="small stoptxt">DESC 未查</text>
+      <rect class="node" x="290" y="224" width="156" height="50" rx="6"/><text x="368" y="245" text-anchor="middle">美股 · 日股个股</text><text x="368" y="263" text-anchor="middle" class="small">未批准 → 暂停</text>
+      <path class="edge bad" d="M144,158 C210,150 230,90 288,86" marker-end="url(#a2b)"/><text x="196" y="108" class="small stoptxt">照样买入</text>
+      <path class="edge bad" d="M144,167 H288" marker-end="url(#a2b)"/>
+      <path class="edge" d="M144,178 C210,190 230,248 288,249" marker-end="url(#a2)"/>
+      <path class="edge bad" d="M446,240 C478,200 478,110 448,92" marker-end="url(#a2b)"/><text x="450" y="300" text-anchor="end" class="small stoptxt">暂停的钱转进未查的基金</text>
+
+      <!-- 修复后 -->
+      <rect class="node" x="514" y="140" width="120" height="54" rx="6"/><text x="574" y="164" text-anchor="middle">每月 20 万</text><text x="574" y="182" text-anchor="middle" class="small">定投</text>
+      <rect class="node" x="780" y="44" width="156" height="50" rx="6"/><text x="858" y="65" text-anchor="middle">全球股基金</text><text x="858" y="83" text-anchor="middle" class="small oktxt">已批准</text>
+      <rect class="node" x="780" y="114" width="156" height="50" rx="6"/><text x="858" y="135" text-anchor="middle">债券基金</text><text x="858" y="153" text-anchor="middle" class="small stoptxt">DESC 未查</text>
+      <rect class="node" x="780" y="184" width="156" height="50" rx="6"/><text x="858" y="205" text-anchor="middle">个股</text><text x="858" y="223" text-anchor="middle" class="small stoptxt">未批准</text>
+      <rect class="node" x="780" y="254" width="156" height="50" rx="6"/><text x="858" y="275" text-anchor="middle">现金保留</text><text x="858" y="293" text-anchor="middle" class="small">注明原因和金额</text>
+      <path class="edge ok" d="M634,158 C700,150 720,70 778,69" marker-end="url(#a2g)"/><text x="688" y="92" class="small oktxt">买入</text>
+      <path class="edge bad" d="M634,167 L740,139"/><text x="748" y="144" class="stoptxt" text-anchor="middle">✕</text>
+      <path class="edge bad" d="M634,174 L740,209"/><text x="748" y="214" class="stoptxt" text-anchor="middle">✕</text>
+      <path class="edge" d="M634,184 C700,200 720,278 778,279" marker-end="url(#a2)"/><text x="660" y="262" class="small">未批准的部分</text>
+    </svg>
+    </div>
+    <figcaption><b>修复后，钱只流进至少有一只已批准标的的类别。</b>其余部分留作现金，并写明金额和原因，不会悄悄改投到别处。还没买过的候选基金，只要在 <code>compliance.yaml</code> 里记录了 <code>asset_class</code>，并且 DESC 和预审都通过，也算已批准。是否批准，只按你告诉我的结果记录。</figcaption>
+  </figure>
+  <p class="prose">其余 8 个错误：</p>
+  <ol class="fixes">
+    <li><div>所有持仓都取不到价格时，报告直接崩溃。云端连不上 Yahoo 时正好会发生。<span class="sev">高</span></div></li>
+    <li><div>取不到价格的类别显示为 0%，于是建议你"全额买入"，但你其实已经超配了。<span class="sev">高</span></div></li>
+    <li><div>XIRR 把被截断或跳过的卖出也按原数量计入，示例里凭空多出 +44% 年化。<span class="sev">高</span></div></li>
+    <li><div>算 XIRR 时，取不到价格的持仓被当成 0 元，结果偏低，而且没有任何提示。<span class="sev">中高</span></div></li>
+    <li><div>同一只股票分在两个账户时，风险权重只算了其中一个。<span class="sev">中</span></div></li>
+    <li><div>集中度按"行"算，还把现金当成最大持仓。<span class="sev">中</span></div></li>
+    <li><div>NISA 年度剩余额度被除以 12（应该除以今年剩下的月数），终身上限 1800 万也没有检查。<span class="sev">中</span></div></li>
+    <li><div>波动率、回撤把日元现金排除在外，被高估了约 1.7 倍。另外修了两处小问题：匿名模式的 HTML 里还藏着金额；外币现金被按日元计算。<span class="sev">中</span></div></li>
+  </ol>
+
+  <h2><span class="no">04</span>模拟盘：虚拟 500 万 × 5 个账户</h2>
+  <p class="prose">你说"给你 500 万日元自己去交易，必须用真实数据"。实现方式如下：同一套规则跑 5 个账户，一个是我自己凭判断操作的，另外 4 个是事先写死的策略。全部用 Yahoo 的真实收盘价，每一笔成交的日期、价格、汇率都记在 <code>paper/state.json</code>，事后可以逐笔核对。不会真的下单。</p>
+  <figure>
+    <div class="canvas">
+    <svg class="dg" viewBox="0 0 1000 250" role="img" aria-label="模拟盘时间线：用 D 日收盘前的数据决定，在 D 之后第一个收盘价成交，扣除费用后估值并自动提交">
+      <defs>
+        <marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="ah" d="M0,0 L10,5 L0,10 z"/></marker>
+        <marker id="a3b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="ah-bad" d="M0,0 L10,5 L0,10 z"/></marker>
+      </defs>
+      <line x1="20" y1="200" x2="980" y2="200" class="edge"/>
+      <line x1="200" y1="192" x2="200" y2="208" class="edge"/><text x="200" y="228" text-anchor="middle" class="mono">D 日收盘</text>
+      <line x1="560" y1="192" x2="560" y2="208" class="edge"/><text x="560" y="228" text-anchor="middle" class="mono">下一个交易日收盘</text>
+      <line x1="880" y1="192" x2="880" y2="208" class="edge"/><text x="880" y="228" text-anchor="middle" class="mono">东京 07:07</text>
+
+      <rect class="node" x="20" y="40" width="160" height="56" rx="6"/><text x="100" y="64" text-anchor="middle">看数据</text><text x="100" y="83" text-anchor="middle" class="small">只用 ≤ D 收盘</text>
+      <rect class="node" x="210" y="40" width="160" height="56" rx="6"/><text x="290" y="64" text-anchor="middle">定目标权重</text><text x="290" y="83" text-anchor="middle" class="small">策略或我的判断</text>
+      <rect class="node" x="400" y="40" width="140" height="56" rx="6"/><text x="470" y="64" text-anchor="middle">挂单</text><text x="470" y="83" text-anchor="middle" class="small">整股 · 先卖后买</text>
+      <rect class="node new" x="570" y="40" width="190" height="56" rx="6"/><text x="665" y="64" text-anchor="middle">按真实收盘价成交</text><text x="665" y="83" text-anchor="middle" class="small">手续费 0.10% · 滑点 0.05%</text>
+      <rect class="node" x="790" y="40" width="190" height="56" rx="6"/><text x="885" y="64" text-anchor="middle">估值 · 记录 · 提交</text><text x="885" y="83" text-anchor="middle" class="small">汇差 0.25 円/美元 · 分红</text>
+      <path class="edge" d="M180,68 H208" marker-end="url(#a3)"/>
+      <path class="edge" d="M370,68 H398" marker-end="url(#a3)"/>
+      <path class="edge" d="M540,68 H568" marker-end="url(#a3)"/>
+      <path class="edge" d="M760,68 H788" marker-end="url(#a3)"/>
+      <path class="edge bad" d="M290,96 C290,150 200,160 200,190" marker-end="url(#a3b)"/>
+      <text x="300" y="148" class="small stoptxt">✕ 不允许按 D 日价格成交（那等于偷看答案）</text>
+      <path class="edge" d="M665,96 V190" marker-end="url(#a3)"/>
+    </svg>
+    </div>
+    <figcaption><b>决定和成交之间隔开一个收盘价，</b>这是模拟盘和回测共用的规则。日本放假（比如 10/12 体育日）时，日本 ETF 顺延到东证下一个开市日成交。按 NISA 账户计算，所以没有日本税；美国 ETF 的分红扣 10% 美国预扣税，这部分在 NISA 里拿不回来。</figcaption>
+  </figure>
+  <div id="live"></div>
+
+  <h2><span class="no">05</span>回测：同样的规则，2009 年至今的真实数据</h2>
+  <p class="prose">先说这一节最重要的结论：<b>一个月的成绩几乎全看运气。</b>下面第二张图是过去 17 年里所有"一个月"的回报分布。11 月 12 日出来的结果，只会落在这个范围里的某个位置。</p>
+  <div id="bt"></div>
+
+  <h2><span class="no">06</span>交易前检查怎么工作</h2>
+  <p class="prose">PLAYBOOK 里的数据：晨星统计，投资者因为自己的买卖时机，每年平均少赚约 1.2 个百分点（8.7% 对比基金本身的 9.9%）。按你的计划（100 万起步，每月 20 万），20 年下来约差 1,050 万日元。这个工具就是在你下单前拦住这类损失。</p>
+  <figure>
+    <div class="canvas">
+    <svg class="dg" viewBox="0 0 1000 220" role="img" aria-label="交易前检查：五道关依次检查，任何一道出现停止就不执行">
+      <defs>
+        <marker id="a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="ah" d="M0,0 L10,5 L0,10 z"/></marker>
+        <marker id="a4b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="ah-bad" d="M0,0 L10,5 L0,10 z"/></marker>
+        <marker id="a4g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="ah-ok" d="M0,0 L10,5 L0,10 z"/></marker>
+      </defs>
+      <rect class="node" x="10" y="30" width="140" height="62" rx="6"/><text x="80" y="56" text-anchor="middle">① independence</text><text x="80" y="76" text-anchor="middle" class="small">已批准才能买</text>
+      <rect class="node" x="180" y="30" width="140" height="62" rx="6"/><text x="250" y="56" text-anchor="middle">② 目标配置</text><text x="250" y="76" text-anchor="middle" class="small">更远还是更近</text>
+      <rect class="node" x="350" y="30" width="140" height="62" rx="6"/><text x="420" y="56" text-anchor="middle">③ 上限 · 现金</text><text x="420" y="76" text-anchor="middle" class="small">单只 20% · 现金 5%</text>
+      <rect class="node" x="520" y="30" width="140" height="62" rx="6"/><text x="590" y="56" text-anchor="middle">④ NISA · 税</text><text x="590" y="76" text-anchor="middle" class="small">余额 · 20.315%</text>
+      <rect class="node" x="690" y="30" width="140" height="62" rx="6"/><text x="760" y="56" text-anchor="middle">⑤ 行为</text><text x="760" y="76" text-anchor="middle" class="small">冷静 24h · 频率</text>
+      <rect class="node" x="860" y="30" width="130" height="62" rx="6"/><text x="925" y="56" text-anchor="middle" class="oktxt">与计划一致</text><text x="925" y="76" text-anchor="middle" class="small">你自己去下单</text>
+      <path class="edge" d="M150,61 H178" marker-end="url(#a4)"/>
+      <path class="edge" d="M320,61 H348" marker-end="url(#a4)"/>
+      <path class="edge" d="M490,61 H518" marker-end="url(#a4)"/>
+      <path class="edge" d="M660,61 H688" marker-end="url(#a4)"/>
+      <path class="edge ok" d="M830,61 H858" marker-end="url(#a4g)"/>
+      <rect x="10" y="160" width="820" height="40" rx="6" class="node" style="stroke: var(--stop)"/>
+      <text x="420" y="185" text-anchor="middle" class="stoptxt">不执行（任何一道出现 ⛔）</text>
+      <path class="edge bad" d="M80,92 V158" marker-end="url(#a4b)"/>
+      <path class="edge bad" d="M420,92 V158" marker-end="url(#a4b)"/>
+      <path class="edge bad" d="M590,92 V158" marker-end="url(#a4b)"/>
+      <text x="250" y="130" text-anchor="middle" class="small">⚠ 只提醒</text>
+      <text x="760" y="130" text-anchor="middle" class="small">⚠ 第一次想买：明天再查一次</text>
+    </svg>
+    </div>
+    <figcaption><b>先列出不该做的理由。</b>可以用 <code>--pct 3</code>（占总资产的 %）代替金额，这样不用把金额告诉我。第一次考虑某笔交易时会记下时间，24 小时后再运行同一条命令，冷静期这一项才会通过。</figcaption>
+  </figure>
+
+  <h2><span class="no">07</span>调研要点（每条都有出处）</h2>
+  <div class="two">
+    <div class="card">
+      <h4>基金成本 · <code>docs/FUNDS.md</code></h4>
+      <ul>
+        <li>国内低成本全球指数基金之间，费用差每年只有几千日元，到第 10 年（2,500 万规模）也不到 1 万日元。选定了就别来回换。</li>
+        <li>差距大的是结构性成本：在 NISA 里持有美国上市的 VT，分红的 10% 美国预扣税拿不回来，每年约 0.2%，比 VT 自己的管理费还高。</li>
+        <li>个人向け国債（变动 10 年）第 199 回利率 2.05%，零手续费，但不能放进 NISA。</li>
+        <li>2027 年起未成年人也可以用つみたて枠（每年 60 万）。</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>大神们 + 你的计划 · <code>docs/PLAYBOOK.md</code></h4>
+      <ul>
+        <li>Buffett、Bogle、Swensen、Bernstein、山崎元说的都是同一件事：低成本、分散、放着不动。觉得"闲"，说明做对了。</li>
+        <li>SPIVA：美国主动型大盘基金 15 年里有 89.9% 跑输 S&amp;P 500。</li>
+        <li>你计划里 20% 的美股个股，已经是很大的"游玩仓"了（Bogle 建议 5% 以内），而且每一只都要单独预审。PLAYBOOK 建议降到 5～10%，并用规则管住。</li>
+        <li>手痒的时候，按效果排序该做：iDeCo/DC → ふるさと納税 · 医療費控除 → 应急资金 → 提高本业收入。</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2><span class="no">08</span>命令速查</h2>
+  <div class="cmds">
+    <div><code>/import-csv 文件.csv</code><span>导入券商成交记录</span></div>
+    <div><code>/before-trade NVDA 买 3%</code><span>交易前检查</span></div>
+    <div><code>/independence-mail</code><span>生成咨询邮件草稿（不发送）</span></div>
+    <div><code>python -m src.cli scoreboard</code><span>游玩仓对比 VT 的成绩</span></div>
+    <div><code>python tools/papertrade.py run</code><span>手动推进模拟盘</span></div>
+    <div><code>python tools/papertrade.py backtest</code><span>重新跑回测</span></div>
+  </div>
+  <p class="note blue">分析和决策辅助到此为止，不会实际下单。是否买卖，以 DESC 和 Independence &amp; Conflicts Network 的结论为准，由你自己决定。</p>
+</div>
+
+<script>
+const DATA = /*__DATA__*/null;
+const KEYS = ["allcountry", "core_satellite", "trend", "dual_momentum", "claude"];
+const SHORT = { allcountry: "全球股一只·不动", core_satellite: "你的目标配置", trend: "200 日线趋势", dual_momentum: "双动量", claude: "Claude 凭判断" };
+const COLOR = { allcountry: "var(--s1)", core_satellite: "var(--s2)", trend: "var(--s3)", dual_momentum: "var(--s4)", claude: "var(--s5)" };
+const yen = v => Math.round(v).toLocaleString("ja-JP");
+const pct = (v, d = 1) => (v >= 0 ? "+" : "") + (v * 100).toFixed(d) + "%";
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const NS = "http://www.w3.org/2000/svg";
+
+function meta() {
+  const m = document.getElementById("meta");
+  if (!DATA) { m.textContent = "数据未嵌入"; return; }
+  const l = DATA.live || {};
+  m.innerHTML = `<span>回测 ${esc(DATA.start)} → ${esc(DATA.end)}</span><span>模拟盘开始 ${esc(l.start || "—")}</span><span>数据更新 ${esc((l.updated_at || DATA.generated || "").replace("T", " ").slice(0, 16))} UTC</span>`;
+}
+
+function live() {
+  const el = document.getElementById("live");
+  const l = DATA && DATA.live;
+  if (!l) { el.innerHTML = '<p class="note">模拟盘还没开始。</p>'; return; }
+  const cap = l.capital;
+  const base = l.books.allcountry.nav.at(-1)[1] / cap - 1;
+  const lastDay = l.books.allcountry.nav.at(-1)[0];
+  const started = l.books.allcountry.nav.length > 1;
+  let rows = "";
+  for (const k of KEYS) {
+    const b = l.books[k]; if (!b) continue;
+    const v = b.nav.at(-1)[1], r = v / cap - 1;
+    const pend = (b.pending || []).map(o => `${o.side === "buy" ? "买" : "卖"} ${esc(o.symbol)} ${o.qty}`).join("、");
+    const hold = Object.entries(b.qty || {}).map(([s, q]) => `${esc(s)} ${q}`).join("、");
+    rows += `<tr><td><span class="sw" style="background:${COLOR[k]}"></span>${SHORT[k]}</td><td class="num">${yen(v)}</td><td class="num">${pct(r, 2)}</td><td class="num">${k === "allcountry" ? "—" : pct(r - base, 2)}</td><td class="num">${b.trades.length}</td><td style="text-align:left;white-space:normal;min-width:200px">${hold || "—"}${pend ? `<br><span style="color:var(--muted)">待成交：${pend}</span>` : ""}</td></tr>`;
+  }
+  const dec = (l.claude || []).map(d => `<h3>我的判断 · ${esc(d.date)}</h3><p class="mono" style="color:var(--muted);margin:4px 0">${Object.entries(d.weights).map(([s, w]) => `${esc(s)} ${(w * 100).toFixed(0)}%`).join(" · ")} · 其余现金</p><div class="rationale">${esc(d.rationale)}</div>`).join("");
+  el.innerHTML = `
+    <div class="tiles">
+      <div class="tile"><div class="k">每个账户起始资金</div><div class="v">${yen(cap)}</div><div class="s">虚拟日元</div></div>
+      <div class="tile"><div class="k">最后处理的交易日</div><div class="v">${esc(lastDay)}</div><div class="s">${started ? "已开始成交" : "首批订单 10/13 前后成交"}</div></div>
+      <div class="tile"><div class="k">结束日</div><div class="v">${esc(l.end || "—")}</div><div class="s">最后一次运行写 paper/FINAL.md</div></div>
+    </div>
+    <h3>各账户现状</h3>
+    <div class="scroll"><table class="data"><thead><tr><th>账户</th><th>估值（円）</th><th>开始以来</th><th>对比全球股一只</th><th>成交笔数</th><th style="text-align:left">持仓 / 待成交</th></tr></thead><tbody>${rows}</tbody></table></div>
+    ${dec}`;
+}
+
+function navChart(host) {
+  const series = KEYS.filter(k => DATA.nav[k]).map(k => ({ k, pts: DATA.nav[k].map(([d, v]) => [new Date(d), v]) }));
+  const W = 960, H = 380, L = 70, R = 150, T = 16, B = 36;
+  const all = series.flatMap(s => s.pts);
+  const x0 = all[0][0].getTime(), x1 = Math.max(...all.map(p => p[0].getTime()));
+  const ymin = Math.min(...all.map(p => p[1])), ymax = Math.max(...all.map(p => p[1]));
+  const ticks = [2.5e6, 5e6, 1e7, 2e7, 4e7, 8e7].filter(t => t >= ymin * 0.95 && t <= ymax * 1.3);
+  const lo = Math.log(Math.min(ymin, ticks[0])), hi = Math.log(Math.max(ymax, ticks.at(-1)));
+  const X = t => L + (t - x0) / (x1 - x0) * (W - L - R);
+  const Y = v => T + (hi - Math.log(v)) / (hi - lo) * (H - T - B);
+  let g = "";
+  for (const t of ticks) g += `<line class="grid" x1="${L}" x2="${W - R}" y1="${Y(t)}" y2="${Y(t)}"/><text x="${L - 8}" y="${Y(t) + 4}" text-anchor="end">${t >= 1e7 ? t / 1e4 / 1000 + " 千万" : t / 1e4 + " 万"}</text>`;
+  const y0 = new Date(x0).getFullYear(), y1 = new Date(x1).getFullYear();
+  for (let y = y0 + 1; y <= y1; y++) {
+    if ((y - y0) % 2) continue;
+    const xx = X(new Date(y, 0, 1).getTime());
+    g += `<line class="grid" x1="${xx}" x2="${xx}" y1="${T}" y2="${H - B}" opacity=".5"/><text x="${xx}" y="${H - B + 18}" text-anchor="middle">${y}</text>`;
+  }
+  g += `<line class="axis" x1="${L}" x2="${W - R}" y1="${H - B}" y2="${H - B}"/>`;
+  let lines = "", labels = [];
+  for (const s of series) {
+    const d = s.pts.map((p, i) => (i ? "L" : "M") + X(p[0].getTime()).toFixed(1) + "," + Y(p[1]).toFixed(1)).join("");
+    lines += `<path d="${d}" fill="none" stroke="${COLOR[s.k]}" stroke-width="2" stroke-linejoin="round"/>`;
+    const last = s.pts.at(-1);
+    labels.push({ k: s.k, y: Y(last[1]), v: last[1] });
+  }
+  labels.sort((a, b) => a.y - b.y);
+  for (let i = 1; i < labels.length; i++) if (labels[i].y - labels[i - 1].y < 30) labels[i].y = labels[i - 1].y + 30;
+  let lab = "";
+  for (const l of labels) lab += `<circle cx="${W - R}" cy="${Y(l.v)}" r="4" fill="${COLOR[l.k]}" stroke="var(--surface)" stroke-width="2"/><text x="${W - R + 10}" y="${l.y + 1}" style="fill:var(--fg);font-family:var(--f-body);font-size:12px">${SHORT[l.k]}</text><text x="${W - R + 10}" y="${l.y + 15}">${(l.v / 1e4).toFixed(0)} 万</text>`;
+  host.innerHTML = `<div class="chart-wrap"><svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="四个策略 2009 年以来的资产曲线（对数刻度）">${g}${lines}${lab}<line id="xh" class="axis" y1="${T}" y2="${H - B}" opacity="0"/><rect id="hit" x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="transparent"/></svg><div class="tip" id="tip" style="opacity:0"></div></div>`;
+  const svg = host.querySelector("svg"), tip = host.querySelector("#tip"), xh = host.querySelector("#xh");
+  const n = series[0].pts.length;
+  function show(ev) {
+    const r = svg.getBoundingClientRect();
+    const sx = (ev.clientX - r.left) / r.width * W;
+    const t = x0 + (sx - L) / (W - L - R) * (x1 - x0);
+    let i = 0, best = Infinity;
+    series[0].pts.forEach((p, j) => { const d = Math.abs(p[0].getTime() - t); if (d < best) { best = d; i = j; } });
+    const xx = X(series[0].pts[i][0].getTime());
+    xh.setAttribute("x1", xx); xh.setAttribute("x2", xx); xh.setAttribute("opacity", ".6");
+    tip.innerHTML = `<div class="d">${series[0].pts[i][0].toISOString().slice(0, 10)}</div>` + series.map(s => `<div class="r"><span><span class="sw" style="background:${COLOR[s.k]}"></span>${SHORT[s.k]}</span><span>${(s.pts[Math.min(i, s.pts.length - 1)][1] / 1e4).toFixed(0)} 万</span></div>`).join("");
+    const px = xx / W * r.width;
+    tip.style.left = Math.min(px + 12, r.width - 230) + "px"; tip.style.top = "10px"; tip.style.opacity = 1;
+  }
+  host.querySelector("#hit").addEventListener("pointermove", show);
+  host.querySelector("#hit").addEventListener("pointerleave", () => { tip.style.opacity = 0; xh.setAttribute("opacity", "0"); });
+}
+
+function distChart(host) {
+  const ks = KEYS.filter(k => DATA.monthly[k]);
+  const W = 960, rowH = 46, L = 170, R = 40, T = 26, H = T + ks.length * rowH + 30;
+  const lo = -0.10, hi = 0.10;
+  const X = v => L + (v - lo) / (hi - lo) * (W - L - R);
+  let g = "";
+  for (let v = -0.1; v <= 0.1001; v += 0.025) g += `<line class="grid" x1="${X(v)}" x2="${X(v)}" y1="${T - 6}" y2="${H - 30}" ${Math.abs(v) < 1e-9 ? 'style="stroke:var(--muted)"' : ""}/><text x="${X(v)}" y="${H - 12}" text-anchor="middle">${pct(v, 1)}</text>`;
+  let rows = "";
+  ks.forEach((k, i) => {
+    const q = DATA.monthly[k], cy = T + i * rowH + rowH / 2;
+    rows += `<text x="${L - 12}" y="${cy + 4}" text-anchor="end" style="fill:var(--fg);font-family:var(--f-body);font-size:13px">${SHORT[k]}</text>
+      <line x1="${X(q.p05)}" x2="${X(q.p95)}" y1="${cy}" y2="${cy}" stroke="${COLOR[k]}" stroke-width="2" stroke-linecap="round"/>
+      <rect x="${X(q.p25)}" y="${cy - 9}" width="${X(q.p75) - X(q.p25)}" height="18" rx="4" fill="${COLOR[k]}" opacity=".85"/>
+      <line x1="${X(q.p50)}" x2="${X(q.p50)}" y1="${cy - 13}" y2="${cy + 13}" stroke="var(--fg)" stroke-width="2.5"/>
+      <rect x="${L}" y="${cy - rowH / 2}" width="${W - L - R}" height="${rowH}" fill="transparent" data-k="${k}"/>`;
+  });
+  host.innerHTML = `<div class="chart-wrap"><svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="每个策略一个月回报的分布：细线是 5% 到 95%，粗块是中间一半，竖线是中位数">${g}${rows}</svg><div class="tip" style="opacity:0"></div></div>`;
+  const svg = host.querySelector("svg"), tip = host.querySelector(".tip");
+  svg.querySelectorAll("rect[data-k]").forEach(r => {
+    r.addEventListener("pointerenter", () => {
+      const k = r.dataset.k, q = DATA.monthly[k];
+      tip.innerHTML = `<div class="d">${SHORT[k]} · 一个月</div><div class="r"><span>最差 5%</span><span>${pct(q.p05)}</span></div><div class="r"><span>中间一半</span><span>${pct(q.p25)} ～ ${pct(q.p75)}</span></div><div class="r"><span>中位数</span><span>${pct(q.p50)}</span></div><div class="r"><span>最好 5%</span><span>${pct(q.p95)}</span></div>${k === "allcountry" ? "" : `<div class="r"><span>赢过全球股的月份</span><span>${(q.beat_base * 100).toFixed(0)}%</span></div>`}`;
+      const sr = svg.getBoundingClientRect(), rr = r.getBoundingClientRect();
+      tip.style.left = Math.min(rr.left - sr.left + rr.width / 2, sr.width - 230) + "px";
+      tip.style.top = (rr.bottom - sr.top + 4) + "px"; tip.style.opacity = 1;
+    });
+    r.addEventListener("pointerleave", () => tip.style.opacity = 0);
+  });
+}
+
+function backtest() {
+  const el = document.getElementById("bt");
+  if (!DATA || !DATA.stats) { el.innerHTML = '<p class="note">回测数据未嵌入。</p>'; return; }
+  const ks = KEYS.filter(k => DATA.stats[k]);
+  const legend = ks.map(k => `<span><span class="sw" style="background:${COLOR[k]}"></span>${SHORT[k]}</span>`).join("");
+  let rows = "";
+  for (const k of ks) {
+    const s = DATA.stats[k];
+    rows += `<tr><td><span class="sw" style="background:${COLOR[k]}"></span>${SHORT[k]}</td><td class="num">${yen(s.final)}</td><td class="num">${pct(s.cagr)}</td><td class="num">${(s.vol * 100).toFixed(1)}%</td><td class="num">${pct(s.max_dd)}</td><td class="num">${s.trades}</td><td class="num">${yen(s.fees)}</td><td class="num">${yen(s.tax_if_taxable)}</td></tr>`;
+  }
+  el.innerHTML = `
+    <figure><div class="canvas" id="nav"></div><div class="legend">${legend}</div>
+    <figcaption><b>2009 年 7 月一次性投入 500 万日元的资产曲线</b>（以日元计，对数刻度，含分红再投资）。这 17 年是全球股的大牛市加日元贬值，"不动"的全球股最难被超越。趋势策略最大回撤最小，但总收益不到一半。</figcaption></figure>
+    <div class="scroll"><table class="data"><thead><tr><th>策略</th><th>最终金额（円）</th><th>年化</th><th>年化波动</th><th>最大回撤</th><th>成交笔数</th><th>手续费等</th><th>若在课税账户：税</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <figure><div class="canvas" id="dist"></div>
+    <figcaption><b>所有"一个月"的回报分布</b>（起点逐日滑动的 21 个交易日窗口）。细线是最差 5% 到最好 5%，粗块是中间一半，竖线是中位数。每个策略的区间都有十几个百分点宽，而策略之间中位数的差不到 1 个百分点。所以一个月后谁赢了，基本说明不了水平。悬停可看具体数字。</figcaption></figure>
+    <div class="note">读法：<b>你的目标配置</b>年化 14.4%，全球股一只不动是 14.7%，但前者最大回撤从 -34% 降到 -27%。这就是配置债券和分散的作用：收益稍低，跌得更少，更容易拿得住。个股部分用 QQQ 代替，因为拿今天的大公司去回测过去会有幸存者偏差。<b>主动择时的两个策略</b>（趋势、双动量）都输给了"不动"，交易次数多，如果在课税账户还要多交约 300～450 万日元的税。</div>`;
+  navChart(document.getElementById("nav"));
+  distChart(document.getElementById("dist"));
+}
+
+meta(); live(); backtest();
+</script>

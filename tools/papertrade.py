@@ -295,7 +295,8 @@ def _export_live_json(st: dict) -> None:
         "start": st["start"], "end": st.get("end"), "capital": st["capital"],
         "updated_at": st.get("updated_at"),
         "books": {n: {"label": STRATEGY_LABELS[n], "nav": b.nav, "trades": b.trades,
-                      "qty": b.qty, "cash": b.cash, "fees": b.fees}
+                      "qty": b.qty, "cash": b.cash, "fees": b.fees,
+                      "pending": b.pending, "income": b.income, "notes": b.notes[-5:]}
                   for n, b in st["books"].items()},
         "claude": claude_decisions(),
     }
