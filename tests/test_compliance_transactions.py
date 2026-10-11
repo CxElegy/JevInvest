@@ -123,3 +123,19 @@ transactions:
     flows = cash_flows(led, 1100.0, as_of=date(2026, 1, 1))
     assert led.flow_mode == "trade"
     assert flows[0] == (date(2025, 1, 1), -1010.0) and flows[-1][1] == 1100.0
+
+
+def test_xirr_flows_use_quantity_actually_applied(tmp_path):
+    # 切り詰めた売却・飛ばした売却を、元の数量のままキャッシュフローに入れない
+    p = tmp_path / "t.yaml"
+    p.write_text("""
+transactions:
+  - {date: 2025-01-01, type: buy, symbol: A, account: X, quantity: 10, price: 100}
+  - {date: 2025-07-01, type: sell, symbol: A, account: X, quantity: 12, price: 100}
+  - {date: 2025-08-01, type: sell, symbol: B, account: X, quantity: 5, price: 100, fee: 3}
+""", encoding="utf-8")
+    led = load_tx(p)
+    flows = cash_flows(led, 0.0, as_of=date(2026, 1, 1))
+    assert (date(2025, 7, 1), 1000.0) in flows                 # 12 株ではなく 10 株分
+    assert not any(d == date(2025, 8, 1) for d, _ in flows)    # 保有が無い売却は何も生まない
+    assert xirr(flows) is None or abs(xirr(flows)) < 1e-6
