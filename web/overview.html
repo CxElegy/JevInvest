@@ -71,6 +71,14 @@ code { background: var(--sunk); padding: 1px 6px; border-radius: 4px; }
 .pill.fix { background: color-mix(in srgb, var(--stop) 14%, transparent); color: var(--stop); }
 .pill.doc { background: var(--sunk); color: var(--muted); }
 .scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+@media (max-width: 600px) {
+  .deliver thead { display: none; }
+  .deliver tr { display: block; border-bottom: 1px solid var(--line); padding: 8px 0; }
+  .deliver td { display: block; border: 0; padding: 2px 0; }
+  .deliver td:first-child { float: right; }
+  figure .canvas svg.chart { min-width: 0; }
+  .chart text { font-size: 22px; }
+}
 @media (max-width: 700px) {
   .scroll::before, figure .canvas::before { content: "← 左右滑动查看 →"; display: block; font-size: 11.5px; color: var(--muted); margin-bottom: 4px; }
 }
@@ -401,7 +409,7 @@ table.data td.num { font-family: var(--f-mono); }
       <ul>
         <li>国内低成本全球指数基金之间，费用差每年只有几千日元，到第 10 年（2,500 万规模）也不到 1 万日元。选定了就别来回换。</li>
         <li>差距大的是结构性成本：在 NISA 里持有美国上市的 VT，分红的 10% 美国预扣税拿不回来，每年约 0.2%，比 VT 自己的管理费还高。</li>
-        <li>个人向け国債（变动 10 年）第 199 回利率 2.05%，零手续费，但不能放进 NISA。</li>
+        <li>个人向国债（日本财务省发行、保本、变动 10 年）第 199 回利率 2.05%，零手续费，但不能放进 NISA。</li>
         <li>2027 年起未成年人也可以用つみたて枠（每年 60 万）。</li>
       </ul>
     </div>
@@ -530,7 +538,7 @@ function distChart(host) {
   const lo = -0.10, hi = 0.10;
   const X = v => L + (v - lo) / (hi - lo) * (W - L - R);
   let g = "";
-  for (let v = -0.1; v <= 0.1001; v += 0.025) g += `<line class="grid" x1="${X(v)}" x2="${X(v)}" y1="${T - 6}" y2="${H - 30}" ${Math.abs(v) < 1e-9 ? 'style="stroke:var(--muted)"' : ""}/><text x="${X(v)}" y="${H - 12}" text-anchor="middle">${pct(v, 1)}</text>`;
+  for (let v = -0.1; v <= 0.1001; v += 0.025) g += `<line class="grid" x1="${X(v)}" x2="${X(v)}" y1="${T - 6}" y2="${H - 30}" ${Math.abs(v) < 1e-9 ? 'style="stroke:var(--muted)"' : ""}/><text x="${X(v)}" y="${H - 12}" text-anchor="middle">${Math.abs(v) < 1e-9 ? "0%" : pct(v, 1)}</text>`;
   let rows = "";
   ks.forEach((k, i) => {
     const q = DATA.monthly[k], cy = T + i * rowH + rowH / 2;
@@ -613,7 +621,7 @@ function tax() {
       <div class="card"><h4>ふるさと納税（家乡税捐赠，可抵税）：年底前做</h4><ul>
         <li>只花 2,000 日元的自付额，就能拿到当地特产。截止到 12 月 31 日的捐款计入今年。</li>
         <li>先定 iDeCo，再定捐多少。iDeCo 会降低你的上限（表格最后一列）。</li>
-        <li>捐给 5 个地方以内可以用ワンストップ特例，申请书 1 月 10 日前必须寄到。超过 5 个地方要做确定申告。</li>
+        <li>捐给 5 个地方以内可以用ワンストップ特例（一站式特例，不用自己报税），申请书 1 月 10 日前必须寄到。超过 5 个地方要做确定申告（自己报税）。</li>
         <li>别捐到上限边缘，留 10～20% 余量，因为年收入和社会保险费的实际数会有出入。</li>
       </ul></div>
     </div>
@@ -655,7 +663,7 @@ function stress() {
     <figure><div class="canvas"><svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="五次历史危机套用到目标配置的日元损益，拆成价格变动和汇率两部分">${g}${rows}</svg></div>
     <div class="legend"><span><span class="sw" style="background:var(--s1)"></span>价格变动（当地货币）</span><span><span class="sw" style="background:var(--s2)"></span>汇率（日元升贬）</span><span><span class="sw" style="background:var(--fg)"></span>合计（日元）</span></div>
     <figcaption><b>2008 年那样的危机，你的目标配置按日元会跌掉一半左右。</b>其中一部分来自日元升值。2022 年正好相反：股债一起跌了两成多，但日元大幅贬值，换算成日元只跌了几个百分点。汇率对你来说是双刃剑，你的收入是日元，这一点要心里有数。代用指数：发达国家股 SPY+EFA，个股 QQQ，日本股 EWJ 换算成日元，债券 AGG（不对冲汇率）。</figcaption></figure>
-    <div class="note blue">这张图的用处：<b>先想清楚，跌到这个程度时你能不能不卖。</b>回测里"不动"之所以赢，前提是在 -50% 的时候没有卖。如果做不到，就该在现在多配一些日元资产（日元现金、个人向け国債、国内债券），而不是等到大跌时再卖。</div>`;
+    <div class="note blue">这张图的用处：<b>先想清楚，跌到这个程度时你能不能不卖。</b>回测里"不动"之所以赢，前提是在 -50% 的时候没有卖。如果做不到，就该在现在多配一些日元资产（日元现金、个人向国债（保本）、国内债券），而不是等到大跌时再卖。</div>`;
 }
 
 meta(); tax(); live(); backtest(); stress();
