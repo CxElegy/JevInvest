@@ -158,7 +158,7 @@ table.data td.num { font-family: var(--f-mono); }
   <ol class="todo">
     <li><div class="rank">1</div><div><b>发 independence 咨询邮件</b><span>你的计划卡在这一步：核心那 55% 的指数基金能不能先买、要不要每支都预审，都等这封邮件的回复。运行 <code>/independence-mail</code> 会生成英日对照草稿，只起草，不发送。</span></div></li>
     <li><div class="rank">2</div><div><b>查公司有没有企业型 DC，决定 iDeCo 要不要加额</b><span>从 2026 年 12 月那期起，没有企业年金的上班族 iDeCo 上限从每月 2.3 万涨到 6.2 万日元（厚劳省资料）。这是全部内容里节税效果最大的一项，而且有截止日。在本地运行 <code>/taxplan</code> 可以算出你能省多少（下面第 01 节有示例）。</span></div></li>
-    <li><div class="rank">3</div><div><b>打开 <a href="https://claude.ai/artifact/4UHKcCEXmkn67ocnwvLCF6">500 万模拟器</a> 玩一下</b><span>"回放实验"默认是"一个月前开始"，打开就能看到一个月的完整过程：每天的估值、持仓、每一笔成交。"你来操盘"可以自己操作，和"不动"比。实盘 5 个账户从 10/13 早上起每天 7:07 自动更新，更新后会推送通知给你。</span></div></li>
+    <li><div class="rank">3</div><div><b>打开 <a href="https://claude.ai/artifact/4UHKcCEXmkn67ocnwvLCF6">500 万模拟器</a> 玩一下</b><span>"回放实验"默认是"一个月前开始"，打开就能看到一个月的完整过程：每天的估值、持仓、每一笔成交。"策略排行榜"比较 17 个公开策略，"未来模拟"看你的计划 20 年后的分布范围，"你来操盘"可以自己操作、和"不动"比。实盘 18 个账户从 10/13 早上起每天 7:07 自动更新，更新后会推送通知给你。</span></div></li>
   </ol>
 
   <h2><span class="no">01</span>节税：这是最确定能赚到的钱</h2>
@@ -174,6 +174,8 @@ table.data td.num { font-family: var(--f-mono); }
       <tr><td><span class="pill new">新</span></td><td>交易前检查</td><td><code>/before-trade</code></td><td>把"不该做的理由"一次列全：independence、目标配置、单只上限、现金下限、NISA 额度、税、24 小时冷静期、交易频率。</td></tr>
       <tr><td><span class="pill new">新</span></td><td>游玩仓记分牌</td><td><code>scoreboard</code></td><td>你自己挑的个股，跟"同一天把同样的钱放进 VT"比。差额就是选股和择时的真实水平。</td></tr>
       <tr><td><span class="pill new">新</span></td><td>模拟盘 + 回测</td><td><code>paper/</code></td><td>你要的：虚拟 500 万，真实数据。外加 2009 年至今的回测，用同一套代码。</td></tr>
+      <tr><td><span class="pill new">新</span></td><td>策略排行榜（17 个）</td><td><a href="https://claude.ai/artifact/4UHKcCEXmkn67ocnwvLCF6">模拟器</a></td><td>60/40、永久组合、全天候、风险平价、动量、波动率目标、Sell in May 等，都用同一套规则和同一份真实数据比较，也能放到课税账户里比较。</td></tr>
+      <tr><td><span class="pill new">新</span></td><td>未来模拟</td><td><a href="https://claude.ai/artifact/4UHKcCEXmkn67ocnwvLCF6">模拟器</a></td><td>用过去的真实月度回报随机拼出 2000 条未来路径：你的计划 20 年后的范围、亏本概率、途中最大回撤。</td></tr>
       <tr><td><span class="pill new">新</span></td><td>节税计算</td><td><code>/taxplan</code></td><td>算 iDeCo 能省多少税、ふるさと納税的上限。iDeCo 上限 12 月起变成 2.7 倍，有截止时间。</td></tr>
       <tr><td><span class="pill new">新</span></td><td>压力测试</td><td><code>stress</code></td><td>把 2008、2011、2020、2022、2024 年的真实危机套到你的配置上，并拆出汇率造成的部分。你 90% 是美元资产，日元升值是实实在在的风险。</td></tr>
       <tr><td><span class="pill new">新</span></td><td>每月例行检查</td><td><code>/monthly-check</code></td><td>按 PLAYBOOK 的年度日历，只列出这个月该做的事。检查本身不应该成为买卖的理由。</td></tr>
@@ -306,8 +308,8 @@ table.data td.num { font-family: var(--f-mono); }
     <li><div>波动率、回撤把日元现金排除在外，被高估了约 1.7 倍。另外修了两处小问题：匿名模式的 HTML 里还藏着金额；外币现金被按日元计算。<span class="sev">中</span></div></li>
   </ol>
 
-  <h2><span class="no">05</span>模拟盘：虚拟 500 万 × 5 个账户</h2>
-  <p class="prose">你说"给你 500 万日元自己去交易，必须用真实数据"。实现方式如下：同一套规则跑 5 个账户，一个是我自己凭判断操作的，另外 4 个是事先写死的策略。全部用 Yahoo 的真实收盘价，每一笔成交的日期、价格、汇率都记在 <code>paper/state.json</code>，事后可以逐笔核对。不会真的下单。</p>
+  <h2><span class="no">05</span>模拟盘：虚拟 500 万 × 18 个账户</h2>
+  <p class="prose">你说"给你 500 万日元自己去交易，必须用真实数据"。实现方式如下：同一套规则跑 18 个账户，一个是我自己凭判断操作的，另外 17 个是事先写死、来自公开文献的策略（下表只列主要的 5 个，全部 18 个在 <a href="https://claude.ai/artifact/4UHKcCEXmkn67ocnwvLCF6">模拟器的「实盘进度」</a>里）。全部用 Yahoo 的真实收盘价，每一笔成交的日期、价格、汇率都记在 <code>paper/state.json</code>，事后可以逐笔核对。不会真的下单。</p>
   <figure>
     <div class="canvas">
     <svg class="dg" viewBox="0 0 1000 250" role="img" aria-label="模拟盘时间线：用 D 日收盘前的数据决定，在 D 之后第一个收盘价成交，扣除费用后估值并自动提交">
@@ -339,6 +341,12 @@ table.data td.num { font-family: var(--f-mono); }
   <div id="live"></div>
 
   <h2><span class="no">06</span>回测：同样的规则，2009 年至今的真实数据</h2>
+  <div class="note blue"><b>17 个策略的完整比较在 <a href="https://claude.ai/artifact/4UHKcCEXmkn67ocnwvLCF6">模拟器的「策略排行榜」</a>。</b>包括 NISA 和课税账户、一次性投入和定投、8 个不同起点的 10 年定投、前后半段的排名变化，以及参数敏感性。概括地说：
+    <ul style="margin:6px 0 0;padding-left:18px">
+      <li>择时和动量类的 7 个策略，在一次性投入和定投下都输给"全球股一只不动"；放在课税账户里，定投年化再少 1.4～2.6 个百分点。</li>
+      <li>8 段 10 年定投全部胜出的只有"S&amp;P500 一只"，原因是这十几年美国股市特别强，不能当成规律。</li>
+      <li>把策略参数换成相邻的值，年化就会相差 3.4～5.8 个百分点；用前半段选出的"最好参数"，到后半段不一定还好。</li>
+    </ul></div>
   <p class="prose">先说这一节最重要的结论：<b>一个月的成绩几乎全看运气。</b>下面第二张图是过去 17 年里所有"一个月"的回报分布。11 月 12 日出来的结果，只会落在这个范围里的某个位置。</p>
   <div id="bt"></div>
 
