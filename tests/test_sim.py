@@ -159,3 +159,41 @@ def test_taxable_account_withholds_and_refunds_within_the_year():
     assert b.tax_paid == pytest.approx(0)
     b._withhold(2027, 50_000)                  # 年が変わると通算はリセット（繰越控除はしない）
     assert b.tax_paid == pytest.approx(50_000 * TAX_RATE)
+
+
+def test_yearly_sells_only_in_january():
+    """年 1 回の戦略は、積立中でも売って戻すのは年初だけ。毎月戻す戦略は年の途中でも売る。"""
+    from src.sim import Book as B
+
+    idx = pd.bdate_range("2026-01-01", "2027-03-31")
+    n = len(idx)
+    p = Prices({"VT": pd.Series([100 * 1.004 ** k for k in range(n)], index=idx),
+                "1348.T": pd.Series([4000 * 0.998 ** k for k in range(n)], index=idx)},
+               pd.Series([150.0] * n, index=idx))
+    sells: dict[str, list] = {"y": [], "m": []}
+    orig = B._fill
+
+    def spy(self, o, prices, day, costs):
+        if o["side"] == "sell":
+            sells[self.name].append(pd.Timestamp(o["decided"]))
+        return orig(self, o, prices, day, costs)
+
+    B._fill = spy
+    try:
+        mix = lambda h, d=None: {"VT": 0.5, "1348.T": 0.5}  # noqa: E731
+        backtest(p, idx[0], 10_000_000, costs=ZERO, monthly=10_000,
+                 strategies={"y": (mix, "yearly"), "m": (mix, "monthly")})
+    finally:
+        B._fill = orig
+    assert sells["y"] and all(d.month == 1 for d in sells["y"])
+    assert any(d.month != 1 for d in sells["m"])
+
+
+def test_liquidated_value_taxes_unrealized_gain():
+    from src.sim import TAX_RATE, BacktestResult
+
+    r = BacktestResult("x", pd.Series([100.0, 150.0], index=pd.bdate_range("2026-01-05", periods=2)), 1, 0, 0)
+    r.unrealized = 50.0
+    assert r.liquidated() == pytest.approx(150 - 50 * TAX_RATE)
+    r.unrealized = -10.0
+    assert r.liquidated() == pytest.approx(150)

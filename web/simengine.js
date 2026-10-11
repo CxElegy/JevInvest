@@ -317,7 +317,12 @@
         b.processDay(p, i);
         if (isDue(st.freq, p, i, prev, b.lastDecision !== null, !!monthly)) {
           const target = st.fn(p, i);
-          if (target !== null) b.decide(p, i, target, 0.005, k);   // null は「今のまま」
+          if (target !== null) {                                    // null は「今のまま」
+            b.decide(p, i, target, 0.005, k);
+            // 年 1 回の戦略は、年の途中の積立月には買い増しだけ（src/sim.py と同じ）
+            if (st.freq === "yearly" && prev !== null && p.dates[i].slice(0, 4) === p.dates[prev].slice(0, 4))
+              b.pending = b.pending.filter(o => o.side === "buy");
+          }
         }
       }
       prev = i;

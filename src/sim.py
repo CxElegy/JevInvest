@@ -543,6 +543,11 @@ class BacktestResult:
     realized: float
     flows: list = field(default_factory=list)   # 投資家から見た入金（負）。積立の金額加重リターン用
     tax_paid: float = 0.0                       # 課税口座で実際に差し引いた税（還付後）
+    unrealized: float = 0.0                     # 最終日の含み益（円）。課税口座で全部売ったときの税の計算用
+
+    def liquidated(self) -> float:
+        """最終日に全部売って、含み益にも 20.315% を払った後の額（課税口座の比較用）。"""
+        return float(self.nav.iloc[-1]) - max(self.unrealized, 0.0) * TAX_RATE
 
     def money_weighted(self) -> float | None:
         """積立の年率（XIRR）。入金と最終評価額から出す。"""
@@ -593,6 +598,9 @@ def backtest(prices: Prices, start: pd.Timestamp, capital: float,
                 target = fn(prices.upto(day), day)
                 if target is not None:          # None は「今のまま」（押し目待ちなど）
                     b.decide(prices, day, target, reason=name)
+                    if freq == "yearly" and prev is not None and day.year == prev.year:
+                        # 年 1 回の戦略は、年の途中の積立月には買い増しだけ（売って戻すのは年初）
+                        b.pending = [o for o in b.pending if o["side"] == "buy"]
         prev = day
     out = {}
     for name, b in books.items():
@@ -600,6 +608,9 @@ def backtest(prices: Prices, start: pd.Timestamp, capital: float,
         r = BacktestResult(name, nav, len(b.trades), b.fees, b.realized)
         r.flows = flows.get(name, [])
         r.tax_paid = b.tax_paid
+        if cal:
+            last = cal[-1]
+            r.unrealized = sum(q * prices.jpy(sym, last) - b.cost.get(sym, 0.0) for sym, q in b.qty.items() if q)
         out[name] = r
     return out
 

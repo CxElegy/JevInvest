@@ -643,14 +643,14 @@ const INFO = {
   sp500: ["只买美国 S&P500（SPY），不动。日本「新NISA」里最受欢迎的选择之一。", "Buffett 2013 年致股东信（给妻子信托的 90/10 建议）", "过去 17 年美国股市一枝独秀，所以排第一；这是事后看到的结果，不能保证将来。"],
   home_bias: ["日本股（TOPIX）和全球股各一半。", "French & Poterba (1991) 关于本国偏好的研究", "日本人常见的配置。好处是一半是日元资产，日元升值时缓冲。"],
   sixty_forty: ["全球股 60%、美国债券 40%，每月调回。", "传统的平衡型配置", "跌得少，但长期回报也低。"],
-  permanent: ["美国股、长期国债、黄金、短期国债各 25%，每年调回一次。", "Harry Browne「Fail-Safe Investing」(1999)", "最大回撤最小的一类，适合受不了大跌的人；代价是长期回报低很多。"],
+  permanent: ["美国股、长期国债、黄金、短期国债各 25%，每年调回一次。", "Harry Browne「Fail-Safe Investing」(1999)", "定投时，年中的每月投入只买不卖，年初才卖出调回。最大回撤最小的一类，适合受不了大跌的人；代价是长期回报低很多。"],
   all_weather: ["美国股 30%、长期国债 40%、中期国债 15%、黄金 7.5%、大宗商品 7.5%。", "Dalio 在 Tony Robbins「Money: Master the Game」(2014) 中给出的简化版", "这是公开的近似，不是 Bridgewater 实际的基金。"],
   ivy: ["美国股、美国以外股、中期国债、房地产、大宗商品各 20%。", "Faber & Richardson「The Ivy Portfolio」(2009)", "模仿耶鲁、哈佛基金的分散方式。"],
   risk_parity: ["全球股、长期国债、黄金、大宗商品，按过去半年波动的倒数分配（越稳的放越多）。", "Qian (2005)；Asness, Frazzini & Pedersen (2012)", "真正的风险平价会用杠杆，这里不用，所以回报偏低。"],
   trend: ["5 种资产各 20%，跌破 200 日均线的那份换成现金。", "Faber (2007) A Quantitative Approach to Tactical Asset Allocation", "大跌时能躲一部分，但牛市里经常踏空。"],
   dual_momentum: ["比较过去 12 个月：美国股和美国以外股哪个强，强的那个如果也比短期国债强就全买它，否则全买债券。", "Antonacci「Dual Momentum Investing」(2014)", "一次只持有一种资产，换仓时变化很大。"],
   ivy_timing: ["Ivy 五资产，跌破 200 日均线的换成现金。", "Faber (2007)", ""],
-  momentum_top3: ["8 种资产里，1/3/6/12 个月平均涨幅最好的 3 个，各 1/3；跌破 200 日均线的换成现金。", "Faber「GTAA Aggressive」", "交易最多的策略之一，在课税账户里税的拖累最大。"],
+  momentum_top3: ["8 种资产里，1/3/6/12 个月平均涨幅最好的 3 个，各 1/3；跌破 200 日均线的换成现金。", "Faber「GTAA Aggressive」", "交易最多的策略之一，属于课税账户里税的拖累最大的一类。"],
   vol_target: ["全球股最近 60 天的年化波动超过 12% 时，按比例减仓到短期国债。", "Moreira & Muir (2017) Journal of Finance「Volatility-Managed Portfolios」", ""],
   spy_timing: ["S&P500 在 200 日均线上方时全仓，下方时全换短期国债。", "Faber (2007)", "前半段看起来很好，后半段明显变差，这是过度拟合的典型样子。"],
   sell_in_may: ["5～10 月持有短期国债，11～4 月持有全球股。", "Bouman & Jacobsen (2002) American Economic Review「The Halloween Indicator」", "股市格言的检验。"],
@@ -666,9 +666,9 @@ function renderBoard() {
   $("bView").innerHTML = Object.entries(VIEWS).map(([k, l]) => `<button class="chip" data-v="${k}" style="${k === bView ? "border-color:var(--accent);color:var(--accent)" : ""}">${l}</button>`).join("");
   const cols = {
     lump: [["cagr", "年化", pct], ["vol", "年化波动", v => (v * 100).toFixed(1) + "%"], ["max_dd", "最大回撤", v => pct(v, 1)], ["worst_year", "最差一年", v => pct(v, 1)], ["trades", "成交", v => v]],
-    lump_tax: [["taxable_cagr", "税后年化", pct], ["cagr", "NISA 年化", pct], ["tax_paid", "交的税（円）", yen], ["trades", "成交", v => v]],
+    lump_tax: [["taxable_liq_cagr", "税后年化（期末卖光）", pct], ["cagr", "NISA 年化", pct], ["taxable_cagr", "不卖时", pct], ["tax_total", "交的税（含期末）", yen], ["trades", "成交", v => v]],
     dca: [["dca_xirr", "年化 XIRR", pct], ["dca_final", "最终金额", yen], ["max_dd", "最大回撤*", v => pct(v, 1)]],
-    dca_tax: [["dca_tax_xirr", "税后 XIRR", pct], ["dca_xirr", "NISA XIRR", pct], ["dca_tax_final", "税后最终金额", yen]],
+    dca_tax: [["dca_tax_liq_xirr", "税后 XIRR（期末卖光）", pct], ["dca_xirr", "NISA XIRR", pct], ["dca_tax_xirr", "不卖时", pct], ["dca_tax_liq_final", "卖光后到手", yen]],
   }[bView];
   const all = cols.concat([["rolling_wins", "10 年定投胜出", v => v == null ? "基准" : `${v} / ${Object.keys(S.allcountry.rolling).length}`], ["first_cagr", "前半", pct], ["second_cagr", "后半", pct]]);
   const sk = bSort.key && all.some(c => c[0] === bSort.key) ? bSort.key : cols[0][0];
@@ -681,20 +681,24 @@ function renderBoard() {
   const base = S.allcountry;
   $("bTable").innerHTML = `<thead><tr><th>#</th><th>策略</th>${all.map(c => `<th data-k="${c[0]}" style="cursor:pointer">${c[1]}${c[0] === sk ? (bSort.dir < 0 ? " ↓" : " ↑") : ""}</th>`).join("")}</tr></thead><tbody>` +
     order.map((k, r) => `<tr${k === "allcountry" ? ' style="background:var(--accent-soft)"' : ""}><td class="num">${r + 1}</td><td>${STRAT[k].label}</td>${all.map(c => {
-      const v = S[k][c[0]]; const better = ["cagr", "taxable_cagr", "dca_xirr", "dca_tax_xirr", "first_cagr", "second_cagr"].includes(c[0]) && k !== "allcountry" ? (v > base[c[0]] ? "pos" : "neg") : "";
+      const v = S[k][c[0]]; const better = ["cagr", "taxable_cagr", "taxable_liq_cagr", "dca_xirr", "dca_tax_xirr", "dca_tax_liq_xirr", "first_cagr", "second_cagr"].includes(c[0]) && k !== "allcountry" ? (v > base[c[0]] ? "pos" : "neg") : "";
       return `<td class="num ${better}">${c[2](v)}</td>`; }).join("")}</tr>`).join("") + "</tbody>";
   $("bTable").querySelectorAll("th[data-k]").forEach(th => th.addEventListener("click", () => { bSort = { key: th.dataset.k, dir: bSort.key === th.dataset.k ? -bSort.dir : -1 }; renderBoard(); }));
   if (bView === "dca") $("bTable").insertAdjacentHTML("beforeend", '<caption style="caption-side:bottom;text-align:left" class="note">* 最大回撤取自一次性投入。</caption>');
+  if (bView === "lump_tax" || bView === "dca_tax") $("bTable").insertAdjacentHTML("beforeend", '<caption style="caption-side:bottom;text-align:left" class="note">课税账户按"最后一天全部卖出、未实现收益也交 20.315%"来比，这样"不动"的策略也算上了税。分红的税没有算（价格含分红再投资），所以"不动"类实际上还会再少一点。</caption>');
   // 结论（由数据算出）
   const beatLump = keys.filter(k => k !== "allcountry" && S[k].cagr > base.cagr);
   const beatRoll = keys.filter(k => k !== "allcountry" && S[k].rolling_wins === Object.keys(base.rolling).length);
   const timing = ["trend", "dual_momentum", "ivy_timing", "momentum_top3", "vol_target", "spy_timing", "sell_in_may"];
-  const tdrag = timing.map(k => S[k].dca_xirr - S[k].dca_tax_xirr);
+  // 课税账户的拖累，和基准自己的拖累相比（基准期末卖光也要交税）
+  const liq = k => S[k].dca_tax_liq_xirr ?? S[k].dca_tax_xirr;
+  const baseDrag = base.dca_xirr - liq("allcountry");
+  const tdrag = timing.map(k => (S[k].dca_xirr - liq(k)) - baseDrag);
   const tLose = timing.filter(k => S[k].cagr < base.cagr && S[k].dca_xirr < base.dca_xirr).length;
   const lowDD = keys.filter(k => S[k].max_dd > -0.2).map(k => STRAT[k].label);
-  $("bVerdict").innerHTML = `<b>数据说的话：</b>① 17 个策略里，一次性投入的年化赢过全球股一只的只有 ${beatLump.length} 个（${beatLump.map(k => STRAT[k].label).join("、") || "无"}）；8 段 10 年定投全部胜出的只有 ${beatRoll.map(k => STRAT[k].label).join("、") || "无"}，那是美国股市这十几年特别强。` +
-    ` ② ${timing.length} 个择时/动量策略里，一次性和定投都输给"不动"的有 ${tLose} 个。放在课税账户，定投年化再少 ${pct(Math.min(...tdrag), 1).replace("+", "")}～${pct(Math.max(...tdrag), 1).replace("+", "")}。` +
-    ` ③ 最大回撤小于 20% 的是：${lowDD.join("、")}，换来的是明显更低的回报。<br><b>还有一点要知道：</b>${DATA.fx ? `这段时间 1 美元从 ${DATA.fx.fx0.toFixed(0)} 日元变成 ${DATA.fx.fx1.toFixed(0)} 日元，日元每年贬值约 ${(DATA.fx.fx_cagr * 100).toFixed(1)}%。全球股的年化用美元算是 ${pct(DATA.fx.vt_usd, 1)}，用日元算是 ${pct(DATA.fx.vt_jpy, 1)}，差的部分就是日元贬值带来的。以后日元升值时，这部分会反过来变成损失。` : ""}<br><b>对你的意思：</b>NISA 里的核心部分，"不动"已经是很难打败的选项。真正要选的是能不能忍住 -34% 的下跌；忍不住的话，就加债券、黄金或日元资产降低波动，而不是去择时。`;
+  $("bVerdict").innerHTML = `<b>数据说的话：</b>① ${keys.length} 个策略里，一次性投入的年化赢过全球股一只的只有 ${beatLump.length} 个（${beatLump.map(k => STRAT[k].label).join("、") || "无"}）；${Object.keys(base.rolling).length} 段 10 年定投全部胜出的只有 ${beatRoll.map(k => STRAT[k].label).join("、") || "无"}，那是美国股市这十几年特别强。` +
+    ` ② ${timing.length} 个择时/动量策略里，一次性和定投都输给"不动"的有 ${tLose} 个。放在课税账户（期末卖光、两边都交税），它们的税比"不动"每年多吃掉 ${pct(Math.min(...tdrag), 1).replace("+", "")}～${pct(Math.max(...tdrag), 1).replace("+", "")}。` +
+    ` ③ 最大回撤小于 20% 的是：${lowDD.join("、")}，换来的是明显更低的回报。<br><b>还有一点要知道：</b>${DATA.fx ? `这段时间 1 美元从 ${DATA.fx.fx0.toFixed(0)} 日元变成 ${DATA.fx.fx1.toFixed(0)} 日元，日元每年贬值约 ${(DATA.fx.fx_cagr * 100).toFixed(1)}%。全球股的年化用美元算是 ${pct(DATA.fx.vt_usd, 1)}，用日元算是 ${pct(DATA.fx.vt_jpy, 1)}，差的部分就是日元贬值带来的。以后日元升值时，这部分会反过来变成损失。` : ""}<br><b>对你的意思：</b>NISA 里的核心部分，"不动"已经是很难打败的选项。真正要选的是能不能忍住 ${pct(base.max_dd, 0)} 的下跌；忍不住的话，就加债券、黄金或日元资产降低波动，而不是去择时。`;
   $("bView").onclick = e => { const b = e.target.closest("button"); if (!b) return; bView = b.dataset.v; bSort = { key: null, dir: -1 }; renderBoard(); };
   scatter(S);
   renderSensitivity();
@@ -714,7 +718,7 @@ function renderBoard() {
   // 卡片
   $("bCards").innerHTML = keys.map(k => {
     const x = S[k], info = INFO[k] || ["", "", ""];
-    const verdict = k === "allcountry" ? "基准。" : `10 年定投 ${x.rolling_wins} / ${yrs.length} 段赢过基准；一次性年化 ${pct(x.cagr - base.cagr, 1)}（对比基准），最大回撤 ${pct(x.max_dd, 0)}；课税账户里定投年化少 ${pct(x.dca_xirr - x.dca_tax_xirr, 1).replace("+", "")}。`;
+    const verdict = k === "allcountry" ? "基准。" : `10 年定投 ${x.rolling_wins} / ${yrs.length} 段赢过基准；一次性年化 ${pct(x.cagr - base.cagr, 1)}（对比基准），最大回撤 ${pct(x.max_dd, 0)}；课税账户（期末卖光）定投年化 ${pct((x.dca_tax_liq_xirr ?? x.dca_tax_xirr), 1)}，基准是 ${pct((base.dca_tax_liq_xirr ?? base.dca_tax_xirr), 1)}。`;
     return `<div class="dc"><div class="h"><span>${STRAT[k].label}</span><span class="mono ${cls(x.cagr - base.cagr)}">${pct(x.cagr, 1)}</span></div><p style="margin:6px 0">${info[0]}</p><div class="note">出处：${info[1]}</div>${info[2] ? `<div class="note" style="margin-top:4px">${info[2]}</div>` : ""}<div style="margin-top:6px;font-size:13px">${verdict}</div><div class="btnrow" style="margin-top:8px"><button class="chip" data-try="${k}">在回放里试</button></div></div>`;
   }).join("");
   $("bCards").onclick = e => { const b = e.target.closest("[data-try]"); if (!b) return; const k = b.dataset.try;

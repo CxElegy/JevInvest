@@ -225,10 +225,17 @@ def cmd_run(args) -> None:
             b.process_day(prices, day, costs)
             if name in ALL_STRATEGIES:
                 fn, freq = ALL_STRATEGIES[name]
-                if is_due(freq, day, prev, b.last_decision is not None):
+                due = is_due(freq, day, prev, b.last_decision is not None)
+                # 買って持つだけの口座も、受け取った分配金などの現金が残っていたら月初に買い足す
+                # （バックテストは配当込み価格で再投資扱いなので、それと揃える）。売りは出さない
+                idle = (freq == "once" and is_rebalance_day(day, prev)
+                        and b.cash > 0.005 * b.value(prices, day))
+                if due or idle:
                     target = fn(prices.upto(day), day)
                     if target is not None:
                         b.decide(prices, day, target, reason=name)
+                        if not due:
+                            b.pending = [o for o in b.pending if o["side"] == "buy"]
     _apply_claude(st, prices, upto=None)
     save_state(st)
     write_report(st)
@@ -289,7 +296,7 @@ def write_report(st: dict) -> None:
     base = books["allcountry"]
     base_ret = base.nav[-1][1] / cap - 1
     lines = [
-        "# ペーパートレード（仮想 500 万円 × 5 口座）",
+        f"# ペーパートレード（仮想 {cap / 1e4:,.0f} 万円 × {len(books)} 口座）",
         "",
         "実際の発注はしていない。価格は Yahoo Finance の実際の終値。判断の翌営業日の終値で約定し、"
         "手数料 0.10%・スリッページ 0.05%・為替スプレッド 25 銭を引いている。"

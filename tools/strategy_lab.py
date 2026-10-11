@@ -42,6 +42,19 @@ def cagr(nav: pd.Series) -> float:
     return float((nav.iloc[-1] / nav.iloc[0]) ** (1 / years) - 1) if years > 0 else 0.0
 
 
+def liq_cagr(r) -> float:
+    """課税口座で最終日に全部売った後の年率（含み益にも課税）。"""
+    nav = r.nav
+    years = (nav.index[-1] - nav.index[0]).days / 365.25
+    return float((r.liquidated() / nav.iloc[0]) ** (1 / years) - 1)
+
+
+def liq_xirr(r) -> float | None:
+    from src.transactions import xirr
+
+    return xirr(r.flows + [(r.nav.index[-1].date(), r.liquidated())])
+
+
 def yearly(nav: pd.Series) -> dict[str, float]:
     ends = nav.groupby(nav.index.year).last()
     prev = nav.iloc[0]
@@ -94,10 +107,16 @@ def main() -> None:
             "final": float(nav.iloc[-1]),
             "worst_year": min(full_years.values()), "best_year": max(full_years.values()),
             "yearly": yr,
+            # 課税口座: 「売らずに持っている状態」と「最終日に全部売って含み益にも課税した後」の両方。
+            # 比べるのは後者（買って持つだけの戦略は売らないので、前者だと税がかからないように見える）
             "taxable_final": float(lump_tax[k].nav.iloc[-1]), "taxable_cagr": cagr(lump_tax[k].nav),
+            "taxable_liq_final": lump_tax[k].liquidated(), "taxable_liq_cagr": liq_cagr(lump_tax[k]),
             "tax_paid": lump_tax[k].tax_paid,
+            "tax_total": lump_tax[k].tax_paid + max(lump_tax[k].unrealized, 0.0) * 0.20315,
             "dca_xirr": dca[k].money_weighted(), "dca_tax_xirr": dca_tax[k].money_weighted(),
+            "dca_tax_liq_xirr": liq_xirr(dca_tax[k]),
             "dca_final": float(dca[k].nav.iloc[-1]), "dca_tax_final": float(dca_tax[k].nav.iloc[-1]),
+            "dca_tax_liq_final": dca_tax[k].liquidated(),
             "first_cagr": cagr(first[k].nav), "second_cagr": cagr(second[k].nav),
             "rolling": {y: row[k] for y, row in rolling.items()},
             "rolling_wins": wins,
@@ -106,7 +125,7 @@ def main() -> None:
     OUT.write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     print(f"→ {OUT.relative_to(ROOT)}（{OUT.stat().st_size / 1024:.0f} KB）")
     for k, v in sorted(out["strategies"].items(), key=lambda kv: -kv[1]["dca_xirr"]):
-        print(f"  {k:<15} 積立 NISA {v['dca_xirr'] * 100:5.2f}% 課税 {v['dca_tax_xirr'] * 100:5.2f}%  "
+        print(f"  {k:<15} 積立 NISA {v['dca_xirr'] * 100:5.2f}% 課税(全部売却後) {v['dca_tax_liq_xirr'] * 100:5.2f}%  "
               f"前半 {v['first_cagr'] * 100:5.1f}% 後半 {v['second_cagr'] * 100:5.1f}%  10 年勝ち {v['rolling_wins']}")
 
 
