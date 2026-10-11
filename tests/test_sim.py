@@ -197,3 +197,18 @@ def test_liquidated_value_taxes_unrealized_gain():
     assert r.liquidated() == pytest.approx(150 - 50 * TAX_RATE)
     r.unrealized = -10.0
     assert r.liquidated() == pytest.approx(150)
+
+
+def test_export_flags_unadjusted_split_like_jumps():
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
+    from export_sim_data import suspicious_moves
+
+    idx = pd.bdate_range("2015-01-01", periods=4)
+    p = Prices({"1306.T": pd.Series([1442.0, 143.3, 144.0, 145.0], index=idx),
+                "VT": pd.Series([100.0, 101.0, 99.0, 100.0], index=idx)},
+               pd.Series([120.0] * 4, index=idx))
+    bad = suspicious_moves(p)
+    assert len(bad) == 1 and bad[0].startswith("1306.T 2015-01-02")

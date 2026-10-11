@@ -43,9 +43,27 @@ def to_payload(prices: Prices, source: str) -> dict:
     }
 
 
+JUMP = 0.25   # 1 日でこれ以上動いたら、未調整の分割や配信ミスを疑う
+
+
+def suspicious_moves(prices: Prices) -> list[str]:
+    """1 日で ±25% を超える動き。1306.T の未調整分割のような壊れたデータを、黙って使わないため。"""
+    out = []
+    for s, ser in prices.series.items():
+        r = ser.pct_change().dropna()
+        for d, v in r[r.abs() > JUMP].items():
+            out.append(f"{s} {d.date()} {v * 100:+.1f}%")
+    return out
+
+
 def main() -> None:
     hist = fetch_bars(years=18.5)
     prices = Prices({s: hist[s]["adj_close"] for s in UNIVERSE}, hist[FX_SYMBOL]["close"])
+    bad = suspicious_moves(prices)
+    if bad:
+        # 2008〜2009 年や 2020 年でも ±25% を超える日は対象の ETF ではほぼ無い。出たら止めて人が確かめる
+        raise SystemExit("1 日で ±25% を超える動きがあります。分割の未調整や配信ミスの可能性があるため、"
+                         "web/simdata.json は更新しません:\n  " + "\n  ".join(bad))
     data = to_payload(prices, "Yahoo Finance 日足（配当調整後終値・USDJPY 終値）")
     OUT.write_text(json.dumps(data, separators=(",", ":")), encoding="utf-8")
     print(f"→ {OUT.relative_to(ROOT)}（{len(data['dates'])} 営業日、{OUT.stat().st_size / 1024:.0f} KB）"
