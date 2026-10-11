@@ -361,7 +361,85 @@
     return out;
   }
 
-  const api = { Prices, Book, STRATEGIES, MORE_STRATEGIES, ALL_STRATEGIES, TREND_ASSETS, COSTS, backtest, stats, xirr,
+  // ---------------------------------------------------------------- 未来の分布（ブロック・ブートストラップ）
+  //
+  // 実データの「月ごとの円建てリターン」を 12 か月のかたまりで復元抽出してつなぎ、将来の道筋を何千本も作る。
+  // かたまりで取るのは、暴落が何か月も続くような並び（自己相関）を壊さないため。
+  // 過去の分布をそのまま使うので、過去が良すぎた分だけ楽観的になる → haircut（年率で差し引く）を用意する。
+
+  function mulberry32(seed) {
+    let a = seed >>> 0;
+    return () => {
+      a = (a + 0x6D2B79F5) >>> 0;
+      let t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  /** 月末の円建て価格から月次リターン。window の全銘柄がそろっている月だけ（比べる配分どうしで期間を揃える）。 */
+  function monthlyReturns(p, symbols, window) {
+    const need = [...new Set([...(window || []), ...symbols])];
+    const months = [], level = {};
+    for (const s of symbols) level[s] = [];
+    for (let i = 0; i < p.n; i++) {
+      const m = p.dates[i].slice(0, 7);
+      const last = i === p.n - 1 || p.dates[i + 1].slice(0, 7) !== m;
+      if (!last) continue;
+      if (need.some(s => p.jpy(s, i) == null)) continue;
+      const vals = symbols.map(s => p.jpy(s, i));
+      months.push(m);
+      symbols.forEach((s, k) => level[s].push(vals[k]));
+    }
+    const r = {};
+    for (const s of symbols) r[s] = level[s].slice(1).map((v, k) => v / level[s][k] - 1);
+    return { months: months.slice(1), r };
+  }
+
+  /**
+   * opts: { weights: {SYM: w}, initial, monthly, years, paths, block, seed, haircut }
+   *   weights の合計が 1 未満なら残りは現金（リターン 0）。毎月その比率に戻す前提。
+   *   haircut: 株・債券などすべての資産の月次リターンから年率でこの分を差し引く（0.02 = 年 2%）。
+   */
+  function bootstrap(p, opts) {
+    const syms = Object.keys(opts.weights).filter(s => opts.weights[s] > 0);
+    const { months, r } = monthlyReturns(p, syms, opts.window);
+    const n = months.length;
+    const port = new Array(n).fill(0);
+    for (let k = 0; k < n; k++) for (const s of syms) port[k] += opts.weights[s] * r[s][k];
+    const hc = Math.pow(1 + (opts.haircut || 0), 1 / 12) - 1;
+    const T = Math.round(opts.years * 12), N = opts.paths || 2000, B = opts.block || 12;
+    const rnd = mulberry32(opts.seed || 1);
+    const values = Array.from({ length: T + 1 }, () => new Float64Array(N));
+    const paidAt = k => opts.initial + opts.monthly * k;
+    const finals = new Float64Array(N), dds = new Float64Array(N);
+    for (let j = 0; j < N; j++) {
+      let v = opts.initial, peakRatio = 1, worst = 0, t = 0;
+      values[0][j] = v;
+      while (t < T) {
+        const start = Math.floor(rnd() * (n - B + 1));
+        for (let b = 0; b < B && t < T; b++, t++) {
+          v = v * (1 + port[start + b] - hc) + opts.monthly;
+          values[t + 1][j] = v;
+          const ratio = v / paidAt(t + 1);           // 入れた額に対する倍率で下落を測る（積立で見かけが膨らむのを除く）
+          peakRatio = Math.max(peakRatio, ratio);
+          worst = Math.min(worst, ratio / peakRatio - 1);
+        }
+      }
+      finals[j] = v; dds[j] = worst;
+    }
+    const q = (arr, f) => { const a = Array.from(arr).sort((x, y) => x - y); return a[Math.min(a.length - 1, Math.max(0, Math.floor(f * (a.length - 1))))]; };
+    const bands = values.map(col => { const a = Array.from(col).sort((x, y) => x - y); const at = f => a[Math.floor(f * (a.length - 1))]; return [at(0.05), at(0.25), at(0.5), at(0.75), at(0.95)]; });
+    const paid = paidAt(T);
+    let loss = 0; for (const f of finals) if (f < paid) loss++;
+    return { months: n, from: months[0], to: months[n - 1], bands, paid, pLoss: loss / N,
+             final: { p05: q(finals, 0.05), p25: q(finals, 0.25), p50: q(finals, 0.5), p75: q(finals, 0.75), p95: q(finals, 0.95) },
+             dd: { p50: q(dds, 0.5), p05: q(dds, 0.05) },
+             histMean: port.reduce((a, x) => a + x, 0) / n };
+  }
+
+  const api = { Prices, Book, bootstrap, monthlyReturns, mulberry32, STRATEGIES, MORE_STRATEGIES, ALL_STRATEGIES, TREND_ASSETS, COSTS, backtest, stats, xirr,
                 windowReturns, vals, ret, aboveSma, vol, isDue };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.SimEngine = api;

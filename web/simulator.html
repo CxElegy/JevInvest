@@ -55,6 +55,7 @@ section[role="tabpanel"] { padding-top: 20px; }
 .checks { display: grid; gap: 6px; font-size: 14px; }
 .checks label { display: flex; align-items: center; gap: 8px; color: var(--fg); font-size: 14px; }
 .sw { display: inline-block; width: 14px; height: 4px; border-radius: 2px; vertical-align: middle; }
+.wgrid label { font-size: 13px; line-height: 1.3; }
 .wgrid { display: grid; grid-template-columns: 1fr 74px; gap: 4px 8px; align-items: center; font-size: 13.5px; }
 .wgrid input { padding: 4px 6px; font: 14px var(--f-mono); text-align: right; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); color: var(--fg); width: 100%; }
 .wsum { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
@@ -109,6 +110,7 @@ svg.chart { display: block; width: 100%; height: auto; }
     <button role="tab" id="tab-replay" aria-controls="t-replay" aria-selected="true">回放实验</button>
     <button role="tab" id="tab-game" aria-controls="t-game" aria-selected="false">你来操盘</button>
     <button role="tab" id="tab-board" aria-controls="t-board" aria-selected="false">策略排行榜</button>
+    <button role="tab" id="tab-future" aria-controls="t-future" aria-selected="false">未来模拟</button>
     <button role="tab" id="tab-live" aria-controls="t-live" aria-selected="false">实盘进度</button>
   </div>
 
@@ -246,6 +248,33 @@ svg.chart { display: block; width: 100%; height: auto; }
     </div>
   </section>
 
+  <!-- 未来模拟 -->
+  <section role="tabpanel" id="t-future" aria-labelledby="tab-future" hidden>
+    <div class="desk">
+      <div>
+        <div class="panel ctl">
+          <div><div class="note" style="margin-bottom:6px">配置</div><div class="chips" id="fPresets"></div></div>
+          <div class="wgrid" id="fW"></div><div class="wsum" id="fWsum"></div>
+          <label for="fInit">起步（日元）<input id="fInit" type="number" step="100000" min="0" value="1000000"></label>
+          <label for="fMonthly">每月投入（日元）<input id="fMonthly" type="number" step="10000" min="0" value="200000"></label>
+          <label for="fYears">年数<select id="fYears"><option value="10">10 年</option><option value="20" selected>20 年</option><option value="30">30 年</option></select></label>
+          <label for="fCut">保守折扣（每年从所有资产的回报里扣掉）<select id="fCut"><option value="0">0%（照搬过去）</option><option value="0.01">1%</option><option value="0.02" selected>2%</option><option value="0.03">3%</option><option value="0.04">4%</option></select></label>
+        </div>
+      </div>
+      <div style="min-width:0">
+        <div class="panel">
+          <h2 id="fTitle">未来会怎样</h2>
+          <div class="luck" id="fNote"></div>
+          <div class="tiles" id="fTiles"></div>
+        </div>
+        <div class="panel"><h3 style="margin-top:0">2000 条可能的路径（日元）</h3><div id="fFan"></div>
+          <div class="legend"><span><span class="sw" style="background:var(--accent)"></span>中位数</span><span><span class="sw" style="background:var(--accent);opacity:.35;height:10px"></span>中间一半（25%～75%）</span><span><span class="sw" style="background:var(--accent);opacity:.15;height:10px"></span>90% 的路径（5%～95%）</span><span><span class="sw" style="background:var(--muted)"></span>投入合计</span></div></div>
+        <div class="panel"><h3 style="margin-top:0">同样的投入，换个配置</h3><div class="scroll"><table class="data" id="fCompare"></table></div>
+          <p class="note">每个配置都用同一段历史、同一组随机抽样（1000 条路径），所以差别只来自配置本身。</p></div>
+      </div>
+    </div>
+  </section>
+
   <!-- 实盘进度 -->
   <section role="tabpanel" id="t-live" aria-labelledby="tab-live" hidden>
     <div id="liveBox"></div>
@@ -257,7 +286,7 @@ svg.chart { display: block; width: 100%; height: auto; }
 const DATA = /*__DATA__*/null;
 const E = window.SimEngine;
 const P = new E.Prices(DATA.sim);
-const NAMES = { VT: "全球股", QQQ: "美国科技（纳指100）", SPY: "美国大盘（S&P500）", VEU: "美国以外股", AGG: "美国债券", BIL: "美国短期国债", GLD: "黄金", "1348.T": "日本股（TOPIX）" };
+const NAMES = { VT: "全球股", QQQ: "美国科技（纳指100）", SPY: "美国大盘（S&P500）", VEU: "美国以外股", AGG: "美国债券", BIL: "美国短期国债", GLD: "黄金", "1348.T": "日本股（TOPIX）", TLT: "美国长期国债", IEF: "美国中期国债", DBC: "大宗商品", VNQ: "美国房地产" };
 const STRAT = {
   allcountry: { label: "全球股一只·不动" }, core_satellite: { label: "你的目标配置" }, sp500: { label: "S&P500 一只·不动" },
   home_bias: { label: "日本股 50 / 全球股 50" }, custom: { label: "你的自定义" },
@@ -284,6 +313,7 @@ function colorOf(k) {
   return SLOT_COLORS[slotOf[k]];
 }
 const yen = v => Math.round(v).toLocaleString("ja-JP");
+const man = v => Math.round(v / 1e4).toLocaleString("ja-JP") + " 万円";
 const pct = (v, d = 2) => v == null ? "—" : (v >= 0 ? "+" : "") + (v * 100).toFixed(d) + "%";
 const cls = v => v > 0 ? "pos" : v < 0 ? "neg" : "";
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -295,12 +325,13 @@ $("src").textContent = `数据：Yahoo Finance 真实日线（含分红再投资
   Object.entries(NAMES).map(([s, n]) => `${s} ${n}`).join(" · ");
 
 // ---------------------------------------------------------------- 页签
-const tabs = ["replay", "game", "board", "live"];
+const tabs = ["replay", "game", "board", "future", "live"];
 function showTab(t) {
   for (const x of tabs) { $("tab-" + x).setAttribute("aria-selected", x === t); $("t-" + x).hidden = x !== t; }
   store.set("jev-sim-tab", t);
   if (t === "live") renderLive();
   if (t === "board") renderBoard();
+  if (t === "future") runFuture();
 }
 for (const t of tabs) $("tab-" + t).addEventListener("click", () => showTab(t));
 document.querySelector(".tabs").addEventListener("keydown", e => {
@@ -349,7 +380,7 @@ function lineChart(host, series, opt = {}) {
 }
 
 // ---------------------------------------------------------------- 比例输入（共用）
-const WSYMS = ["VT", "QQQ", "SPY", "VEU", "1348.T", "AGG", "GLD", "BIL"];
+const WSYMS = ["VT", "QQQ", "SPY", "VEU", "1348.T", "AGG", "TLT", "GLD", "BIL"];
 function weightInputs(host, sumHost, init, onChange, prefix) {
   host.innerHTML = WSYMS.map(s => `<label for="${prefix}-${s}">${NAMES[s]} <span class="note mono">${s}</span></label><input id="${prefix}-${s}" type="number" min="0" max="100" step="5" value="${init[s] || 0}">`).join("");
   const read = () => { const w = {}; let t = 0; for (const s of WSYMS) { const v = Math.max(0, Number($(`${prefix}-${s}`).value) || 0); if (v) w[s] = v / 100; t += v; } return { w, t }; };
@@ -705,6 +736,80 @@ function scatter(S) {
     dots += `<line x1="${p.x + 6}" y1="${p.y}" x2="${W - R + 6}" y2="${p.ly - 4}" stroke="var(--line)"/><text x="${W - R + 10}" y="${p.ly}" style="fill:${base ? "var(--fg)" : "var(--muted)"};font-family:var(--f-body);font-size:11.5px;${base ? "font-weight:700" : ""}">${STRAT[p.k].label}</text>`;
   }
   $("bScatter").innerHTML = `<svg class="chart" viewBox="0 0 ${W} ${Math.max(H, lastY + 10)}" role="img" aria-label="各策略的年化波动和年化收益">${g}${dots}</svg>`;
+}
+
+// ---------------------------------------------------------------- 未来模拟
+const F_PRESETS = {
+  "你的目标配置": { VT: 55, QQQ: 20, "1348.T": 5, AGG: 15 },
+  "全球股一只": { VT: 100 },
+  "S&P500 一只": { SPY: 100 },
+  "股 60 / 债 40": { VT: 60, AGG: 40 },
+  "永久组合": { SPY: 25, TLT: 25, GLD: 25, BIL: 25 },
+  "日本股 50 / 全球股 50": { "1348.T": 50, VT: 50 },
+};
+let fRead = null, fTimer = null;
+function fSetWeights(w) { for (const s of WSYMS) { const el = $(`fw-${s}`); if (el) el.value = w[s] || 0; } $("fW").dispatchEvent(new Event("input")); }
+function initFuture() {
+  if (fRead) return;
+  fRead = weightInputs($("fW"), $("fWsum"), F_PRESETS["你的目标配置"], () => { clearTimeout(fTimer); fTimer = setTimeout(runFuture, 300); }, "fw");
+  $("fPresets").innerHTML = Object.keys(F_PRESETS).map(k => `<button class="chip" data-k="${k}">${k}</button>`).join("");
+  $("fPresets").addEventListener("click", e => { const b = e.target.closest("button"); if (b) fSetWeights(F_PRESETS[b.dataset.k]); });
+  for (const id of ["fInit", "fMonthly", "fYears", "fCut"]) $(id).addEventListener("change", runFuture);
+}
+function runFuture() {
+  initFuture();
+  const w = fRead(); if (!w) return;
+  const opts = { weights: w, initial: Math.max(0, Number($("fInit").value) || 0), monthly: Math.max(0, Number($("fMonthly").value) || 0),
+                 years: Number($("fYears").value), paths: 2000, block: 12, seed: 20261011, haircut: Number($("fCut").value),
+                 window: WSYMS };   // 所有配置用同一段历史（所有品种都有数据的月份），比较才公平
+  if (!Object.keys(w).length) { $("fNote").textContent = "全是现金，没有可模拟的。"; return; }
+  const r = E.bootstrap(P, opts);
+  const yrs = opts.years;
+  $("fTitle").textContent = `${yrs} 年后：投入合计 ${man(r.paid)}`;
+  $("fNote").innerHTML = `<b>怎么算的：</b>把 ${r.from} ～ ${r.to} 共 ${r.months} 个月的真实月度回报（日元计，含分红，扣除这个配置的现金部分），按 12 个月一段随机抽取、拼接成 2000 条未来路径。这段历史是美股牛市加日元贬值，照搬会偏乐观，所以默认每年扣 2%。另外，日本股的数据从 2009 年才有，为了让所有配置用同一段历史，<b>2008 年金融危机最惨的几个月不在里面</b>，回撤数字因此偏小；那种极端情况请看总览页的压力测试（目标配置约 -51%）。这是"如果未来像过去那样波动"的范围，不是预测。`;
+  const f = r.final;
+  $("fTiles").innerHTML = [
+    ["中位数（一半路径高于它）", man(f.p50), `是投入的 ${(f.p50 / r.paid).toFixed(2)} 倍`],
+    ["最差 5% 的路径", man(f.p05), `是投入的 ${(f.p05 / r.paid).toFixed(2)} 倍`],
+    ["最好 5% 的路径", man(f.p95), `是投入的 ${(f.p95 / r.paid).toFixed(2)} 倍`],
+    ["最后亏本的概率", (r.pLoss * 100).toFixed(1) + "%", "期末金额低于投入合计"],
+    ["途中最大回撤（中位）", pct(r.dd.p50, 0), "相对投入的倍率，从高点算"],
+    ["途中最大回撤（最差 5%）", pct(r.dd.p05, 0), "这时你能不卖吗？"],
+  ].map(([k, v, x]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${x}</div></div>`).join("");
+  fan(r, opts);
+  // 比较
+  const rows = Object.entries(F_PRESETS).map(([name, pw]) => {
+    const ww = Object.fromEntries(Object.entries(pw).map(([s, v]) => [s, v / 100]));
+    const x = E.bootstrap(P, Object.assign({}, opts, { weights: ww, paths: 1000 }));
+    return `<tr><td>${name}</td><td class="num">${yen(x.final.p05)}</td><td class="num">${yen(x.final.p50)}</td><td class="num">${yen(x.final.p95)}</td><td class="num">${(x.pLoss * 100).toFixed(1)}%</td><td class="num">${pct(x.dd.p05, 0)}</td></tr>`;
+  }).join("");
+  $("fCompare").innerHTML = `<thead><tr><th>配置</th><th>最差 5%</th><th>中位数</th><th>最好 5%</th><th>亏本概率</th><th>回撤（最差 5%）</th></tr></thead><tbody>${rows}</tbody>`;
+}
+function fan(r, opts) {
+  const W = 900, H = 320, L = 78, R = 16, T = 12, B = 30;
+  const n = r.bands.length, hi = Math.max(...r.bands.map(b => b[4])) * 1.05;
+  const X = k => L + k / (n - 1) * (W - L - R), Y = v => T + (hi - v) / hi * (H - T - B);
+  const area = (lo, up) => "M" + r.bands.map((b, k) => `${X(k).toFixed(1)},${Y(b[up]).toFixed(1)}`).join("L") + "L" + r.bands.map((b, k) => [k, b]).reverse().map(([k, b]) => `${X(k).toFixed(1)},${Y(b[lo]).toFixed(1)}`).join("L") + "Z";
+  const step = (() => { const raw = hi / 5, m = Math.pow(10, Math.floor(Math.log10(raw))); return [1, 2, 2.5, 5, 10].map(x => x * m).find(x => x >= raw); })();
+  let g = "";
+  for (let v = 0; v <= hi; v += step) g += `<line class="grid" x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}"/><text x="${L - 8}" y="${Y(v) + 4}" text-anchor="end">${(v / 1e4).toFixed(0)}万</text>`;
+  for (let y = 0; y <= opts.years; y += opts.years > 10 ? 5 : 2) g += `<text x="${X(y * 12)}" y="${H - 8}" text-anchor="middle">${y} 年</text>`;
+  const paid = r.bands.map((_, k) => opts.initial + opts.monthly * k);
+  const paidPath = "M" + paid.map((v, k) => `${X(k).toFixed(1)},${Y(v).toFixed(1)}`).join("L");
+  const med = "M" + r.bands.map((b, k) => `${X(k).toFixed(1)},${Y(b[2]).toFixed(1)}`).join("L");
+  $("fFan").innerHTML = `<div class="chart-wrap"><svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="未来资产的分布带">${g}
+    <path d="${area(0, 4)}" fill="var(--accent)" opacity=".15"/><path d="${area(1, 3)}" fill="var(--accent)" opacity=".3"/>
+    <path d="${paidPath}" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="5 4"/>
+    <path d="${med}" fill="none" stroke="var(--accent)" stroke-width="2.5"/>
+    <line class="xh" y1="${T}" y2="${H - B}" stroke="var(--muted)" opacity="0"/><rect class="hit" x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="transparent"/></svg><div class="tip"></div></div>`;
+  const svg = $("fFan").querySelector("svg"), tip = $("fFan").querySelector(".tip"), xh = svg.querySelector(".xh");
+  svg.querySelector(".hit").addEventListener("pointermove", ev => {
+    const rc = svg.getBoundingClientRect(), k = Math.max(0, Math.min(n - 1, Math.round(((ev.clientX - rc.left) / rc.width * W - L) / (W - L - R) * (n - 1))));
+    const b = r.bands[k]; xh.setAttribute("x1", X(k)); xh.setAttribute("x2", X(k)); xh.setAttribute("opacity", ".6");
+    tip.innerHTML = `<div class="d">${(k / 12).toFixed(1)} 年后 · 投入 ${yen(paid[k])}</div>` + [["最好 5%", b[4]], ["75%", b[3]], ["中位数", b[2]], ["25%", b[1]], ["最差 5%", b[0]]].map(([l, v]) => `<div class="r"><span>${l}</span><span>${yen(v)}</span></div>`).join("");
+    tip.style.left = Math.max(0, Math.min(X(k) / W * rc.width + 12, rc.width - 230)) + "px"; tip.style.top = "8px"; tip.style.opacity = 1;
+  });
+  svg.querySelector(".hit").addEventListener("pointerleave", () => { tip.style.opacity = 0; xh.setAttribute("opacity", "0"); });
 }
 
 // 实盘图只画基准、Claude 和回放里选中的策略（不为没选中的策略占用颜色）
