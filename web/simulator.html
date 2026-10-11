@@ -320,6 +320,13 @@ svg.chart { display: block; width: 100%; height: auto; }
       <p class="note" id="hgNote"></p>
     </div>
     <div class="panel">
+      <h3 style="margin-top:0">NISA 每年 360 万：年初一次买满，还是每月 30 万</h3>
+      <p id="flSummary"></p>
+      <div class="chips" id="flMix" style="margin:8px 0"></div>
+      <div id="flChart"></div>
+      <p class="note" id="flNote"></p>
+    </div>
+    <div class="panel">
       <h3 style="margin-top:0">每个策略是什么</h3>
       <div class="daycards" id="bCards"></div>
     </div>
@@ -799,7 +806,7 @@ function renderBoard() {
   $("bView").onclick = e => { const b = e.target.closest("button"); if (!b) return; bView = b.dataset.v; bSort = { key: null, dir: -1 }; renderBoard(); };
   scatter(S);
   renderSensitivity();
-  initRebalance(); renderRebalance(); renderHedge();
+  initRebalance(); renderRebalance(); renderHedge(); renderFrontload();
   // 滚动
   const yrs = Object.keys(base.rolling);
   const rk = keys.slice().sort((a, b) => (S[b].rolling_wins ?? 99) - (S[a].rolling_wins ?? 99) || S[b].dca_xirr - S[a].dca_xirr);
@@ -856,6 +863,32 @@ function renderRebalance() {
   $("rbTable").innerHTML = `<thead><tr><th>方法</th><th>期末到手</th><th>年化（XIRR）</th><th>最大回撤</th><th>偏离 平均/最大</th><th>股+金 期末/最高</th><th>交易次数</th>${rbSel.taxable ? "<th>途中交的税</th>" : ""}</tr></thead><tbody>` +
     X.policies.map(k => { const x = r.by[k]; return `<tr${x.final === best ? ' style="background:var(--accent-soft)"' : ""}><td>${RB_LABEL[k]}</td><td class="num">${man(x.final)}</td><td class="num">${pct(x.xirr, 1)}</td><td class="num">${pct(x.max_dd, 0)}</td><td class="num">${(x.drift_avg * 100).toFixed(1)} / ${(x.drift_max * 100).toFixed(0)} 点</td><td class="num">${(x.risky_end * 100).toFixed(0)}% / ${(x.risky_max * 100).toFixed(0)}%</td><td class="num">${x.trades}</td>${rbSel.taxable ? `<td class="num">${man(x.tax_during)}</td>` : ""}</tr>`; }).join("") +
     `</tbody><caption class="note" style="caption-side:bottom;text-align:left">投入合计 ${man(r.by.monthly.paid)}，${r.start} ～ ${X.generated_to}。底色 = 期末到手最多。目标里股+金占 ${(rbRisky(X.mixes[r.mix]) * 100).toFixed(0)}%。</caption>`;
+}
+let flMix = "target";
+function renderFrontload() {
+  const X = DATA.front;
+  if (!X) { $("flSummary").textContent = "年初一次买满的数据没有嵌入。"; return; }
+  const all = Object.values(X.results).map(m => m["1"]);
+  const rows = X.results[flMix]["1"];
+  const st = rs => ({ n: rs.length, wins: rs.filter(r => r.diff > 0).length, avg: rs.reduce((a, r) => a + r.diff, 0) / rs.length,
+                      worst: rs.reduce((a, r) => r.diff < a.diff ? r : a), regret: rs.reduce((a, r) => r.worst_gap < a.worst_gap ? r : a) });
+  const t = st(X.results.target["1"]), v = st(X.results.vt["1"]);
+  $("flSummary").innerHTML = `<b>数据说的话：</b>目标配置（近似）在 ${t.n} 个年份里，年初一次买满赢了 <b>${t.wins} 次</b>，平均多 <b>${pct(t.avg, 1)}</b>（360 万的 ${pct(t.avg, 1)} ≈ ${man(X.annual * t.avg)}/年），最差的 ${t.worst.year} 年少 ${pct(t.worst.diff, 1).replace("-", "")}。全球股一只：${v.wins} / ${v.n} 次，平均 ${pct(v.avg, 1)}。` +
+    `道理很简单：股票长期向上，钱越早进去，平均在市场里的时间多 5 个半月左右。<b>但心理上的代价</b>是：年中如果大跌，一次买满的人会眼看着比分批的人少很多——最多的一次是 ${v.regret.year} 年（新冠暴跌），全球股一只的情况下，比分批买少了约 ${man(-v.regret.worst_gap)}。` +
+    `<br><b>对你的意思：</b>前提是年初手上已经有这笔钱（比如存款或奖金）。有的话，成长投资枠（240 万）年初一次买入，期望值更高；受不了"刚买就跌"的话，分 12 个月也只是平均少赚几个百分点，不是大错。工资每月进来的钱，本来就只能每月投。` +
+    `つみたて投資枠要求用积立方式购买，能不能年初一次买满取决于证券公司的设置（有的有"ボーナス月"设定），请在证券公司页面确认。买什么，先过 independence 确认。`;
+  $("flMix").innerHTML = Object.entries(X.mixes).map(([k, l]) => `<button class="chip${k === flMix ? " on" : ""}" data-m="${k}">${l}</button>`).join("");
+  $("flMix").onclick = e => { const b = e.target.closest("[data-m]"); if (b) { flMix = b.dataset.m; renderFrontload(); } };
+  const W = 900, H = 260, L = 50, R = 10, T = 14, B = 34, n = rows.length;
+  const mx = Math.max(0.05, ...rows.map(r => Math.abs(r.diff)));
+  const Y = d => T + (mx - d) / (2 * mx) * (H - T - B), bw = (W - L - R) / n;
+  let g = "";
+  for (const d of [-mx, -mx / 2, 0, mx / 2, mx]) g += `<line class="grid" x1="${L}" x2="${W - R}" y1="${Y(d)}" y2="${Y(d)}"/><text x="${L - 6}" y="${Y(d) + 4}" text-anchor="end">${(d * 100).toFixed(0)}%</text>`;
+  rows.forEach((r, i) => { const x = L + i * bw + bw * 0.15, y0 = Y(0), y1 = Y(r.diff);
+    g += `<rect x="${x}" y="${Math.min(y0, y1)}" width="${bw * 0.7}" height="${Math.max(1, Math.abs(y1 - y0))}" fill="${r.diff >= 0 ? "var(--good)" : "var(--stop)"}"><title>${r.year} 年：年初一次买满 ${man(r.lump)}，每月 ${man(r.monthly)}（${pct(r.diff, 1)}）；年中最多落后 ${man(-r.worst_gap)}</title></rect>`;
+    g += `<text x="${x + bw * 0.35}" y="${H - B + 16}" text-anchor="middle">${n > 12 && window.innerWidth < 700 ? String(r.year).slice(2) : r.year}</text>`; });
+  $("flChart").innerHTML = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="每年年初一次买满比每月买多出的比例">${g}</svg>`;
+  $("flNote").innerHTML = `每根柱子 = 那一年"年初一次买满 360 万"比"每月初买 30 万"在年末多（绿）或少（红）的比例。12 月买完以后两边持有的东西一样，这个差距之后不会再变。日元计，不含交易成本和税（NISA）。数据到 ${X.generated_to}。`;
 }
 let hgMix = "target";
 function renderHedge() {
