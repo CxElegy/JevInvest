@@ -67,3 +67,13 @@ def test_yearly_rebalance_only_in_january_unless_contributing():
     assert not sim.is_due("yearly", d("2026-11-02"), d("2026-10-30"), True)
     assert sim.is_due("yearly", d("2026-11-02"), d("2026-10-30"), True, contributing=True)
     assert not sim.is_due("once", d("2026-11-02"), d("2026-10-30"), True)
+
+
+def test_panic_sell_exits_after_30pct_drop_and_returns_at_old_high():
+    idx = pd.bdate_range("2020-01-01", periods=7)
+    path = [100, 110, 76, 90, 105, 111, 120]   # 110 から 76（-31%）→ 110 を超えるまで外
+    states = []
+    for k in range(1, len(path) + 1):
+        h = {"VT": pd.Series(path[:k], index=idx[:k], dtype=float)}
+        states.append(next(iter(sim.panic_sell(h))))
+    assert states == ["VT", "VT", "BIL", "BIL", "BIL", "VT", "VT"]

@@ -309,13 +309,14 @@ const STRAT = {
   ivy: { label: "Ivy 五资产等权" }, risk_parity: { label: "风险平价" },
   trend: { label: "200 日线趋势" }, dual_momentum: { label: "双动量" }, ivy_timing: { label: "Ivy 五资产 + 200 日线" },
   momentum_top3: { label: "相对动量前 3" }, vol_target: { label: "波动率目标" }, spy_timing: { label: "S&P500 + 200 日线" },
-  sell_in_may: { label: "Sell in May" }, buy_the_dip: { label: "等回调 10% 再买" },
+  sell_in_may: { label: "Sell in May" }, buy_the_dip: { label: "等回调 10% 再买" }, panic_sell: { label: "恐慌卖出（跌 30% 卖）" },
   claude: { label: "Claude 凭判断" },
 };
 const GROUPS = [
   ["基准和你的计划", ["allcountry", "core_satellite", "sp500", "home_bias", "custom"]],
   ["固定比例（定期调回）", ["sixty_forty", "permanent", "all_weather", "ivy", "risk_parity"]],
   ["择时 / 动量", ["trend", "dual_momentum", "ivy_timing", "momentum_top3", "vol_target", "spy_timing", "sell_in_may", "buy_the_dip"]],
+  ["常见的行为错误", ["panic_sell"]],
 ];
 // 颜色跟着策略走：基准固定第 1 色，Claude 固定第 5 色，其余在被选中时占一个空位，取消后才释放
 const SLOT_COLORS = ["var(--s2)", "var(--s3)", "var(--s4)", "var(--s6)", "var(--s7)"];
@@ -664,6 +665,7 @@ const INFO = {
   vol_target: ["全球股最近 60 天的年化波动超过 12% 时，按比例减仓到短期国债。", "Moreira & Muir (2017) Journal of Finance「Volatility-Managed Portfolios」", ""],
   spy_timing: ["S&P500 在 200 日均线上方时全仓，下方时全换短期国债。", "Faber (2007)", "前半段看起来很好，后半段明显变差，这是过度拟合的典型样子。"],
   sell_in_may: ["5～10 月持有短期国债，11～4 月持有全球股。", "Bouman & Jacobsen (2002) American Economic Review「The Halloween Indicator」", "股市格言的检验。"],
+  panic_sell: ["一直持有全球股，但从最高点跌了 30% 时受不了全部卖掉，等价格回到原来的最高点才敢买回来。", "行为金融学：DALBAR、Morningstar「Mind the Gap」（见 docs/PLAYBOOK.md）", "这不是一个推荐的策略，而是最常见的错误。它在底部附近卖出，又在已经涨回去之后才买回来。"],
   buy_the_dip: ["钱先放着，等全球股从一年高点跌 10% 时全部买入，之后不卖；定投时每月的钱也等下一次回调。", "Maggiulli (2019)「Even God Couldn't Beat Dollar-Cost Averaging」", "等的那段时间钱是闲着的。上涨行情里往往等不到。"],
 };
 let bView = "lump", bSort = { key: null, dir: -1 };

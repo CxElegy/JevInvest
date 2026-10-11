@@ -287,6 +287,19 @@
     },
     sell_in_may: { freq: "monthly", fn: (p, i) => { const m = Number(p.dates[i].slice(5, 7)); return m >= 5 && m <= 10 ? { BIL: 1.0 } : { VT: 1.0 }; } },
     home_bias: { freq: "monthly", fn: fixed({ "1348.T": 0.5, VT: 0.5 }) },
+    // 狼狽売り: 最高値から 30% 下げたら売り、元の最高値に戻ったら買い直す（src/sim.py の panic_sell）
+    panic_sell: {
+      freq: "monthly",
+      fn: (p, i) => {
+        const a = vals(p, "VT", i);
+        if (!a.length) return { VT: 1.0 };
+        let peak = a[0], pk = 0;
+        for (let k = 0; k < a.length; k++) if (a[k] >= peak) { peak = a[k]; pk = k; }
+        let lo = Infinity;
+        for (let k = pk; k < a.length; k++) lo = Math.min(lo, a[k]);
+        return lo <= peak * 0.7 && a[a.length - 1] < peak ? { BIL: 1.0 } : { VT: 1.0 };
+      },
+    },
   };
   const ALL_STRATEGIES = Object.assign({}, STRATEGIES, MORE_STRATEGIES);
 

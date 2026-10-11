@@ -14610,7 +14610,7 @@
   "start": "2026-10-09",
   "end": "2026-11-11",
   "capital": 5000000,
-  "updated_at": "2026-10-11T16:30:16+00:00",
+  "updated_at": "2026-10-11T16:53:19+00:00",
   "books": {
    "allcountry": {
     "label": "全世界株 1 本・ほったらかし",
@@ -15182,6 +15182,30 @@
       "qty": 98.0,
       "decided": "2026-10-09",
       "reason": "home_bias"
+     }
+    ],
+    "income": [],
+    "notes": []
+   },
+   "panic_sell": {
+    "label": "狼狽売り（-30% で売り、高値回復で買い戻し）",
+    "nav": [
+     [
+      "2026-10-09",
+      5000000.0
+     ]
+    ],
+    "trades": [],
+    "qty": {},
+    "cash": 5000000,
+    "fees": 0.0,
+    "pending": [
+     {
+      "symbol": "VT",
+      "side": "buy",
+      "qty": 197.0,
+      "decided": "2026-10-09",
+      "reason": "panic_sell"
      }
     ],
     "income": [],

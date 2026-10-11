@@ -465,6 +465,23 @@ def sell_in_may(hist, day=None):
     return {"BIL": 1.0} if 5 <= m <= 10 else {"VT": 1.0}
 
 
+def panic_sell(hist, day=None):
+    """よくある行動の誤り: 最高値から 30% 下げたら全部売り、元の最高値に戻ったら買い直す。
+
+    状態を持たずに履歴から判定する: 直近の最高値 P の後に 0.7P 以下まで下げたことがあり、
+    いまも P を下回っていれば「売って待っている」状態。
+    """
+    a = _vals(hist, "VT")
+    if not a:
+        return {"VT": 1.0}
+    peak, peak_i = a[0], 0
+    for k, x in enumerate(a):
+        if x >= peak:
+            peak, peak_i = x, k
+    crashed = min(a[peak_i:]) <= peak * 0.7
+    return {"BIL": 1.0} if crashed and a[-1] < peak else {"VT": 1.0}
+
+
 def home_bias(hist, day=None):
     return {"1348.T": 0.5, "VT": 0.5}
 
@@ -491,6 +508,7 @@ MORE_STRATEGIES = {
     "buy_the_dip": (buy_the_dip, "monthly"),
     "sell_in_may": (sell_in_may, "monthly"),
     "home_bias": (home_bias, "monthly"),
+    "panic_sell": (panic_sell, "monthly"),
 }
 ALL_STRATEGIES = {**STRATEGIES, **MORE_STRATEGIES}
 
@@ -513,6 +531,7 @@ STRATEGY_LABELS = {
     "buy_the_dip": "押し目待ち（-10% で買う）",
     "sell_in_may": "セル・イン・メイ",
     "home_bias": "日本株 50 / 全世界 50",
+    "panic_sell": "狼狽売り（-30% で売り、高値回復で買い戻し）",
 }
 
 

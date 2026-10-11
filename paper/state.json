@@ -737,6 +737,39 @@
    "year_gain": 0.0,
    "year_tax": 0.0
   },
+  "panic_sell": {
+   "name": "panic_sell",
+   "cash": 5000000,
+   "qty": {},
+   "cost": {},
+   "pending": [
+    {
+     "symbol": "VT",
+     "side": "buy",
+     "qty": 197.0,
+     "decided": "2026-10-09",
+     "reason": "panic_sell"
+    }
+   ],
+   "trades": [],
+   "nav": [
+    [
+     "2026-10-09",
+     5000000.0
+    ]
+   ],
+   "income": [],
+   "notes": [],
+   "realized": 0.0,
+   "fees": 0.0,
+   "last_day": "2026-10-09",
+   "last_decision": "2026-10-09",
+   "taxable": false,
+   "tax_paid": 0.0,
+   "tax_year": null,
+   "year_gain": 0.0,
+   "year_tax": 0.0
+  },
   "claude": {
    "name": "claude",
    "cash": 5000000,
@@ -792,5 +825,5 @@
    "year_tax": 0.0
   }
  },
- "updated_at": "2026-10-11T16:30:16+00:00"
+ "updated_at": "2026-10-11T16:53:19+00:00"
 }
