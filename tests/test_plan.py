@@ -71,3 +71,20 @@ def test_foreign_cash_is_not_counted_as_yen_in_projection():
     cfg["positions"][-1]["cost_fx_rate"] = 150
     proj = annual_projection(cfg, plan, years=1)
     assert proj.iloc[0]["累計投入"] == pytest.approx(1_000_000 + 150_000 + 200_000 * 12)
+
+
+def test_cleared_candidate_not_yet_held_opens_its_class(tmp_path):
+    """まだ持っていない候補でも、購入可と記録され asset_class があればクラスに数える。"""
+    from datetime import date
+
+    from src.compliance import cleared_by_class, load as load_c
+
+    c = tmp_path / "c.yaml"
+    c.write_text(
+        "securities:\n"
+        "  - {symbol: FUND-ALLCOUNTRY, desc_result: clear, desc_checked: 2026-10-01,"
+        " preclearance: not_required, asset_class: developed_equity}\n"
+        "  - {symbol: FUND-BOND, desc_result: clear, desc_checked: 2026-10-01,"
+        " preclearance: pending, asset_class: bond}\n", encoding="utf-8")
+    reg = load_c(c, today=date(2026, 10, 11))
+    assert cleared_by_class(reg, []) == {"developed_equity": ["FUND-ALLCOUNTRY"]}

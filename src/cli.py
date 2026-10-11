@@ -133,10 +133,9 @@ def cmd_dashboard(args) -> None:
     cfg = yaml.safe_load(args.holdings.read_text(encoding="utf-8"))
     reg = load_compliance(args.compliance)
 
-    cleared: dict[str, list[str]] = {}
-    for p in h.positions:
-        if not p.is_cash and reg.can_buy(p.symbol):
-            cleared.setdefault(p.asset_class, []).append(p.symbol)
+    from .compliance import cleared_by_class
+
+    cleared = cleared_by_class(reg, h.positions)
     plan = build_plan(cfg, compliance=reg, cleared_symbols_by_class=cleared)
 
     md = MarketData()
@@ -530,15 +529,11 @@ def cmd_plan(args) -> None:
     h = _load(args.holdings)
     reg = load_compliance(args.compliance)
 
-    # 資産クラスごとに「事前承認が取れている銘柄」を集める。
-    # 台帳にまだ無い候補銘柄は拾えないので、承認済みでも保有していなければ
-    # ここには出てこない。候補段階の管理は watchlist を作ってから。
-    cleared: dict[str, list[str]] = {}
-    for p in h.positions:
-        if p.is_cash:
-            continue
-        if reg.can_buy(p.symbol):
-            cleared.setdefault(p.asset_class, []).append(p.symbol)
+    # 資産クラスごとに「事前承認が取れている銘柄」を集める。保有中の銘柄に加えて、
+    # compliance.yaml に asset_class を書いた購入可の候補も数える（最初の 1 本を買う前用）。
+    from .compliance import cleared_by_class
+
+    cleared = cleared_by_class(reg, h.positions)
 
     plan = build(cfg, compliance=reg, cleared_symbols_by_class=cleared)
 

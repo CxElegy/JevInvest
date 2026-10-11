@@ -147,6 +147,24 @@ def load(path: str | Path, today: date | None = None) -> ComplianceRegistry:
     )
 
 
+def cleared_by_class(reg: ComplianceRegistry, positions) -> dict[str, list[str]]:
+    """資産クラスごとに「今買える（購入可と記録された）銘柄」を集める。
+
+    保有中の銘柄に加えて、まだ持っていない候補でも、記録に asset_class が書いてあり
+    購入可（DESC 確認済み・事前承認済み）なら数える。これが無いと、最初の 1 本を買う前は
+    どのクラスにも積立を回せない。
+    """
+    out: dict[str, list[str]] = {}
+    for p in positions:
+        if not p.is_cash and reg.can_buy(p.symbol):
+            out.setdefault(p.asset_class, []).append(p.symbol)
+    for sym, rec in reg.records.items():
+        cls = str((rec or {}).get("asset_class") or "").strip()
+        if cls and reg.can_buy(sym) and sym not in out.get(cls, []):
+            out.setdefault(cls, []).append(sym)
+    return out
+
+
 def summarize(reg: ComplianceRegistry, symbols: list[str]) -> dict:
     """銘柄を状態ごとに振り分ける。次に何を申請すべきかの元データ。"""
     buckets: dict[str, list[tuple[str, Verdict]]] = {}

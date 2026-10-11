@@ -337,14 +337,13 @@ def to_markdown(
         reb = a.rebalance
         if compliance is not None:
             # クラスごとに購入可の銘柄を並べる。無いクラスの「買い増し」は実行できない
+            from .compliance import cleared_by_class
+
             reb = reb.copy()
             col = []
+            cleared = cleared_by_class(compliance, [v.position for v in a.valuations])
             for cls, row in reb.iterrows():
-                syms = sorted({
-                    v.position.symbol for v in a.valuations
-                    if v.position.asset_class == cls and not v.position.is_cash
-                    and compliance.can_buy(v.position.symbol)
-                })
+                syms = sorted(set(cleared.get(cls, [])))
                 is_cash = any(v.position.asset_class == cls and v.position.is_cash
                               for v in a.valuations)
                 if syms:

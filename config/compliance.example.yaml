@@ -14,6 +14,7 @@ securities:
     desc_checked: 2026-09-01        # DESC で確認した日
     preclearance: approved          # approved / not_required / pending / not_submitted
     preclearance_expires: 2026-12-31   # 任意。過ぎると承認待ちに戻る
+    asset_class: developed_equity   # 任意。まだ持っていない候補でも、購入可ならこのクラスに積立を回せる
     note: 例
 
   # 確認は済んだが事前承認が未申請 → 承認待ち
