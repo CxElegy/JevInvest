@@ -327,17 +327,19 @@
     return nm;
   }
 
-  /** 目標からの最大のずれ（src/sim.py の drift と同じ） */
+  /** 目標からの最大のずれ。投資している部分だけで測る（src/sim.py の drift と同じ） */
   function drift(b, p, i, target) {
-    const nav = b.value(p, i);
-    if (nav <= 0) return 0;
-    let worst = 0;
     const syms = [...new Set([...Object.keys(target), ...b.qty.keys()])].filter(s => s !== "CASH").sort();
+    const vals = [];
     for (const s of syms) {
       const px = p.jpy(s, i);
-      if (px === null) continue;
-      worst = Math.max(worst, Math.abs((b.qty.get(s) || 0) * px / nav - (target[s] || 0)));
+      if (px !== null) vals.push([s, (b.qty.get(s) || 0) * px]);
     }
+    const invested = vals.reduce((a, [, v]) => a + v, 0);
+    const tsum = Object.entries(target).filter(([s]) => s !== "CASH").reduce((a, [, v]) => a + v, 0);
+    if (invested <= 0 || tsum <= 0) return 0;
+    let worst = 0;
+    for (const [s, v] of vals) worst = Math.max(worst, Math.abs(v / invested - (target[s] || 0) / tsum));
     return worst;
   }
   function buyOnlyNow(freq, b, p, i, prev, target) {

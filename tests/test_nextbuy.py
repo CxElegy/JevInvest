@@ -52,3 +52,25 @@ def test_pct_only_hides_amounts():
     s = split({"developed_equity": 700_000, "bond": 200_000, "cash": 100_000}, T, 123_456, OK)
     out = render(s, pct_only=True)
     assert "123" not in out and " 円" not in out
+
+
+def test_parked_cash_shows_up_without_cash_class_and_rows_sum_to_100():
+    s = split({"equity": 600_000, "bond": 300_000}, {"equity": 60, "bond": 40}, 100_000, {"equity": ["VT"]})
+    out = render(s)
+    assert "（留保した現金）" in out
+    after = [float(line.split("|")[6]) for line in out.splitlines() if line.startswith("| ") and "資産クラス" not in line]
+    assert sum(after) == pytest.approx(100, abs=0.2)
+    assert any("ずれは毎月広がる" in n for n in s.notes)
+
+
+def test_custom_cash_class_name_holds_parked_money():
+    s = split({"eq": 500_000, "bond": 400_000, "mmf": 100_000}, {"eq": 60, "bond": 30, "mmf": 10}, 100_000,
+              {"bond": ["B"]}, cash_classes={"mmf"})
+    out = render(s)
+    after = [float(line.split("|")[6]) for line in out.splitlines() if line.startswith("| ") and "資産クラス" not in line]
+    assert sum(after) == pytest.approx(100, abs=0.2)
+
+
+def test_target_not_summing_to_100_is_reported():
+    s = split({"equity": 1.0, "bond": 1.0}, {"equity": 54, "bond": 36}, 100_000, {"equity": ["A"], "bond": ["B"]})
+    assert any("合計が 90%" in n for n in s.notes)

@@ -17,6 +17,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass, field
 
+PARKED_ROW = "（留保した現金）"
 BAND_PP = 5.0     # これ以上ずれたクラスは「売って戻す」を検討する目安（src/sim.py の DRIFT_BAND）
 
 
@@ -41,6 +42,7 @@ class Split:
     drift_naive: float      # 目標比率でそのまま割った場合の後
     over_band: list[tuple[str, float]] = field(default_factory=list)   # (クラス, 超過ポイント)
     notes: list[str] = field(default_factory=list)
+    cash_key: str | None = None   # 留保した現金を入れる行（現金のクラス、無ければ PARKED_ROW）
 
     @property
     def parked(self) -> float:
@@ -89,26 +91,29 @@ def split(current: dict[str, float], target_pct: dict[str, float], new_money: fl
                 r.status = "購入可の銘柄なし（現金で留保）"
         rows.append(r)
 
-    after = {r.asset_class: r.current + r.amount + r.parked for r in rows}
-    # 留保した分は現金のクラスに入ったものとして数える（実際に現金で持つので）
+    # 留保した分は現金で持つので、現金のクラス（無ければ専用の行）に入ったものとして数える
     cash_key = next((c for c in classes if c in cash_classes), None)
     parked = sum(r.parked for r in rows)
+    if parked and cash_key is None:
+        cash_key = PARKED_ROW
+        rows.append(Row(PARKED_ROW, 0.0, 0.0))
+    after = {r.asset_class: r.current + r.amount for r in rows}
     if parked:
-        for r in rows:
-            if r.parked:
-                after[r.asset_class] -= r.parked
-        if cash_key:
-            after[cash_key] += parked
-        else:
-            after["（留保した現金）"] = parked
+        after[cash_key] += parked
     naive = {c: current.get(c, 0.0) + new_money * tgt.get(c, 0.0) / 100 for c in classes}
     before_pct = {c: (current.get(c, 0.0) / total * 100 if total > 0 else 0.0) for c in classes}
     over = sorted(((c, before_pct[c] - tgt.get(c, 0.0)) for c in classes
                    if before_pct[c] - tgt.get(c, 0.0) >= BAND_PP), key=lambda x: -x[1])
-    out = Split(rows, new_money, total, _drift(current, tgt), _drift(after, tgt), _drift(naive, tgt), over)
+    out = Split(rows, new_money, total, _drift(current, tgt), _drift(after, tgt), _drift(naive, tgt), over,
+                cash_key=cash_key)
+    if abs(tsum - 100) > 0.01:
+        out.notes.append(f"目標配分の合計が {tsum:g}% なので、合計 100% になるよう比例で直して計算した。台帳を確認する")
     if parked:
         out.notes.append("購入可の銘柄が無いクラスの分は現金で留保した。DESC 確認と事前承認の結果を "
                          "config/compliance.yaml に記録すると、次回からそのクラスに回る")
+        if out.drift_after > out.drift_naive:
+            out.notes.append("留保が続くと現金が積み上がり、目標からのずれは毎月広がる。そのクラスの銘柄の承認を取るか、"
+                             "目標配分そのものを見直す")
     if g < new_money and total > 0:
         out.notes.append("今月の額で不足はすべて埋まる。残りは目標比率で配った")
     return out
@@ -125,10 +130,10 @@ def render(s: Split, pct_only: bool = False) -> str:
     for r in s.rows:
         share = (r.amount + r.parked) / s.new_money * 100 if s.new_money else 0.0
         now = r.current / s.total_before * 100 if s.total_before else 0.0
-        held = s.parked if r.asset_class == "cash" else 0.0       # 留保した分は現金として持つ
+        held = s.parked if r.asset_class == s.cash_key else 0.0   # 留保した分は現金として持つ
         aft = (r.current + r.amount + held) / T * 100 if T else 0.0
         amt = "" if pct_only else (f"{r.amount:,.0f} 円" + (f"（留保 {r.parked:,.0f}）" if r.parked else "") + " | ")
-        sym = ", ".join(r.symbols) or ("（現金）" if r.asset_class == "cash" else "なし")
+        sym = ", ".join(r.symbols) or ("（現金）" if r.asset_class == s.cash_key else "なし")
         L.append(f"| {r.asset_class} | {now:.1f} | {r.target_pct:.1f} | {share:.1f} | {amt}{aft:.1f} | {sym}"
                  + (f" — {r.status}" if r.status else "") + " |")
     L.append("")

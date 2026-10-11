@@ -50,14 +50,21 @@ def run_one(P, start, mix, capital, monthly, taxable):
     risky = {s for s in mix if s not in BONDS}
 
     def on_day(name, book, day):
-        m = day.year * 12 + day.month
-        if last_month.get(name) == m or not book.qty:      # 最初の約定前は数えない
+        # 月末の状態を数える（月初は入金の現金が乗っていて、ずれが大きく見える）。
+        # 同じ月の間は上書きし、月が変わったら確定する
+        if not book.qty:                                   # 最初の約定前は数えない
             return
-        last_month[name] = m
+        m = day.year * 12 + day.month
         nav = book.value(P, day)
         w = {s: q * P.jpy(s, day) / nav for s, q in book.qty.items() if q and P.jpy(s, day) is not None}
-        drift_log[name].append(max(abs(w.get(s, 0.0) - mix.get(s, 0.0)) for s in set(mix) | set(w)))
-        eq_log[name].append(sum(v for s, v in w.items() if s in risky))
+        sample = (max(abs(w.get(s, 0.0) - mix.get(s, 0.0)) for s in set(mix) | set(w)),
+                  sum(v for s, v in w.items() if s in risky))
+        if last_month.get(name) == m:
+            drift_log[name][-1], eq_log[name][-1] = sample
+        else:
+            last_month[name] = m
+            drift_log[name].append(sample[0])
+            eq_log[name].append(sample[1])
 
     fixed = lambda h, d=None: dict(mix)  # noqa: E731
     res = backtest(P, pd.Timestamp(start), capital, monthly=monthly, taxable=taxable, on_day=on_day,

@@ -236,3 +236,16 @@ def test_buy_only_never_sells_overweight():
     b.qty = {"VT": 90.0, "AGG": 10.0}
     b.decide(p, p.calendar()[0], {"VT": 0.5, "AGG": 0.5}, buy_only=True)
     assert b.pending == []
+
+
+def test_drift_ignores_fresh_deposit_cash():
+    """入金で現金が増えただけでは「ずれた」と判定しない（5 ポイント幅の売り戻しを誤って起こさない）。"""
+    from src.sim import drift
+
+    n = 2
+    p = Prices({"VT": _px(n, [100.0] * n), "AGG": _px(n, [100.0] * n)}, _px(n, [1.0] * n))
+    b = Book("t", cash=200_000)
+    b.qty = {"VT": 800.0, "AGG": 200.0}          # 投資部分はちょうど 80/20
+    assert drift(b, p, p.calendar()[0], {"VT": 0.8, "AGG": 0.2}) == pytest.approx(0.0)
+    b.qty = {"VT": 860.0, "AGG": 140.0}
+    assert drift(b, p, p.calendar()[0], {"VT": 0.8, "AGG": 0.2}) == pytest.approx(0.06)

@@ -309,7 +309,7 @@ svg.chart { display: block; width: 100%; height: auto; }
       <div class="chips" id="rbMix" style="margin:8px 0"></div>
       <div class="chips" id="rbOpt" style="margin:8px 0"></div>
       <div class="scroll"><table class="data" id="rbTable"></table></div>
-      <p class="note">同一个配置，只改"偏离目标比例以后怎么调回去"。"期末到手"：最后一天全部卖出后的金额（课税账户扣掉 20.315% 的税，NISA 不扣）。"偏离"：每月月初，比例最偏的那一项离目标差几个百分点（平均 / 最大）。"股+金"：股票和黄金（债券、短债以外）在总资产里的比例（期末 / 最高），这一项变高说明风险在悄悄变大。交易成本（手续费 0.1%、滑点、换汇差）都算进去了。</p>
+      <p class="note">同一个配置，只改"偏离目标比例以后怎么调回去"。"期末到手"：最后一天全部卖出后的金额（课税账户扣掉 20.315% 的税；"免税"假设全部在 NISA 里、不考虑每年 360 万和终身 1,800 万的上限）。"偏离"：每月月末，比例最偏的那一项离目标差几个百分点（平均 / 最大）。"股+金"：股票和黄金（债券、短债以外）在总资产里的比例（期末 / 最高），这一项变高说明风险在悄悄变大。交易成本（手续费 0.1%、滑点、换汇差）都算进去了。</p>
     </div>
     <div class="panel">
       <h3 style="margin-top:0">债券那部分：美元债、对冲汇率的美元债，还是日元现金</h3>
@@ -840,15 +840,17 @@ function renderRebalance() {
   const cfDrift = dca.map(r => r.by.cashflow.drift_avg), cfMax = dca.map(r => r.by.cashflow.drift_max);
   const lump = X.results.filter(r => r.scenario === "lump");
   const lumpRisk = lump.map(r => r.by.cashflow.risky_max - rbRisky(X.mixes[r.mix]));
-  $("rbSummary").innerHTML = `<b>数据说的话：</b>① 一边定投一边投资时（${dca.length} 种组合：${Object.keys(X.mixes).length} 个配置 × ${starts.length} 个起点 × NISA/课税），"偏离 5 个点才卖"或"从不卖，只用新钱补低的"有 <b>${noSellWins} / ${dca.length}</b> 次比"每月卖回"到手更多。` +
-    ` ② 比"每月卖回"期末多出的比例（平均）：偏离 5 个点才卖——课税 ${pct(gain("band", true), 1)}、NISA ${pct(gain("band", false), 1)}（${bandWins} / ${dca.length} 次不输）；只用新钱补——课税 ${pct(gain("cashflow", true), 1)}、NISA ${pct(gain("cashflow", false), 1)}。NISA 里也多，说明一大半不是税，而是少交易（每次买卖都有成本）和让涨得好的资产多留一会儿；课税账户再多出来的那一截才是税。` +
-    ` ③ 代价是比例会偏：平均偏 ${(avg(cfDrift) * 100).toFixed(1)} 个点，最多偏 ${(Math.max(...cfMax) * 100).toFixed(0)} 个点，定投金额相对总资产越小，越补不回来。` +
-    ` ④ <b>不再投钱、一次性放着的话</b>（下面选"一次性 500 万"），"从不卖"就是放任不管，股票（含黄金）的比例最多比目标高 ${(Math.max(...lumpRisk) * 100).toFixed(0)} 个点——多出来的回报是多承担风险换来的，在这段牛市里看起来划算，碰上 2008 年那样的下跌就会多跌。` +
-    `<br><b>对你的意思：</b>你在 NISA 里每月定投，在这 ${dca.length} 种组合里最稳的做法是"偏离 5 个点才卖"：<b>平时不卖，每月的钱优先买低于目标的那部分</b>；只有某一项偏离超过 5 个点（比如股票大涨后），才卖回目标。NISA 里卖出不交税，但卖掉的额度要到第二年才恢复，而且年度 360 万的额度不会退回，所以 NISA 里少卖还有额度上的好处。`;
+  const riskUp = avg(dca.map(r => r.by.band.risky_max - r.by.monthly.risky_max));
+  const minGain = Math.min(...dca.map(r => r.by.band.final / r.by.monthly.final - 1));
+  $("rbSummary").innerHTML = `<b>数据说的话：</b>① 一边定投一边投资时（${dca.length} 种组合：${Object.keys(X.mixes).length} 个配置 × ${starts.length} 个起点 × 免税/课税；免税和课税是同一段行情，所以实际是 ${dca.length / 2} 段行情），"偏离 5 个点才卖"或"从不卖，只用新钱补低的"有 <b>${noSellWins} / ${dca.length}</b> 次比"每月卖回"到手更多。` +
+    ` ② 比"每月卖回"期末多出的比例（平均）：偏离 5 个点才卖——课税 ${pct(gain("band", true), 1)}、免税 ${pct(gain("band", false), 1)}（${bandWins} / ${dca.length} 次不输，最少的一次只多 ${pct(minGain, 2)}）；只用新钱补——课税 ${pct(gain("cashflow", true), 1)}、免税 ${pct(gain("cashflow", false), 1)}。免税时也多，说明差别不只是税：一是少交易（每次买卖都有成本），二是<b>股票的比例平均更高一点</b>（股+金的最高比例比"每月卖回"平均高 ${(riskUp * 100).toFixed(1)} 个点）——在 2009 年以后这段长期上涨里，多拿股票自然多赚，这一部分是多承担风险换来的。课税账户再多出来的一截是税。` +
+    ` ③ 代价是比例会偏（每月末量）：只用新钱补平均偏 ${(avg(cfDrift) * 100).toFixed(1)} 个点，最多偏 ${(Math.max(...cfMax) * 100).toFixed(0)} 个点，定投金额相对总资产越小，越补不回来。` +
+    ` ④ <b>不再投钱、一次性放着的话</b>（下面选"一次性 500 万"），"从不卖"就是放任不管，股票（含黄金）的比例最多比目标高 ${(Math.max(...lumpRisk) * 100).toFixed(0)} 个点——多出来的回报是多承担风险换来的，碰上 2008 年那样的下跌就会多跌。两个起点都在 2008 年暴跌之后，这一点要打折看。` +
+    `<br><b>对你的意思：</b>你在 NISA 里每月定投，在这段数据里没输过的做法是"偏离 5 个点才卖"：<b>平时不卖，每月的钱优先买低于目标的那部分</b>；只有某一项偏离超过 5 个点（比如股票大涨后），才卖回目标。NISA 里卖出不交税，但卖掉的额度要到第二年才恢复，而且年度 360 万的额度不会退回，所以 NISA 里少卖还有额度上的好处。本地运行 <code>python -m src.cli nextbuy</code> 会按你的实际持仓算出这个月的钱该分给哪部分。`;
   $("rbMix").innerHTML = Object.entries(X.mixes).map(([k, m]) => `<button class="chip${k === rbSel.mix ? " on" : ""}" data-mix="${k}">${m.label}</button>`).join("");
   const opt = (key, val, label) => `<button class="chip${rbSel[key] === val ? " on" : ""}" data-k="${key}" data-v="${val}">${label}</button>`;
   $("rbOpt").innerHTML = Object.entries(X.scenarios).map(([k, l]) => opt("scenario", k, l)).join("") + " " +
-    starts.map(s0 => opt("start", s0, s0.slice(0, 4) + " 年起")).join("") + " " + opt("taxable", true, "课税账户") + opt("taxable", false, "NISA");
+    starts.map(s0 => opt("start", s0, s0.slice(0, 4) + " 年起")).join("") + " " + opt("taxable", true, "课税账户") + opt("taxable", false, "免税（假设全在 NISA）");
   const r = X.results.find(x => x.mix === rbSel.mix && x.scenario === rbSel.scenario && x.start === rbSel.start && x.taxable === rbSel.taxable);
   const best = Math.max(...X.policies.map(k => r.by[k].final));
   $("rbTable").innerHTML = `<thead><tr><th>方法</th><th>期末到手</th><th>年化（XIRR）</th><th>最大回撤</th><th>偏离 平均/最大</th><th>股+金 期末/最高</th><th>交易次数</th>${rbSel.taxable ? "<th>途中交的税</th>" : ""}</tr></thead><tbody>` +

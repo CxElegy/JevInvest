@@ -621,18 +621,25 @@ class BacktestResult:
 
 
 def drift(book: Book, prices: Prices, day: pd.Timestamp, target: dict[str, float]) -> float:
-    """目標ウェイトからの最大のずれ（現金は除く。価格の無い銘柄は見ない）。"""
-    nav = book.value(prices, day)
-    if nav <= 0:
-        return 0.0
-    worst = 0.0
+    """目標ウェイトからの最大のずれ。投資している部分だけで測る（価格の無い銘柄は見ない）。
+
+    積立の入金日は現金が増えるので、現金込みで測ると全銘柄が「足りない」に見えてしまう。
+    そこで保有の比率と、目標の（現金を除いた）比率を、それぞれ合計 1 にして比べる。
+    """
+    vals = {}
     for s in sorted(set(target) | set(book.qty)):
         if s == "CASH":
             continue
         px = prices.jpy(s, day)
-        if px is None:
-            continue
-        worst = max(worst, abs(book.qty.get(s, 0.0) * px / nav - target.get(s, 0.0)))
+        if px is not None:
+            vals[s] = book.qty.get(s, 0.0) * px
+    invested = sum(vals.values())
+    tsum = sum(v for s, v in target.items() if s != "CASH")
+    if invested <= 0 or tsum <= 0:
+        return 0.0
+    worst = 0.0
+    for s, v in vals.items():
+        worst = max(worst, abs(v / invested - target.get(s, 0.0) / tsum))
     return worst
 
 
