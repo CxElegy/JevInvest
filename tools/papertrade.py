@@ -155,7 +155,8 @@ def claude_decisions() -> list[dict]:
         if sum(w.values()) > 1.0 + 1e-9 or any(v < 0 for v in w.values()):
             raise SystemExit(f"paper/claude.yaml {d.get('date')}: ウェイトは 0 以上・合計 1 以下")
         out.append({"date": str(d["date"]), "weights": w,
-                    "rationale": str(d.get("rationale", "")).strip()})
+                    "rationale": str(d.get("rationale", "")).strip(),
+                    "summary_zh": str(d.get("summary_zh", "")).strip()})
     return sorted(out, key=lambda d: d["date"])
 
 
