@@ -44,6 +44,19 @@ def _blob(data) -> str:
     return json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
 
 
+def fx_effect(sim: dict, start: str = "2009-07-01") -> dict:
+    """期間中の円安が、円建てのリターンにどれだけ効いたか（VT のドル建てと円建ての年率の差）。"""
+    dates = sim["dates"]
+    i0 = next(i for i, d in enumerate(dates) if d >= start)
+    fx = [v for v in sim["fx"][i0:] if v is not None]
+    vt = [v for v in sim["adj"]["VT"][i0:] if v is not None]
+    from datetime import date
+    yrs = (date.fromisoformat(dates[-1]) - date.fromisoformat(dates[i0])).days / 365.25
+    g = lambda a, b: (b / a) ** (1 / yrs) - 1   # noqa: E731
+    return {"start": dates[i0], "end": dates[-1], "fx0": fx[0], "fx1": fx[-1], "fx_cagr": g(fx[0], fx[-1]),
+            "vt_usd": g(vt[0], vt[-1]), "vt_jpy": g(vt[0] * fx[0], vt[-1] * fx[-1])}
+
+
 def build_simulator(out: Path) -> None:
     html = (ROOT / "web" / "simulator.html").read_text(encoding="utf-8")
     engine = (ROOT / "web" / "simengine.js").read_text(encoding="utf-8")
@@ -59,7 +72,7 @@ def build_simulator(out: Path) -> None:
     sens_path = ROOT / "web" / "strategy_sensitivity.json"
     sens = json.loads(sens_path.read_text(encoding="utf-8")) if sens_path.exists() else None
     html = html.replace("/*__ENGINE__*/", engine).replace(
-        MARK, _blob({"sim": sim, "live": pt.get("live"), "lab": lab, "sens": sens}))
+        MARK, _blob({"sim": sim, "live": pt.get("live"), "lab": lab, "sens": sens, "fx": fx_effect(sim)}))
     out.write_text(html, encoding="utf-8")
     print(f"→ {out}（{out.stat().st_size / 1024:.0f} KB）")
 

@@ -235,6 +235,43 @@ def cmd_run(args) -> None:
     print(f"{len(days)} 営業日を処理しました → {REPORT.relative_to(ROOT)}")
 
 
+def cmd_brief(args) -> None:
+    """Claude 口座の判断材料（毎週火曜の定期実行で使う）。paper/briefs/<日付>.md に残す。
+
+    判断に使ってよいのは、ここに出る「最後に処理した日までの」数字だけ。
+    """
+    from src.sim import _above_sma, _ret, _vals, _vol
+
+    st = load_state()
+    prices = settled(live_prices())
+    last = pd.Timestamp(st["books"]["allcountry"].last_day)
+    hist = prices.truncate(last).upto(last)
+    lines = [f"# 判断材料 {last.date()}（この日の終値まで）", "",
+             "| 銘柄 | 1 か月 | 3 か月 | 12 か月 | 200 日線との差 | 60 日変動率 | 1 年高値から |",
+             "|---|---:|---:|---:|---:|---:|---:|"]
+    for s in UNIVERSE:
+        a = _vals(hist, s)
+        if len(a) < 253:
+            continue
+        sma = sum(a[-200:]) / 200
+        lines.append(f"| {s} | {_pct(_ret(a, 21))} | {_pct(_ret(a, 63))} | {_pct(_ret(a, 252))} | "
+                     f"{_pct(a[-1] / sma - 1)} | {(_vol(a, 60) or 0) * 100:.1f}% | {_pct(a[-1] / max(a[-252:]) - 1)} |")
+    fx = prices.fx.loc[:last]
+    lines += ["", f"USDJPY {fx.iloc[-1]:.2f}（1 か月 {_pct(fx.iloc[-1] / fx.iloc[-22] - 1)}、"
+                  f"12 か月 {_pct(fx.iloc[-1] / fx.iloc[-253] - 1)}）", ""]
+    cap = st["capital"]
+    base = st["books"]["allcountry"].nav[-1][1] / cap - 1
+    c = st["books"]["claude"]
+    lines += [f"Claude 口座: 開始来 {_pct(c.nav[-1][1] / cap - 1)}（全世界株 1 本 {_pct(base)}）",
+              "保有: " + ("、".join(f"{s} {q:g}" for s, q in sorted(c.qty.items())) or "なし") + f"、現金 {c.cash:,.0f} 円",
+              "", "※ 変えるなら paper/claude.yaml に追記（date はこの日）。据え置きも判断。売買はコスト。"]
+    out = PAPER / "briefs" / f"{last.date()}.md"
+    out.parent.mkdir(exist_ok=True)
+    out.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print("\n".join(lines))
+    print(f"\n→ {out.relative_to(ROOT)}")
+
+
 def cmd_report(args) -> None:
     write_report(load_state())
     print(f"→ {REPORT.relative_to(ROOT)}")
@@ -500,6 +537,9 @@ def main(argv=None) -> None:
 
     p = sub.add_parser("report")
     p.set_defaults(func=cmd_report)
+
+    p = sub.add_parser("brief", help="Claude 口座の判断材料を出す（paper/briefs/ に残す）")
+    p.set_defaults(func=cmd_brief)
 
     args = ap.parse_args(argv)
     PAPER.mkdir(exist_ok=True)

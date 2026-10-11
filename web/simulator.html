@@ -694,7 +694,7 @@ function renderBoard() {
   const lowDD = keys.filter(k => S[k].max_dd > -0.2).map(k => STRAT[k].label);
   $("bVerdict").innerHTML = `<b>数据说的话：</b>① 17 个策略里，一次性投入的年化赢过全球股一只的只有 ${beatLump.length} 个（${beatLump.map(k => STRAT[k].label).join("、") || "无"}）；8 段 10 年定投全部胜出的只有 ${beatRoll.map(k => STRAT[k].label).join("、") || "无"}，那是美国股市这十几年特别强。` +
     ` ② ${timing.length} 个择时/动量策略里，一次性和定投都输给"不动"的有 ${tLose} 个。放在课税账户，定投年化再少 ${pct(Math.min(...tdrag), 1).replace("+", "")}～${pct(Math.max(...tdrag), 1).replace("+", "")}。` +
-    ` ③ 最大回撤小于 20% 的是：${lowDD.join("、")}，换来的是明显更低的回报。<br><b>对你的意思：</b>NISA 里的核心部分，"不动"已经是很难打败的选项。真正要选的是能不能忍住 -34% 的下跌；忍不住的话，就加债券、黄金或日元资产降低波动，而不是去择时。`;
+    ` ③ 最大回撤小于 20% 的是：${lowDD.join("、")}，换来的是明显更低的回报。<br><b>还有一点要知道：</b>${DATA.fx ? `这段时间 1 美元从 ${DATA.fx.fx0.toFixed(0)} 日元变成 ${DATA.fx.fx1.toFixed(0)} 日元，日元每年贬值约 ${(DATA.fx.fx_cagr * 100).toFixed(1)}%。全球股的年化用美元算是 ${pct(DATA.fx.vt_usd, 1)}，用日元算是 ${pct(DATA.fx.vt_jpy, 1)}，差的部分就是日元贬值带来的。以后日元升值时，这部分会反过来变成损失。` : ""}<br><b>对你的意思：</b>NISA 里的核心部分，"不动"已经是很难打败的选项。真正要选的是能不能忍住 -34% 的下跌；忍不住的话，就加债券、黄金或日元资产降低波动，而不是去择时。`;
   $("bView").onclick = e => { const b = e.target.closest("button"); if (!b) return; bView = b.dataset.v; bSort = { key: null, dir: -1 }; renderBoard(); };
   scatter(S);
   renderSensitivity();
@@ -786,7 +786,7 @@ function runFuture() {
   const r = E.bootstrap(P, opts);
   const yrs = opts.years;
   $("fTitle").textContent = `${yrs} 年后：投入合计 ${man(r.paid)}`;
-  $("fNote").innerHTML = `<b>怎么算的：</b>把 ${r.from} ～ ${r.to} 共 ${r.months} 个月的真实月度回报（日元计，含分红，扣除这个配置的现金部分），按 12 个月一段随机抽取、拼接成 2000 条未来路径。这段历史是美股牛市加日元贬值，照搬会偏乐观，所以默认每年扣 2%。另外，日本股的数据从 2009 年才有，为了让所有配置用同一段历史，<b>2008 年金融危机最惨的几个月不在里面</b>，回撤数字因此偏小；那种极端情况请看总览页的压力测试（目标配置约 -51%）。这是"如果未来像过去那样波动"的范围，不是预测。`;
+  $("fNote").innerHTML = `<b>怎么算的：</b>把 ${r.from} ～ ${r.to} 共 ${r.months} 个月的真实月度回报（日元计，含分红，扣除这个配置的现金部分），按 12 个月一段随机抽取、拼接成 2000 条未来路径。这段历史是美股牛市加日元贬值${DATA.fx ? `（日元每年贬值约 ${(DATA.fx.fx_cagr * 100).toFixed(1)}%）` : ""}，照搬会偏乐观，所以默认每年扣 2%，大致相当于去掉日元贬值的那一部分。另外，日本股的数据从 2009 年才有，为了让所有配置用同一段历史，<b>2008 年金融危机最惨的几个月不在里面</b>，回撤数字因此偏小；那种极端情况请看总览页的压力测试（目标配置约 -51%）。这是"如果未来像过去那样波动"的范围，不是预测。`;
   const f = r.final;
   $("fTiles").innerHTML = [
     ["中位数（一半路径高于它）", man(f.p50), `是投入的 ${(f.p50 / r.paid).toFixed(2)} 倍`],
