@@ -156,11 +156,15 @@ table.data td.num { font-family: var(--f-mono); }
   <h2><span class="no">00</span>醒来先做这三件事</h2>
   <ol class="todo">
     <li><div class="rank">1</div><div><b>发 independence 咨询邮件</b><span>你的计划卡在这一步：核心那 55% 的指数基金能不能先买、要不要每支都预审，都等这封邮件的回复。运行 <code>/independence-mail</code> 会生成英日对照草稿，只起草，不发送。</span></div></li>
-    <li><div class="rank">2</div><div><b>查公司有没有企业型 DC，决定 iDeCo 要不要加额</b><span>从 2026 年 12 月那期起，没有企业年金的上班族 iDeCo 上限从每月 2.3 万涨到 6.2 万日元（厚劳省资料）。这是全部内容里节税效果最大的一项，而且有截止日。详见 <code>docs/PLAYBOOK.md</code> 第 3-4 节。</span></div></li>
-    <li><div class="rank">3</div><div><b>看一眼模拟盘，然后别管它</b><span>5 个虚拟账户各 500 万日元，用真实收盘价自动跑到 11 月 12 日。每个交易日东京时间早上 7:07 自动更新。一个月的输赢大多靠运气，下面第 04 节会说明怎么看。</span></div></li>
+    <li><div class="rank">2</div><div><b>查公司有没有企业型 DC，决定 iDeCo 要不要加额</b><span>从 2026 年 12 月那期起，没有企业年金的上班族 iDeCo 上限从每月 2.3 万涨到 6.2 万日元（厚劳省资料）。这是全部内容里节税效果最大的一项，而且有截止日。在本地运行 <code>/taxplan</code> 可以算出你能省多少（下面第 01 节有示例）。</span></div></li>
+    <li><div class="rank">3</div><div><b>看一眼模拟盘，然后别管它</b><span>5 个虚拟账户各 500 万日元，用真实收盘价自动跑到 11 月 12 日。每个交易日东京时间早上 7:07 自动更新。一个月的输赢大多靠运气，下面第 05、06 节会说明怎么看。</span></div></li>
   </ol>
 
-  <h2><span class="no">01</span>做了什么</h2>
+  <h2><span class="no">01</span>节税：这是最确定能赚到的钱</h2>
+  <p class="prose">CLAUDE.md 里定的优先级，第一位就是税制和手续费。选股赚多少不确定，节税省下的钱是确定的。下表用几个<b>示例年收入</b>算 2026 年的数（不是你的收入；社会保险费按年收入 15% 估算，只有本人、没有家属）。你自己的数，请在本地运行 <code>python -m src.cli taxplan --salary 你的年收入</code>，收入只显示在屏幕上，不会保存，也不用告诉我。</p>
+  <div id="tax"></div>
+
+  <h2><span class="no">02</span>做了什么</h2>
   <div class="scroll">
   <table class="deliver">
     <thead><tr><th>类型</th><th>东西</th><th>怎么用</th><th>为什么值得做</th></tr></thead>
@@ -169,10 +173,11 @@ table.data td.num { font-family: var(--f-mono); }
       <tr><td><span class="pill new">新</span></td><td>交易前检查</td><td><code>/before-trade</code></td><td>把"不该做的理由"一次列全：independence、目标配置、单只上限、现金下限、NISA 额度、税、24 小时冷静期、交易频率。</td></tr>
       <tr><td><span class="pill new">新</span></td><td>游玩仓记分牌</td><td><code>scoreboard</code></td><td>你自己挑的个股，跟"同一天把同样的钱放进 VT"比。差额就是选股和择时的真实水平。</td></tr>
       <tr><td><span class="pill new">新</span></td><td>模拟盘 + 回测</td><td><code>paper/</code></td><td>你要的：虚拟 500 万，真实数据。外加 2009 年至今的回测，用同一套代码。</td></tr>
+      <tr><td><span class="pill new">新</span></td><td>节税计算</td><td><code>/taxplan</code></td><td>算 iDeCo 能省多少税、ふるさと納税的上限。iDeCo 上限 12 月起变成 2.7 倍，有截止时间。</td></tr>
       <tr><td><span class="pill new">新</span></td><td>压力测试</td><td><code>stress</code></td><td>把 2008、2011、2020、2022、2024 年的真实危机套到你的配置上，并拆出汇率造成的部分。你 90% 是美元资产，日元升值是实实在在的风险。</td></tr>
       <tr><td><span class="pill new">新</span></td><td>每月例行检查</td><td><code>/monthly-check</code></td><td>按 PLAYBOOK 的年度日历，只列出这个月该做的事。检查本身不应该成为买卖的理由。</td></tr>
       <tr><td><span class="pill new">新</span></td><td>Independence 邮件草稿</td><td><code>/independence-mail</code></td><td>你的计划卡在这里。</td></tr>
-      <tr><td><span class="pill fix">修复</span></td><td>9 个旧代码错误</td><td>自动生效</td><td>其中一个最严重：没通过预审的基金，定投计划照样分钱进去。下面第 03 节有图。</td></tr>
+      <tr><td><span class="pill fix">修复</span></td><td>9 个旧代码错误</td><td>自动生效</td><td>其中一个最严重：没通过预审的基金，定投计划照样分钱进去。下面第 04 节有图。</td></tr>
       <tr><td><span class="pill fix">修复</span></td><td>今晚新代码的 10 个错误</td><td>自动生效</td><td>写完后另找一个 agent 专门挑错。最严重的一个：模拟盘可能把盘中价格当成收盘价成交。现在只处理所有品种都已收盘、数据齐全的交易日。</td></tr>
       <tr><td><span class="pill doc">调研</span></td><td>基金成本对比</td><td><code>docs/FUNDS.md</code></td><td>NISA 候选基金的信託報酬、实际成本、美国 ETF 的外国税。每个数字都有出处。</td></tr>
       <tr><td><span class="pill doc">调研</span></td><td>大神们的做法 + 你的计划</td><td><code>docs/PLAYBOOK.md</code></td><td>Buffett、Bogle、山崎元等人的原话和数据，游玩仓规则，年度日历，接下来 90 天的清单。</td></tr>
@@ -180,7 +185,7 @@ table.data td.num { font-family: var(--f-mono); }
   </table>
   </div>
 
-  <h2><span class="no">02</span>整体结构</h2>
+  <h2><span class="no">03</span>整体结构</h2>
   <p class="prose">计算全在你本地的 Python 里做，判断交给 Claude Code。带金额的文件只留在本地，不提交到 GitHub。蓝色描边的是今晚新加的，红色描边的是今晚修过的。</p>
   <figure>
     <div class="canvas">
@@ -249,7 +254,7 @@ table.data td.num { font-family: var(--f-mono); }
     <figcaption><b>数据只往一个方向流：</b>输入 → 本地文件 → 计算 → 产出。compliance 是闸门：定投计划和交易前检查都要先过它。Yahoo 的价格分两路：估值用最新价；模拟盘只能用"判断之后的下一个收盘价"成交。</figcaption>
   </figure>
 
-  <h2><span class="no">03</span>最严重的那个错误：independence 闸门漏了</h2>
+  <h2><span class="no">04</span>最严重的那个错误：independence 闸门漏了</h2>
   <p class="prose">原来的定投计划只对"个股"类检查预审。全球股基金和债券基金就算 DESC 还没查，也照样每月分钱。更糟的是，个股因为没批准而暂停的那部分钱，又被转到了同样没查过的全球股基金里。按 CLAUDE.md，这是最不能出错的地方。</p>
   <figure>
     <div class="canvas">
@@ -300,7 +305,7 @@ table.data td.num { font-family: var(--f-mono); }
     <li><div>波动率、回撤把日元现金排除在外，被高估了约 1.7 倍。另外修了两处小问题：匿名模式的 HTML 里还藏着金额；外币现金被按日元计算。<span class="sev">中</span></div></li>
   </ol>
 
-  <h2><span class="no">04</span>模拟盘：虚拟 500 万 × 5 个账户</h2>
+  <h2><span class="no">05</span>模拟盘：虚拟 500 万 × 5 个账户</h2>
   <p class="prose">你说"给你 500 万日元自己去交易，必须用真实数据"。实现方式如下：同一套规则跑 5 个账户，一个是我自己凭判断操作的，另外 4 个是事先写死的策略。全部用 Yahoo 的真实收盘价，每一笔成交的日期、价格、汇率都记在 <code>paper/state.json</code>，事后可以逐笔核对。不会真的下单。</p>
   <figure>
     <div class="canvas">
@@ -332,15 +337,15 @@ table.data td.num { font-family: var(--f-mono); }
   </figure>
   <div id="live"></div>
 
-  <h2><span class="no">05</span>回测：同样的规则，2009 年至今的真实数据</h2>
+  <h2><span class="no">06</span>回测：同样的规则，2009 年至今的真实数据</h2>
   <p class="prose">先说这一节最重要的结论：<b>一个月的成绩几乎全看运气。</b>下面第二张图是过去 17 年里所有"一个月"的回报分布。11 月 12 日出来的结果，只会落在这个范围里的某个位置。</p>
   <div id="bt"></div>
 
-  <h2><span class="no">06</span>压力测试：把历史上的暴跌放到你的配置上</h2>
+  <h2><span class="no">07</span>压力测试：把历史上的暴跌放到你的配置上</h2>
   <p class="prose">现在 1 美元约 158 日元，处在高位，而你的目标配置大约 90% 是美元资产。日元一旦升值，就算股价不动，换算成日元也会缩水。下面把 5 次真实发生过的危机套到你的目标配置上，看最多会跌多少，以及其中多少是汇率造成的。时间段按事件本身固定，不是看结果挑的。用命令 <code>python -m src.cli stress</code> 也能对你的实际持仓跑一遍。</p>
   <div id="stress"></div>
 
-  <h2><span class="no">07</span>交易前检查怎么工作</h2>
+  <h2><span class="no">08</span>交易前检查怎么工作</h2>
   <p class="prose">PLAYBOOK 里的数据：晨星统计，投资者因为自己的买卖时机，每年平均少赚约 1.2 个百分点（8.7% 对比基金本身的 9.9%）。按你的计划（100 万起步，每月 20 万），20 年下来约差 1,050 万日元。这个工具就是在你下单前拦住这类损失。</p>
   <figure>
     <div class="canvas">
@@ -373,7 +378,7 @@ table.data td.num { font-family: var(--f-mono); }
     <figcaption><b>先列出不该做的理由。</b>可以用 <code>--pct 3</code>（占总资产的 %）代替金额，这样不用把金额告诉我。第一次考虑某笔交易时会记下时间，24 小时后再运行同一条命令，冷静期这一项才会通过。</figcaption>
   </figure>
 
-  <h2><span class="no">08</span>调研要点（每条都有出处）</h2>
+  <h2><span class="no">09</span>调研要点（每条都有出处）</h2>
   <div class="two">
     <div class="card">
       <h4>基金成本 · <code>docs/FUNDS.md</code></h4>
@@ -395,7 +400,7 @@ table.data td.num { font-family: var(--f-mono); }
     </div>
   </div>
 
-  <h2><span class="no">09</span>命令速查</h2>
+  <h2><span class="no">10</span>命令速查</h2>
   <div class="cmds">
     <div><code>/import-csv 文件.csv</code><span>导入券商成交记录</span></div>
     <div><code>/before-trade NVDA 买 3%</code><span>交易前检查</span></div>
@@ -404,6 +409,7 @@ table.data td.num { font-family: var(--f-mono); }
     <div><code>python tools/papertrade.py run</code><span>手动推进模拟盘</span></div>
     <div><code>python tools/papertrade.py backtest</code><span>重新跑回测</span></div>
     <div><code>python -m src.cli stress</code><span>历史危机套到你的持仓上</span></div>
+    <div><code>/taxplan</code><span>iDeCo 省税额和ふるさと納税上限（在本地输入收入）</span></div>
   </div>
   <p class="note blue">分析和决策辅助到此为止，不会实际下单。是否买卖，以 DESC 和 Independence &amp; Conflicts Network 的结论为准，由你自己决定。</p>
 </div>
@@ -574,6 +580,30 @@ function backtest() {
   distChart(document.getElementById("dist"));
 }
 
+function tax() {
+  const el = document.getElementById("tax");
+  const t = DATA && DATA.tax;
+  if (!t) { el.innerHTML = ""; return; }
+  const rows = t.map(r => `<tr><td class="num">${(r.salary / 1e4).toFixed(0)} 万</td><td class="num">${(r.marginal * 100).toFixed(1)}%</td><td class="num">${yen(r.ideco_23k)}</td><td class="num" style="color:var(--fg);font-weight:700">${yen(r.ideco_62k)}</td><td class="num">${yen(r.furusato)}</td><td class="num">${yen(r.furusato_62k)}</td></tr>`).join("");
+  el.innerHTML = `
+    <div class="scroll"><table class="data"><thead><tr><th>年收入（示例）</th><th>边际税率</th><th>iDeCo 每月 2.3 万<br>每年省税</th><th>iDeCo 每月 6.2 万<br>每年省税</th><th>ふるさと納税上限<br>（不做 iDeCo）</th><th>ふるさと納税上限<br>（iDeCo 6.2 万时）</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="two" style="margin-top:14px">
+      <div class="card"><h4>iDeCo：12 月起上限变成 2.7 倍</h4><ul>
+        <li>没有企业年金的上班族：每月 2.3 万 → 2026 年 12 月那期起 6.2 万（厚劳省）。有企业年金时，6.2 万要和企业年金合算。</li>
+        <li>省下的税 = 投入额 × 你的边际税率，交的当时就确定了。</li>
+        <li>代价是钱要锁到 60 岁，而且领取时还要交一部分税（这次没有计算）。先留够应急资金，再决定能锁多少。</li>
+        <li>先查 Deloitte 有没有企业型 DC（PLAYBOOK 里标的是"未确认"），这会改变你的上限。</li>
+      </ul></div>
+      <div class="card"><h4>ふるさと納税：年底前做</h4><ul>
+        <li>只花 2,000 日元的自付额，就能拿到当地特产。截止到 12 月 31 日的捐款计入今年。</li>
+        <li>先定 iDeCo，再定捐多少。iDeCo 会降低你的上限（表格最后一列）。</li>
+        <li>捐给 5 个地方以内可以用ワンストップ特例，申请书 1 月 10 日前必须寄到。超过 5 个地方要做确定申告。</li>
+        <li>别捐到上限边缘，留 10～20% 余量，因为年收入和社会保险费的实际数会有出入。</li>
+      </ul></div>
+    </div>
+    <p class="note">2026 年税制改正后，所得税的基础控除，合计所得 489 万以下为 104 万，655 万以下为 67 万（国税庁 No.1199，2026 年 12 月 1 日施行）。我自己去国税庁页面核对过。社会保险费的比例和住民税的部分细节标的是"未确认"，最终以源泉徴収票和自治体的模拟器为准。</p>`;
+}
+
 function stress() {
   const el = document.getElementById("stress");
   const st = DATA && DATA.stress;
@@ -610,5 +640,5 @@ function stress() {
     <div class="note blue">这张图的用处：<b>先想清楚，跌到这个程度时你能不能不卖。</b>回测里"不动"之所以赢，前提是在 -50% 的时候没有卖。如果做不到，就该在现在多配一些日元资产（日元现金、个人向け国債、国内债券），而不是等到大跌时再卖。</div>`;
 }
 
-meta(); live(); backtest(); stress();
+meta(); tax(); live(); backtest(); stress();
 </script>
