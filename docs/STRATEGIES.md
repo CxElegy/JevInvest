@@ -1,0 +1,42 @@
+# 戦略の一覧と検証結果
+
+最終更新: 2026-10-11。規則の実装は `src/sim.py`（ブラウザ版 `web/simengine.js` と数字が一致することを
+`tests/test_sim_parity.py` で確認）。成績表は `python tools/strategy_lab.py` → `web/strategy_lab.json`、
+シミュレーターの「策略排行榜」で見られる。
+
+共通の決まり: 判断はその日の終値まで、約定は翌営業日の終値。手数料 0.10%、スリッページ 0.05%、
+為替スプレッド 25 銭。配当込みの価格（再投資扱い）。課税口座は売却益にその場で 20.315%、同じ年の損は還付
+（繰越控除・分配金課税は入れていない）。
+
+| キー | 名前 | 規則 | 出典 |
+|---|---|---|---|
+| allcountry | 全世界株 1 本 | VT を買って持つ（積立は毎月買い足す） | Bogle、山崎元『ほったらかし投資術』 |
+| core_satellite | 目標配分 | VT 55 / QQQ 20 / 1348.T 5 / AGG 15 / 現金 5、毎月戻す | docs/PLAN.md |
+| sp500 | S&P500 1 本 | SPY を買って持つ | Buffett 2013 年の株主への手紙（90/10） |
+| home_bias | 日本株 50 / 全世界 50 | 1348.T 50 / VT 50、毎月戻す | French & Poterba (1991) |
+| sixty_forty | 株 60 / 債券 40 | VT 60 / AGG 40、毎月戻す | 伝統的なバランス型 |
+| permanent | パーマネント | SPY・TLT・GLD・BIL 各 25%、年 1 回戻す | Harry Browne『Fail-Safe Investing』 |
+| all_weather | オールウェザー近似 | SPY 30 / TLT 40 / IEF 15 / GLD 7.5 / DBC 7.5 | Tony Robbins『Money: Master the Game』(2014) の Dalio による簡易版 |
+| ivy | アイビー 5 資産 | SPY・VEU・IEF・VNQ・DBC 各 20% | Faber & Richardson『The Ivy Portfolio』(2009) |
+| ivy_timing | アイビー + 200 日線 | 上のうち 200 日線より上のものだけ、残りは現金 | Faber (2007) SSRN 962461 |
+| risk_parity | リスクパリティ（逆ボラ） | VT・TLT・GLD・DBC を 126 日変動率の逆数で配分（レバレッジなし） | Qian (2005)、Asness, Frazzini & Pedersen (2012) |
+| trend | トレンド（200 日線） | VT・QQQ・1348.T・AGG・GLD 各 20%、200 日線より下は現金 | Faber (2007) |
+| dual_momentum | デュアルモメンタム | SPY と VEU の 12 か月で強いほうが BIL より強ければ 100%、弱ければ AGG | Antonacci『Dual Momentum Investing』(2014) |
+| momentum_top3 | 相対モメンタム上位 3 | 8 資産を 1・3・6・12 か月の平均で順位付け、上位 3 つ（200 日線より下は現金） | Faber「GTAA Aggressive」 |
+| vol_target | ボラティリティ・ターゲット | VT の 60 日変動率が年 12% を超えた分だけ BIL へ | Moreira & Muir (2017) J. Finance |
+| spy_timing | S&P500 + 200 日線 | SPY が 200 日線より上なら SPY、下なら BIL | Faber (2007) |
+| sell_in_may | セル・イン・メイ | 5〜10 月は BIL、11〜4 月は VT | Bouman & Jacobsen (2002) AER |
+| buy_the_dip | 押し目待ち | VT が 1 年の高値から 10% 下がるまで現金、下がったら全額（以後保有） | Maggiulli (2019)「Even God Couldn't Beat Dollar-Cost Averaging」 |
+
+## 結果の要約（2009-07〜2026-10、web/strategy_lab.json より）
+
+- 一括投資で全世界株 1 本の年率を上回ったのは S&P500 1 本と押し目待ちの 2 本だけ。押し目待ちは
+  2009-07 開始で 2010 年の下落をたまたま拾ったもの（積立の 10 年比較では 8 回中 2 回しか勝たない）。
+- 10 年積立を 8 通りの開始年で比べて全勝したのは S&P500 1 本だけ。この期間の米国株の強さによる。
+- タイミング・モメンタム系の 7 本は、一括でも積立でも全世界株 1 本に負けた。課税口座では積立の年率が
+  さらに 1.4〜2.6 ポイント下がる。
+- 最大下落が 20% より小さいのはパーマネント・オールウェザー・アイビー + 200 日線。代わりに年率は 7〜10% 台。
+- 前半（2009-07〜2017）と後半（2018〜）の順位の相関は 0.73。S&P500 + 200 日線は前半 5 位から後半 15 位に落ちた。
+
+**結論**: NISA の中核は「全世界株を買って持つ」が最も破りにくい。選ぶべきは下落に耐えられるかどうかで、
+耐えられないなら債券・金・円資産で振れ幅を下げる。タイミングで避けようとするのは、この検証では割に合わない。

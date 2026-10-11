@@ -51,7 +51,12 @@ def build_simulator(out: Path) -> None:
         raise SystemExit("simengine.js に </script が含まれています")
     pt = json.loads(DATA.read_text(encoding="utf-8"))
     sim = json.loads((ROOT / "web" / "simdata.json").read_text(encoding="utf-8"))
-    html = html.replace("/*__ENGINE__*/", engine).replace(MARK, _blob({"sim": sim, "live": pt.get("live")}))
+    lab_path = ROOT / "web" / "strategy_lab.json"
+    lab = json.loads(lab_path.read_text(encoding="utf-8")) if lab_path.exists() else None
+    if lab:
+        for v in lab["strategies"].values():
+            v.pop("nav", None)          # ページでは使わない（容量を抑える）
+    html = html.replace("/*__ENGINE__*/", engine).replace(MARK, _blob({"sim": sim, "live": pt.get("live"), "lab": lab}))
     out.write_text(html, encoding="utf-8")
     print(f"→ {out}（{out.stat().st_size / 1024:.0f} KB）")
 

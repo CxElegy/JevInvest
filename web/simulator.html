@@ -7,7 +7,7 @@
 :root {
   --bg: #f5f7f6; --surface: #ffffff; --sunk: #eaefec; --fg: #15201b; --muted: #56635d; --line: #d3dbd6;
   --accent: #19628a; --accent-soft: #e1eef5; --good: #1a7f4b; --warn: #9a6400; --stop: #b8322a;
-  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #6250d6;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #6250d6; --s7: #008300;
   --f-display: "Noto Serif SC", "Songti SC", "SimSun", serif;
   --f-body: "Noto Sans SC", "PingFang SC", "Hiragino Sans", "Microsoft YaHei", sans-serif;
   --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
@@ -16,14 +16,14 @@
   :root:not([data-theme="light"]) {
     --bg: #111614; --surface: #19201d; --sunk: #202825; --fg: #e7ece9; --muted: #a1ada7; --line: #313b37;
     --accent: #6db7dc; --accent-soft: #1b3442; --good: #4cc18a; --warn: #e2a63b; --stop: #f07a70;
-    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #9085e9;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #9085e9; --s7: #2f9e2f;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #111614; --surface: #19201d; --sunk: #202825; --fg: #e7ece9; --muted: #a1ada7; --line: #313b37;
   --accent: #6db7dc; --accent-soft: #1b3442; --good: #4cc18a; --warn: #e2a63b; --stop: #f07a70;
-  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #9085e9;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #9085e9; --s7: #2f9e2f;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -108,6 +108,7 @@ svg.chart { display: block; width: 100%; height: auto; }
   <div class="tabs" role="tablist">
     <button role="tab" id="tab-replay" aria-controls="t-replay" aria-selected="true">回放实验</button>
     <button role="tab" id="tab-game" aria-controls="t-game" aria-selected="false">你来操盘</button>
+    <button role="tab" id="tab-board" aria-controls="t-board" aria-selected="false">策略排行榜</button>
     <button role="tab" id="tab-live" aria-controls="t-live" aria-selected="false">实盘进度</button>
   </div>
 
@@ -214,6 +215,37 @@ svg.chart { display: block; width: 100%; height: auto; }
     </div>
   </section>
 
+  <!-- 策略排行榜 -->
+  <section role="tabpanel" id="t-board" aria-labelledby="tab-board" hidden>
+    <div class="panel">
+      <h2>17 个策略，同一套规则，同一份真实数据</h2>
+      <p class="note" id="bMeta"></p>
+      <div class="luck" id="bVerdict"></div>
+      <div class="chips" id="bView" style="margin:10px 0"></div>
+      <div class="scroll"><table class="data" id="bTable"></table></div>
+      <p class="note">点表头可以排序。"10 年定投胜出"：从 2009–2016 年每年 7 月开始、各定投 10 年（起步 100 万 + 每月 20 万），赢过全球股一只的次数。"前半 / 后半"：2009-07～2017 和 2018 年以后分别的年化。</p>
+    </div>
+    <div class="panel">
+      <h3 style="margin-top:0">风险和回报（一次性投入，NISA）</h3>
+      <div id="bScatter"></div>
+      <p class="note">横轴是年化波动（越右越颠簸），纵轴是年化收益。左上角最好。蓝点是全球股一只（基准）。</p>
+    </div>
+    <div class="panel">
+      <h3 style="margin-top:0">换个起点：每段 10 年定投的年化（XIRR）</h3>
+      <div class="scroll"><table class="data" id="bRolling"></table></div>
+      <p class="note">粗体 = 这一段赢过全球股一只。</p>
+    </div>
+    <div class="panel">
+      <h3 style="margin-top:0">前半段的好成绩，后半段还在吗</h3>
+      <p id="bOos"></p>
+      <div class="scroll"><table class="data" id="bOosTable"></table></div>
+    </div>
+    <div class="panel">
+      <h3 style="margin-top:0">每个策略是什么</h3>
+      <div class="daycards" id="bCards"></div>
+    </div>
+  </section>
+
   <!-- 实盘进度 -->
   <section role="tabpanel" id="t-live" aria-labelledby="tab-live" hidden>
     <div id="liveBox"></div>
@@ -227,13 +259,30 @@ const E = window.SimEngine;
 const P = new E.Prices(DATA.sim);
 const NAMES = { VT: "全球股", QQQ: "美国科技（纳指100）", SPY: "美国大盘（S&P500）", VEU: "美国以外股", AGG: "美国债券", BIL: "美国短期国债", GLD: "黄金", "1348.T": "日本股（TOPIX）" };
 const STRAT = {
-  allcountry: { label: "全球股一只·不动", color: "var(--s1)" },
-  core_satellite: { label: "你的目标配置", color: "var(--s2)" },
-  trend: { label: "200 日线趋势", color: "var(--s3)" },
-  dual_momentum: { label: "双动量", color: "var(--s4)" },
-  custom: { label: "你的自定义", color: "var(--s6)" },
-  claude: { label: "Claude 凭判断", color: "var(--s5)" },
+  allcountry: { label: "全球股一只·不动" }, core_satellite: { label: "你的目标配置" }, sp500: { label: "S&P500 一只·不动" },
+  home_bias: { label: "日本股 50 / 全球股 50" }, custom: { label: "你的自定义" },
+  sixty_forty: { label: "股 60 / 债 40" }, permanent: { label: "永久组合" }, all_weather: { label: "全天候（近似）" },
+  ivy: { label: "Ivy 五资产等权" }, risk_parity: { label: "风险平价" },
+  trend: { label: "200 日线趋势" }, dual_momentum: { label: "双动量" }, ivy_timing: { label: "Ivy 五资产 + 200 日线" },
+  momentum_top3: { label: "相对动量前 3" }, vol_target: { label: "波动率目标" }, spy_timing: { label: "S&P500 + 200 日线" },
+  sell_in_may: { label: "Sell in May" }, buy_the_dip: { label: "等回调 10% 再买" },
+  claude: { label: "Claude 凭判断" },
 };
+const GROUPS = [
+  ["基准和你的计划", ["allcountry", "core_satellite", "sp500", "home_bias", "custom"]],
+  ["固定比例（定期调回）", ["sixty_forty", "permanent", "all_weather", "ivy", "risk_parity"]],
+  ["择时 / 动量", ["trend", "dual_momentum", "ivy_timing", "momentum_top3", "vol_target", "spy_timing", "sell_in_may", "buy_the_dip"]],
+];
+// 颜色跟着策略走：基准固定第 1 色，Claude 固定第 5 色，其余在被选中时占一个空位，取消后才释放
+const SLOT_COLORS = ["var(--s2)", "var(--s3)", "var(--s4)", "var(--s6)", "var(--s7)"];
+const MAX_PICK = SLOT_COLORS.length;
+let slotOf = {};
+function colorOf(k) {
+  if (k === "allcountry") return "var(--s1)";
+  if (k === "claude") return "var(--s5)";
+  if (slotOf[k] == null) { const used = new Set(Object.values(slotOf)); const free = SLOT_COLORS.findIndex((_, j) => !used.has(j)); slotOf[k] = free < 0 ? 0 : free; }
+  return SLOT_COLORS[slotOf[k]];
+}
 const yen = v => Math.round(v).toLocaleString("ja-JP");
 const pct = (v, d = 2) => v == null ? "—" : (v >= 0 ? "+" : "") + (v * 100).toFixed(d) + "%";
 const cls = v => v > 0 ? "pos" : v < 0 ? "neg" : "";
@@ -246,16 +295,17 @@ $("src").textContent = `数据：Yahoo Finance 真实日线（含分红再投资
   Object.entries(NAMES).map(([s, n]) => `${s} ${n}`).join(" · ");
 
 // ---------------------------------------------------------------- 页签
-const tabs = ["replay", "game", "live"];
+const tabs = ["replay", "game", "board", "live"];
 function showTab(t) {
   for (const x of tabs) { $("tab-" + x).setAttribute("aria-selected", x === t); $("t-" + x).hidden = x !== t; }
   store.set("jev-sim-tab", t);
   if (t === "live") renderLive();
+  if (t === "board") renderBoard();
 }
 for (const t of tabs) $("tab-" + t).addEventListener("click", () => showTab(t));
 document.querySelector(".tabs").addEventListener("keydown", e => {
   const i = tabs.findIndex(t => $("tab-" + t).getAttribute("aria-selected") === "true");
-  if (e.key === "ArrowRight" || e.key === "ArrowLeft") { const n = tabs[(i + (e.key === "ArrowRight" ? 1 : 2)) % 3]; showTab(n); $("tab-" + n).focus(); }
+  if (e.key === "ArrowRight" || e.key === "ArrowLeft") { const n = tabs[(i + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length]; showTab(n); $("tab-" + n).focus(); }
 });
 
 // ---------------------------------------------------------------- 折线图（共用）
@@ -325,10 +375,22 @@ const PRESETS = [
 $("presets").innerHTML = PRESETS.map((p, k) => `<button class="chip" data-k="${k}">${p[0]}</button>`).join("");
 $("presets").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; const p = PRESETS[b.dataset.k]; $("start").value = p[1]; $("len").value = p[2]; run(); });
 
-const checked = new Set(saved?.strats || ["allcountry", "core_satellite", "trend", "dual_momentum"]);
-$("stratChecks").innerHTML = ["allcountry", "core_satellite", "trend", "dual_momentum", "custom"].map(k =>
-  `<label><input type="checkbox" data-k="${k}" ${checked.has(k) ? "checked" : ""} ${k === "allcountry" ? "disabled" : ""}><span class="sw" style="background:${STRAT[k].color}"></span>${STRAT[k].label}${k === "allcountry" ? '<span class="note">（基准，总是显示）</span>' : ""}</label>`).join("");
-$("stratChecks").addEventListener("change", e => { const k = e.target.dataset.k; if (!k) return; e.target.checked ? checked.add(k) : checked.delete(k); run(); });
+const checked = new Set((saved?.strats || ["allcountry", "core_satellite", "trend", "dual_momentum"]).filter(k => STRAT[k]));
+slotOf = saved?.slots || {};
+for (const k of Object.keys(slotOf)) if (!checked.has(k)) delete slotOf[k];
+function renderChecks() {
+  const n = [...checked].filter(k => k !== "allcountry").length;
+  $("stratChecks").innerHTML = GROUPS.map(([g, ks]) => `<div class="note" style="margin-top:6px">${g}</div>` + ks.map(k => {
+    const on = checked.has(k), base = k === "allcountry", full = !on && !base && n >= MAX_PICK;
+    return `<label${full ? ' style="opacity:.5"' : ""}><input type="checkbox" data-k="${k}" ${on ? "checked" : ""} ${base || full ? "disabled" : ""}><span class="sw" style="background:${on ? colorOf(k) : "var(--line)"}"></span>${STRAT[k].label}${base ? '<span class="note">（基准）</span>' : ""}</label>`;
+  }).join("")).join("") + `<div class="note" style="margin-top:6px">最多同时选 ${MAX_PICK} 个（不含基准），图才看得清。</div>`;
+}
+renderChecks();
+$("stratChecks").addEventListener("change", e => {
+  const k = e.target.dataset.k; if (!k) return;
+  if (e.target.checked) { checked.add(k); colorOf(k); } else { checked.delete(k); delete slotOf[k]; }
+  renderChecks(); run();
+});
 const readCustom = weightInputs($("wgrid"), $("wsum"), saved?.custom || { VT: 60, QQQ: 20, AGG: 15 }, () => { if (checked.has("custom")) runSoon(); }, "cw");
 $("customFreq").value = saved?.customFreq || "monthly";
 $("customFreq").addEventListener("change", () => checked.has("custom") && run());
@@ -345,7 +407,7 @@ function run() {
   const len = $("len").value;
   const i1 = len === "all" ? last : Math.min(last, i0 + Number(len));
   const strategies = {};
-  for (const k of ["allcountry", "core_satellite", "trend", "dual_momentum"]) if (k === "allcountry" || checked.has(k)) strategies[k] = E.STRATEGIES[k];
+  for (const k of Object.keys(E.ALL_STRATEGIES)) if (k === "allcountry" || checked.has(k)) strategies[k] = E.ALL_STRATEGIES[k];
   if (checked.has("custom")) {
     const w = readCustom();
     if (w) strategies.custom = { freq: $("customFreq").value, fn: () => w };
@@ -353,7 +415,7 @@ function run() {
   const books = E.backtest(P, P.dates[i0], cap, { strategies, monthly, endDate: P.dates[i1] });
   R = { books, i0, i1, cap, monthly };
   $("day").max = i1 - i0; $("day").value = i1 - i0;     // 默认看最后一天的持仓
-  store.set("jev-sim-replay", { start: P.dates[i0], len, cap, monthly, strats: [...checked], custom: Object.fromEntries(Object.entries(readCustom() || {}).map(([s, v]) => [s, Math.round(v * 100)])), customFreq: $("customFreq").value });
+  store.set("jev-sim-replay", { start: P.dates[i0], len, cap, monthly, strats: [...checked], slots: slotOf, custom: Object.fromEntries(Object.entries(readCustom() || {}).map(([s, v]) => [s, Math.round(v * 100)])), customFreq: $("customFreq").value });
   renderReplay();
 }
 
@@ -364,7 +426,7 @@ function renderReplay() {
   const st = {}; for (const [k, b] of Object.entries(books)) st[k] = E.stats(b, P);
   const base = st.allcountry;
   const head = `<thead><tr><th>策略</th>${monthly ? "<th>投入合计</th>" : ""}<th>最终金额</th><th>收益</th><th>对比不动</th>${monthly ? "<th>年化(XIRR)</th>" : ""}<th>最大回撤</th><th>成交</th><th>手续费等</th></tr></thead>`;
-  const rows = Object.entries(st).map(([k, s]) => `<tr><td><span class="sw" style="background:${STRAT[k].color}"></span> ${STRAT[k].label}</td>${monthly ? `<td class="num">${yen(s.paid)}</td>` : ""}<td class="num">${yen(s.final)}</td><td class="num ${cls(s.ret)}">${pct(s.ret)}</td><td class="num ${cls(s.ret - base.ret)}">${k === "allcountry" ? "—" : pct(s.ret - base.ret)}</td>${monthly ? `<td class="num">${pct(s.xirr, 1)}</td>` : ""}<td class="num">${pct(s.maxDD, 1)}</td><td class="num">${s.trades}</td><td class="num">${yen(s.fees)}</td></tr>`).join("");
+  const rows = Object.entries(st).map(([k, s]) => `<tr><td><span class="sw" style="background:${colorOf(k)}"></span> ${STRAT[k].label}</td>${monthly ? `<td class="num">${yen(s.paid)}</td>` : ""}<td class="num">${yen(s.final)}</td><td class="num ${cls(s.ret)}">${pct(s.ret)}</td><td class="num ${cls(s.ret - base.ret)}">${k === "allcountry" ? "—" : pct(s.ret - base.ret)}</td>${monthly ? `<td class="num">${pct(s.xirr, 1)}</td>` : ""}<td class="num">${pct(s.maxDD, 1)}</td><td class="num">${s.trades}</td><td class="num">${yen(s.fees)}</td></tr>`).join("");
   $("rTable").innerHTML = head + "<tbody>" + rows + "</tbody>";
 
   // 运气：同样长度的历史期间里，全球股一只的收益分布（VT 日元计）
@@ -382,11 +444,11 @@ function renderReplay() {
 
   // 曲线
   const xl = []; for (let i = i0; i <= i1; i++) xl.push(P.dates[i]);
-  const series = Object.entries(books).map(([k, b]) => ({ name: STRAT[k].label, color: STRAT[k].color, v: b.nav.map(x => x[1]), width: k === "allcountry" ? 2.6 : 2 }));
+  const series = Object.entries(books).map(([k, b]) => ({ name: STRAT[k].label, color: colorOf(k), v: b.nav.map(x => x[1]), width: k === "allcountry" ? 2.6 : 2 }));
   const dayEl = $("day");
   lineChart($("rChart"), series, { xLabels: xl, yFmt: v => (v / 1e4).toFixed(0) + "万", tipFmt: v => yen(v), aria: "各策略的资产曲线", vline: Number(dayEl.value) <= days ? Number(dayEl.value) : null,
     onClick: k => { dayEl.value = k; renderDay(); } });
-  $("rLegend").innerHTML = Object.keys(books).map(k => `<span><span class="sw" style="background:${STRAT[k].color}"></span>${STRAT[k].label}</span>`).join("") + '<span>点曲线可跳到那一天</span>';
+  $("rLegend").innerHTML = Object.keys(books).map(k => `<span><span class="sw" style="background:${colorOf(k)}"></span>${STRAT[k].label}</span>`).join("") + '<span>点曲线可跳到那一天</span>';
   dayEl.max = days; if (Number(dayEl.value) > days) dayEl.value = days;
   renderDay();
   // 成交明细
@@ -418,7 +480,7 @@ function renderDay() {
     const items = [...q].map(([s, n]) => { const val = n * P.jpy(s, i); return `<li>${NAMES[s]} <span class="mono">${s} ${n} 股 · ${(val / v * 100).toFixed(0)}%</span></li>`; }).join("");
     const today = b.trades.filter(t => t.i === i).map(t => `<li class="t">${t.side === "buy" ? "买入" : "卖出"} ${t.symbol} ${t.qty} 股 @ ${t.price.toFixed(2)}${t.fx ? " × " + t.fx.toFixed(2) : ""} = ${yen(t.jpy)} 円</li>`).join("");
     const pend = b.trades.filter(t => t.decided === i && t.i > i).length;
-    return `<div class="dc"><div class="h"><span><span class="sw" style="background:${STRAT[key].color}"></span> ${STRAT[key].label}</span><span class="mono ${cls(v / b.nav[0][1] - 1)}">${pct(v / b.nav[0][1] - 1)}</span></div>
+    return `<div class="dc"><div class="h"><span><span class="sw" style="background:${colorOf(key)}"></span> ${STRAT[key].label}</span><span class="mono ${cls(v / b.nav[0][1] - 1)}">${pct(v / b.nav[0][1] - 1)}</span></div>
       <div class="v">${yen(v)} 円</div><div class="note">现金 ${yen(cash)} 円（${(cash / v * 100).toFixed(0)}%）</div>
       ${items ? `<ul>${items}</ul>` : '<div class="note">还没有持仓</div>'}
       ${today ? `<div class="note" style="margin-top:6px">这天成交：</div><ul>${today}</ul>` : ""}
@@ -538,6 +600,115 @@ function nextRun() {
   }
   return null;
 }
+// ---------------------------------------------------------------- 策略排行榜
+const INFO = {
+  allcountry: ["全世界股票指数基金（VT）买入后不动，有新钱就继续买。", "Bogle、山崎元「ほったらかし投資術」等", "所有策略的比较基准。"],
+  core_satellite: ["全球股 55%、美国个股 20%（用 QQQ 代替）、日本股 5%、美国债券 15%、现金 5%，每月初调回比例。", "你的 docs/PLAN.md", "个股部分用纳指 100 代替，结果受这段时期美国科技股特别强的影响。"],
+  sp500: ["只买美国 S&P500（SPY），不动。日本「新NISA」里最受欢迎的选择之一。", "Buffett 2013 年致股东信（给妻子信托的 90/10 建议）", "过去 17 年美国股市一枝独秀，所以排第一；这是事后看到的结果，不能保证将来。"],
+  home_bias: ["日本股（TOPIX）和全球股各一半。", "French & Poterba (1991) 关于本国偏好的研究", "日本人常见的配置。好处是一半是日元资产，日元升值时缓冲。"],
+  sixty_forty: ["全球股 60%、美国债券 40%，每月调回。", "传统的平衡型配置", "跌得少，但长期回报也低。"],
+  permanent: ["美国股、长期国债、黄金、短期国债各 25%，每年调回一次。", "Harry Browne「Fail-Safe Investing」(1999)", "最大回撤最小的一类，适合受不了大跌的人；代价是长期回报低很多。"],
+  all_weather: ["美国股 30%、长期国债 40%、中期国债 15%、黄金 7.5%、大宗商品 7.5%。", "Dalio 在 Tony Robbins「Money: Master the Game」(2014) 中给出的简化版", "这是公开的近似，不是 Bridgewater 实际的基金。"],
+  ivy: ["美国股、美国以外股、中期国债、房地产、大宗商品各 20%。", "Faber & Richardson「The Ivy Portfolio」(2009)", "模仿耶鲁、哈佛基金的分散方式。"],
+  risk_parity: ["全球股、长期国债、黄金、大宗商品，按过去半年波动的倒数分配（越稳的放越多）。", "Qian (2005)；Asness, Frazzini & Pedersen (2012)", "真正的风险平价会用杠杆，这里不用，所以回报偏低。"],
+  trend: ["5 种资产各 20%，跌破 200 日均线的那份换成现金。", "Faber (2007) A Quantitative Approach to Tactical Asset Allocation", "大跌时能躲一部分，但牛市里经常踏空。"],
+  dual_momentum: ["比较过去 12 个月：美国股和美国以外股哪个强，强的那个如果也比短期国债强就全买它，否则全买债券。", "Antonacci「Dual Momentum Investing」(2014)", "一次只持有一种资产，换仓时变化很大。"],
+  ivy_timing: ["Ivy 五资产，跌破 200 日均线的换成现金。", "Faber (2007)", ""],
+  momentum_top3: ["8 种资产里，1/3/6/12 个月平均涨幅最好的 3 个，各 1/3；跌破 200 日均线的换成现金。", "Faber「GTAA Aggressive」", "交易最多的策略之一，在课税账户里税的拖累最大。"],
+  vol_target: ["全球股最近 60 天的年化波动超过 12% 时，按比例减仓到短期国债。", "Moreira & Muir (2017) Journal of Finance「Volatility-Managed Portfolios」", ""],
+  spy_timing: ["S&P500 在 200 日均线上方时全仓，下方时全换短期国债。", "Faber (2007)", "前半段看起来很好，后半段明显变差，这是过度拟合的典型样子。"],
+  sell_in_may: ["5～10 月持有短期国债，11～4 月持有全球股。", "Bouman & Jacobsen (2002) American Economic Review「The Halloween Indicator」", "股市格言的检验。"],
+  buy_the_dip: ["钱先放着，等全球股从一年高点跌 10% 时全部买入，之后不卖；定投时每月的钱也等下一次回调。", "Maggiulli (2019)「Even God Couldn't Beat Dollar-Cost Averaging」", "等的那段时间钱是闲着的。上涨行情里往往等不到。"],
+};
+let bView = "lump", bSort = { key: null, dir: -1 };
+function renderBoard() {
+  const L = DATA.lab;
+  if (!L) { $("bMeta").textContent = "排行榜数据没有嵌入。"; return; }
+  const S = L.strategies, keys = Object.keys(S);
+  $("bMeta").textContent = `一次性投入 500 万，或起步 100 万 + 每月 20 万定投，期间 ${L.start} → ${L.end}。数据和回放实验相同。手续费、滑点、汇差都已扣除；课税账户在卖出盈利时当场扣 20.315%，同一年内亏损的部分会退回已扣的税。`;
+  const VIEWS = { lump: "一次性 · NISA", lump_tax: "一次性 · 课税账户", dca: "定投 · NISA", dca_tax: "定投 · 课税账户" };
+  $("bView").innerHTML = Object.entries(VIEWS).map(([k, l]) => `<button class="chip" data-v="${k}" style="${k === bView ? "border-color:var(--accent);color:var(--accent)" : ""}">${l}</button>`).join("");
+  const cols = {
+    lump: [["cagr", "年化", pct], ["vol", "年化波动", v => (v * 100).toFixed(1) + "%"], ["max_dd", "最大回撤", v => pct(v, 1)], ["worst_year", "最差一年", v => pct(v, 1)], ["trades", "成交", v => v]],
+    lump_tax: [["taxable_cagr", "税后年化", pct], ["cagr", "NISA 年化", pct], ["tax_paid", "交的税（円）", yen], ["trades", "成交", v => v]],
+    dca: [["dca_xirr", "年化 XIRR", pct], ["dca_final", "最终金额", yen], ["max_dd", "最大回撤*", v => pct(v, 1)]],
+    dca_tax: [["dca_tax_xirr", "税后 XIRR", pct], ["dca_xirr", "NISA XIRR", pct], ["dca_tax_final", "税后最终金额", yen]],
+  }[bView];
+  const all = cols.concat([["rolling_wins", "10 年定投胜出", v => v == null ? "基准" : `${v} / ${Object.keys(S.allcountry.rolling).length}`], ["first_cagr", "前半", pct], ["second_cagr", "后半", pct]]);
+  const sk = bSort.key && all.some(c => c[0] === bSort.key) ? bSort.key : cols[0][0];
+  // 降序（dir = -1）/ 升序（dir = 1）。没有值的（基准的"胜出次数"）总是放最后
+  const order = keys.slice().sort((a, b) => {
+    const va = S[a][sk], vb = S[b][sk];
+    if (va == null) return 1; if (vb == null) return -1;
+    return bSort.dir < 0 ? vb - va : va - vb;
+  });
+  const base = S.allcountry;
+  $("bTable").innerHTML = `<thead><tr><th>#</th><th>策略</th>${all.map(c => `<th data-k="${c[0]}" style="cursor:pointer">${c[1]}${c[0] === sk ? (bSort.dir < 0 ? " ↓" : " ↑") : ""}</th>`).join("")}</tr></thead><tbody>` +
+    order.map((k, r) => `<tr${k === "allcountry" ? ' style="background:var(--accent-soft)"' : ""}><td class="num">${r + 1}</td><td>${STRAT[k].label}</td>${all.map(c => {
+      const v = S[k][c[0]]; const better = ["cagr", "taxable_cagr", "dca_xirr", "dca_tax_xirr", "first_cagr", "second_cagr"].includes(c[0]) && k !== "allcountry" ? (v > base[c[0]] ? "pos" : "neg") : "";
+      return `<td class="num ${better}">${c[2](v)}</td>`; }).join("")}</tr>`).join("") + "</tbody>";
+  $("bTable").querySelectorAll("th[data-k]").forEach(th => th.addEventListener("click", () => { bSort = { key: th.dataset.k, dir: bSort.key === th.dataset.k ? -bSort.dir : -1 }; renderBoard(); }));
+  if (bView === "dca") $("bTable").insertAdjacentHTML("beforeend", '<caption style="caption-side:bottom;text-align:left" class="note">* 最大回撤取自一次性投入。</caption>');
+  // 结论（由数据算出）
+  const beatLump = keys.filter(k => k !== "allcountry" && S[k].cagr > base.cagr);
+  const beatRoll = keys.filter(k => k !== "allcountry" && S[k].rolling_wins === Object.keys(base.rolling).length);
+  const timing = ["trend", "dual_momentum", "ivy_timing", "momentum_top3", "vol_target", "spy_timing", "sell_in_may"];
+  const tdrag = timing.map(k => S[k].dca_xirr - S[k].dca_tax_xirr);
+  const tLose = timing.filter(k => S[k].cagr < base.cagr && S[k].dca_xirr < base.dca_xirr).length;
+  const lowDD = keys.filter(k => S[k].max_dd > -0.2).map(k => STRAT[k].label);
+  $("bVerdict").innerHTML = `<b>数据说的话：</b>① 17 个策略里，一次性投入的年化赢过全球股一只的只有 ${beatLump.length} 个（${beatLump.map(k => STRAT[k].label).join("、") || "无"}）；8 段 10 年定投全部胜出的只有 ${beatRoll.map(k => STRAT[k].label).join("、") || "无"}，那是美国股市这十几年特别强。` +
+    ` ② ${timing.length} 个择时/动量策略里，一次性和定投都输给"不动"的有 ${tLose} 个。放在课税账户，定投年化再少 ${pct(Math.min(...tdrag), 1).replace("+", "")}～${pct(Math.max(...tdrag), 1).replace("+", "")}。` +
+    ` ③ 最大回撤小于 20% 的是：${lowDD.join("、")}，换来的是明显更低的回报。<br><b>对你的意思：</b>NISA 里的核心部分，"不动"已经是很难打败的选项。真正要选的是能不能忍住 -34% 的下跌；忍不住的话，就加债券、黄金或日元资产降低波动，而不是去择时。`;
+  $("bView").onclick = e => { const b = e.target.closest("button"); if (!b) return; bView = b.dataset.v; bSort = { key: null, dir: -1 }; renderBoard(); };
+  scatter(S);
+  // 滚动
+  const yrs = Object.keys(base.rolling);
+  const rk = keys.slice().sort((a, b) => (S[b].rolling_wins ?? 99) - (S[a].rolling_wins ?? 99) || S[b].dca_xirr - S[a].dca_xirr);
+  $("bRolling").innerHTML = `<thead><tr><th>策略</th>${yrs.map(y => `<th>${y}→${+y + 10}</th>`).join("")}</tr></thead><tbody>` +
+    rk.map(k => `<tr${k === "allcountry" ? ' style="background:var(--accent-soft)"' : ""}><td>${STRAT[k].label}</td>${yrs.map(y => { const v = S[k].rolling[y], w = k !== "allcountry" && v > base.rolling[y]; return `<td class="num" style="${w ? "font-weight:700;color:var(--fg)" : "color:var(--muted)"}">${(v * 100).toFixed(1)}%</td>`; }).join("")}</tr>`).join("") + "</tbody>";
+  // 样本内外
+  const r1 = keys.slice().sort((a, b) => S[b].first_cagr - S[a].first_cagr), r2 = keys.slice().sort((a, b) => S[b].second_cagr - S[a].second_cagr);
+  const rank1 = Object.fromEntries(r1.map((k, i) => [k, i + 1])), rank2 = Object.fromEntries(r2.map((k, i) => [k, i + 1]));
+  const n = keys.length, d2 = keys.reduce((a, k) => a + (rank1[k] - rank2[k]) ** 2, 0), rho = 1 - 6 * d2 / (n * (n * n - 1));
+  const drop = keys.filter(k => rank1[k] <= 5 && rank2[k] > 8).map(k => STRAT[k].label);
+  $("bOos").innerHTML = `前半段（${L.start}～2017）和后半段（2018～）的排名相关系数 ρ = <b>${rho.toFixed(2)}</b>（1 = 排名完全一样，0 = 毫无关系）。${drop.length ? `前半段排前 5、后半段掉到第 9 名以后的：${drop.join("、")}。` : ""}如果一个策略只是碰巧适合某段行情，换一段时间就会掉下来。`;
+  $("bOosTable").innerHTML = `<thead><tr><th>策略</th><th>前半年化</th><th>前半排名</th><th>后半年化</th><th>后半排名</th></tr></thead><tbody>` +
+    r1.map(k => `<tr><td>${STRAT[k].label}</td><td class="num">${pct(S[k].first_cagr, 1)}</td><td class="num">${rank1[k]}</td><td class="num">${pct(S[k].second_cagr, 1)}</td><td class="num ${rank2[k] < rank1[k] ? "pos" : rank2[k] > rank1[k] ? "neg" : ""}">${rank2[k]}</td></tr>`).join("") + "</tbody>";
+  // 卡片
+  $("bCards").innerHTML = keys.map(k => {
+    const x = S[k], info = INFO[k] || ["", "", ""];
+    const verdict = k === "allcountry" ? "基准。" : `10 年定投 ${x.rolling_wins} / ${yrs.length} 段赢过基准；一次性年化 ${pct(x.cagr - base.cagr, 1)}（对比基准），最大回撤 ${pct(x.max_dd, 0)}；课税账户里定投年化少 ${pct(x.dca_xirr - x.dca_tax_xirr, 1).replace("+", "")}。`;
+    return `<div class="dc"><div class="h"><span>${STRAT[k].label}</span><span class="mono ${cls(x.cagr - base.cagr)}">${pct(x.cagr, 1)}</span></div><p style="margin:6px 0">${info[0]}</p><div class="note">出处：${info[1]}</div>${info[2] ? `<div class="note" style="margin-top:4px">${info[2]}</div>` : ""}<div style="margin-top:6px;font-size:13px">${verdict}</div><div class="btnrow" style="margin-top:8px"><button class="chip" data-try="${k}">在回放里试</button></div></div>`;
+  }).join("");
+  $("bCards").onclick = e => { const b = e.target.closest("[data-try]"); if (!b) return; const k = b.dataset.try;
+    if (!checked.has(k)) { const others = [...checked].filter(x => x !== "allcountry"); if (others.length >= MAX_PICK) { checked.delete(others[0]); delete slotOf[others[0]]; } checked.add(k); colorOf(k); }
+    renderChecks(); $("start").value = "2009-07-01"; $("len").value = "all"; run(); showTab("replay"); window.scrollTo(0, 0); };
+}
+function scatter(S) {
+  const W = 900, H = 420, L = 60, R = 170, T = 16, B = 40;
+  const keys = Object.keys(S);
+  const xs = keys.map(k => S[k].vol), ys = keys.map(k => S[k].cagr);
+  const x0 = Math.floor(Math.min(...xs) * 50) / 50, x1 = Math.ceil(Math.max(...xs) * 50) / 50, y0 = Math.floor(Math.min(...ys) * 50) / 50, y1 = Math.ceil(Math.max(...ys) * 50) / 50;
+  const X = v => L + (v - x0) / (x1 - x0) * (W - L - R), Y = v => T + (y1 - v) / (y1 - y0) * (H - T - B);
+  let g = "";
+  for (let v = x0; v <= x1 + 1e-9; v += 0.02) g += `<line class="grid" x1="${X(v)}" x2="${X(v)}" y1="${T}" y2="${H - B}"/><text x="${X(v)}" y="${H - B + 16}" text-anchor="middle">${(v * 100).toFixed(0)}%</text>`;
+  for (let v = y0; v <= y1 + 1e-9; v += 0.02) g += `<line class="grid" x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}"/><text x="${L - 8}" y="${Y(v) + 4}" text-anchor="end">${(v * 100).toFixed(0)}%</text>`;
+  g += `<text x="${(L + W - R) / 2}" y="${H - 6}" text-anchor="middle">年化波动 →</text><text x="${L}" y="${T - 4}">↑ 年化收益</text>`;
+  // 标签避让：按 y 排序，太近的往下挪
+  const pts = keys.map(k => ({ k, x: X(S[k].vol), y: Y(S[k].cagr) })).sort((a, b) => a.y - b.y);
+  let lastY = -1e9;
+  for (const p of pts) { p.ly = Math.max(p.y + 4, lastY + 13); lastY = p.ly; }
+  let dots = "";
+  for (const p of pts) {
+    const base = p.k === "allcountry", col = base ? "var(--s1)" : p.k === "core_satellite" ? "var(--s2)" : "var(--muted)";
+    dots += `<circle cx="${p.x}" cy="${p.y}" r="${base ? 7 : 5}" fill="${col}" stroke="var(--surface)" stroke-width="2"><title>${STRAT[p.k].label}: 年化 ${pct(S[p.k].cagr, 1)}，波动 ${(S[p.k].vol * 100).toFixed(1)}%，最大回撤 ${pct(S[p.k].max_dd, 0)}</title></circle>`;
+    dots += `<line x1="${p.x + 6}" y1="${p.y}" x2="${W - R + 6}" y2="${p.ly - 4}" stroke="var(--line)"/><text x="${W - R + 10}" y="${p.ly}" style="fill:${base ? "var(--fg)" : "var(--muted)"};font-family:var(--f-body);font-size:11.5px;${base ? "font-weight:700" : ""}">${STRAT[p.k].label}</text>`;
+  }
+  $("bScatter").innerHTML = `<svg class="chart" viewBox="0 0 ${W} ${Math.max(H, lastY + 10)}" role="img" aria-label="各策略的年化波动和年化收益">${g}${dots}</svg>`;
+}
+
+// 实盘图只画基准、Claude 和回放里选中的策略（不为没选中的策略占用颜色）
+const shown = k => k === "allcountry" || k === "claude" || checked.has(k);
 function renderLive() {
   const L = DATA.live;
   const box = $("liveBox");
@@ -552,7 +723,7 @@ function renderLive() {
     const b = L.books[k], v = b.nav.at(-1)[1], r = v / cap - 1;
     const hold = Object.entries(b.qty || {}).map(([s, q]) => `${NAMES[s] || s} ${q}`).join("、");
     const pend = (b.pending || []).map(o => `${o.side === "buy" ? "买" : "卖"} ${NAMES[o.symbol] || o.symbol} ${o.qty}`).join("、");
-    rows += `<tr><td><span class="sw" style="background:${STRAT[k].color}"></span> ${STRAT[k].label}</td><td class="num">${yen(v)}</td><td class="num ${cls(r)}">${pct(r)}</td><td class="num ${cls(r - base)}">${k === "allcountry" ? "—" : pct(r - base)}</td><td class="num">${b.trades.length}</td><td style="text-align:left;white-space:normal;min-width:220px">${hold || "—"}${pend ? `<br><span class="note">待成交：${pend}</span>` : ""}</td></tr>`;
+    rows += `<tr><td><span class="sw" style="background:${shown(k) ? colorOf(k) : "var(--line)"}"></span> ${STRAT[k]?.label || k}</td><td class="num">${yen(v)}</td><td class="num ${cls(r)}">${pct(r)}</td><td class="num ${cls(r - base)}">${k === "allcountry" ? "—" : pct(r - base)}</td><td class="num">${b.trades.length}</td><td style="text-align:left;white-space:normal;min-width:220px">${hold || "—"}${pend ? `<br><span class="note">待成交：${pend}</span>` : ""}</td></tr>`;
   }
   box.innerHTML = `
     <div class="tiles">
@@ -569,7 +740,8 @@ function renderLive() {
     <p class="note" style="margin-top:14px">这一页在每次自动更新后重新发布，所以打开时看到的就是最新状态。每一笔实盘成交的日期、价格、汇率都记在仓库的 paper/state.json 里，可以和 Yahoo 的数据逐笔核对。</p>`;
   if (L.books.allcountry.nav.length > 1) {
     const xl = L.books.allcountry.nav.map(x => x[0]);
-    lineChart($("liveChart"), keys.map(k => ({ name: STRAT[k].label, color: STRAT[k].color, v: L.books[k].nav.map(x => x[1]) })), { xLabels: xl, base: cap, yFmt: v => (v / 1e4).toFixed(0) + "万", tipFmt: v => yen(v), aria: "实盘账户的资产曲线" });
+    lineChart($("liveChart"), keys.filter(shown).map(k => ({ name: STRAT[k]?.label || k, color: colorOf(k), v: L.books[k].nav.map(x => x[1]) })), { xLabels: xl, base: cap, yFmt: v => (v / 1e4).toFixed(0) + "万", tipFmt: v => yen(v), aria: "实盘账户的资产曲线" });
+    $("liveChart").insertAdjacentHTML("beforeend", '<p class="note">图里只画基准、Claude 和你在「回放实验」里选中的策略；表格列出全部账户。</p>');
   }
 }
 
