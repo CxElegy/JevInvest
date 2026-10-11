@@ -186,17 +186,39 @@ def _concentration(vals: list[PositionValuation], total: float) -> dict:
     }
 
 
-def _rebalance(h: Holdings, by_class: pd.DataFrame, total: float) -> pd.DataFrame:
+def _rebalance(
+    h: Holdings, by_class: pd.DataFrame, total: float,
+    vals: list[PositionValuation], warnings: list[str],
+) -> pd.DataFrame:
     if not h.target_allocation or total <= 0:
         return pd.DataFrame()
 
-    classes = sorted(set(h.target_allocation) | set(by_class.index))
+    # 価格の取れない保有があるクラスは、現在額が分からない。0 として扱うと
+    # 「目標まで全額買い増し」と出てしまうので、乖離と調整額を出さない。
+    unpriced = sorted({v.position.asset_class for v in vals if not v.priced})
+    if unpriced:
+        warnings.append(
+            f"評価不能の保有があるため、{', '.join(unpriced)} の乖離と調整額は出していません。"
+            "他のクラスの目標額も評価できた分の合計を基準にしており、実際より小さく出ます"
+        )
+
+    classes = sorted(set(h.target_allocation) | set(by_class.index) | set(unpriced))
     rows = []
     for c in classes:
         cur_val = float(by_class.loc[c, "評価額"]) if c in by_class.index else 0.0
-        cur_pct = cur_val / total * 100.0
         tgt_pct = float(h.target_allocation.get(c, 0.0))
         tgt_val = total * tgt_pct / 100.0
+        if c in unpriced:
+            nan = float("nan")
+            rows.append(
+                {
+                    "資産クラス": c, "現在%": nan, "目標%": tgt_pct, "乖離pp": nan,
+                    "現在額": nan, "目標額": tgt_val, "調整額": nan,
+                    "状態": "評価不能（価格の取れない保有あり）",
+                }
+            )
+            continue
+        cur_pct = cur_val / total * 100.0
         rows.append(
             {
                 "資産クラス": c,
@@ -206,11 +228,15 @@ def _rebalance(h: Holdings, by_class: pd.DataFrame, total: float) -> pd.DataFram
                 "現在額": cur_val,
                 "目標額": tgt_val,
                 "調整額": tgt_val - cur_val,   # 正 = 買い増し、負 = 売却
+                "状態": "",
             }
         )
 
     df = pd.DataFrame(rows).set_index("資産クラス")
-    return df.reindex(df["乖離pp"].abs().sort_values(ascending=False).index)
+    if not unpriced:
+        df = df.drop(columns="状態")
+    # 評価不能（乖離 NaN）の行は末尾に回す
+    return df.reindex(df["乖離pp"].abs().sort_values(ascending=False, na_position="last").index)
 
 
 # --------------------------------------------------------------- ガードレール
@@ -497,7 +523,7 @@ def analyze(
         by_account=_group(vals, lambda p: p.account),
         by_currency=_group(vals, lambda p: p.currency),
         concentration=_concentration(vals, total),
-        rebalance=_rebalance(h, by_class, total),
+        rebalance=_rebalance(h, by_class, total, vals, warnings),
         guard_config=dict(h.guards or {}),
         warnings=warnings,
     )

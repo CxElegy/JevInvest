@@ -39,12 +39,19 @@ def _table(df: pd.DataFrame, money_cols: tuple[str, ...], ccy: str, anonymize: b
     if df.empty:
         return "_（データなし）_\n"
     d = df.copy()
+    # 評価不能の行は None / NaN のまま来る。数値として書式化せず「—」にする
+    # （None は書式化で落ち、NaN は "nan" と表に出てしまう）。
     for c in money_cols:
         if c in d.columns:
-            d[c] = d[c].map(lambda v: "—" if anonymize else f"{v:,.0f}")
+            d[c] = d[c].map(lambda v: "—" if anonymize or pd.isna(v) else f"{v:,.0f}")
     for c in d.columns:
-        if c not in money_cols and pd.api.types.is_float_dtype(d[c]):
-            d[c] = d[c].map(lambda v: f"{v:,.2f}")
+        if c in money_cols:
+            continue
+        if pd.api.types.is_float_dtype(d[c]) or d[c].map(lambda v: v is None).any():
+            d[c] = d[c].map(
+                lambda v: "—" if v is None or (isinstance(v, float) and pd.isna(v))
+                else (f"{v:,.2f}" if isinstance(v, (int, float)) else v)
+            )
     del ccy
     return d.to_markdown() + "\n"
 
@@ -324,6 +331,12 @@ def to_markdown(
         L.append("")
         L.append(_table(a.rebalance, ("現在額", "目標額", "調整額"), ccy, anonymize))
         L.append("")
+        if "状態" in a.rebalance.columns:
+            L.append(
+                "> **⚠ 評価不能の保有があるクラスは、乖離と調整額を出していません（—）。**"
+                "総額も評価できた分だけなので、他のクラスの調整額も実態とずれます。"
+                "価格を取り直すか price_override を入れてから判断してください。"
+            )
         L.append("> 調整額は正が買い増し、負が売却。税と手数料は考慮していません。")
         L.append(
             "> 課税口座での売却には約 20.315% の税がかかるため、"
