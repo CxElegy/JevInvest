@@ -151,13 +151,14 @@ table.data td.num { font-family: var(--f-mono); }
     <h1>你睡觉的时候，我做了这些</h1>
     <p class="lede">目标没变：提高你扣税扣费之后的长期回报。所以先做见效最大的（税制、手续费、independence 卡点），再做"手痒"时的安全阀，最后做你要的模拟盘。下面每一块都配了结构图，代码都已推到分支 <code>claude/compassionate-heisenberg-buk8d0</code>。</p>
     <div class="meta" id="meta"></div>
+    <p class="note blue" style="margin-top:18px"><b>想亲手玩、看每一天怎么变：</b>打开 <a href="https://claude.ai/artifact/4UHKcCEXmkn67ocnwvLCF6">500 万模拟器</a>。三个页签：用真实历史价格回放任意期间，可以逐日拖动看持仓和每一笔成交；隐藏日期的"你来操盘"游戏；以及每天自动推进的实盘进度。</p>
   </header>
 
   <h2><span class="no">00</span>醒来先做这三件事</h2>
   <ol class="todo">
     <li><div class="rank">1</div><div><b>发 independence 咨询邮件</b><span>你的计划卡在这一步：核心那 55% 的指数基金能不能先买、要不要每支都预审，都等这封邮件的回复。运行 <code>/independence-mail</code> 会生成英日对照草稿，只起草，不发送。</span></div></li>
     <li><div class="rank">2</div><div><b>查公司有没有企业型 DC，决定 iDeCo 要不要加额</b><span>从 2026 年 12 月那期起，没有企业年金的上班族 iDeCo 上限从每月 2.3 万涨到 6.2 万日元（厚劳省资料）。这是全部内容里节税效果最大的一项，而且有截止日。在本地运行 <code>/taxplan</code> 可以算出你能省多少（下面第 01 节有示例）。</span></div></li>
-    <li><div class="rank">3</div><div><b>看一眼模拟盘，然后别管它</b><span>5 个虚拟账户各 500 万日元，用真实收盘价自动跑到 11 月 12 日。每个交易日东京时间早上 7:07 自动更新。一个月的输赢大多靠运气，下面第 05、06 节会说明怎么看。</span></div></li>
+    <li><div class="rank">3</div><div><b>打开 <a href="https://claude.ai/artifact/4UHKcCEXmkn67ocnwvLCF6">500 万模拟器</a> 玩一下</b><span>"回放实验"默认是"一个月前开始"，打开就能看到一个月的完整过程：每天的估值、持仓、每一笔成交。"你来操盘"可以自己操作，和"不动"比。实盘 5 个账户从 10/13 早上起每天 7:07 自动更新，更新后会推送通知给你。</span></div></li>
   </ol>
 
   <h2><span class="no">01</span>节税：这是最确定能赚到的钱</h2>

@@ -1,0 +1,579 @@
+<title>500 万模拟器</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@600;800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* 版式：顶部三个页签；左侧控制、右侧结果的交易台，窄屏时上下叠放 */
+:root {
+  --bg: #f5f7f6; --surface: #ffffff; --sunk: #eaefec; --fg: #15201b; --muted: #56635d; --line: #d3dbd6;
+  --accent: #19628a; --accent-soft: #e1eef5; --good: #1a7f4b; --warn: #9a6400; --stop: #b8322a;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #6250d6;
+  --f-display: "Noto Serif SC", "Songti SC", "SimSun", serif;
+  --f-body: "Noto Sans SC", "PingFang SC", "Hiragino Sans", "Microsoft YaHei", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111614; --surface: #19201d; --sunk: #202825; --fg: #e7ece9; --muted: #a1ada7; --line: #313b37;
+    --accent: #6db7dc; --accent-soft: #1b3442; --good: #4cc18a; --warn: #e2a63b; --stop: #f07a70;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #9085e9;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111614; --surface: #19201d; --sunk: #202825; --fg: #e7ece9; --muted: #a1ada7; --line: #313b37;
+  --accent: #6db7dc; --accent-soft: #1b3442; --good: #4cc18a; --warn: #e2a63b; --stop: #f07a70;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #9085e9;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 15px; line-height: 1.7; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 80px; }
+h1, h2, h3 { font-family: var(--f-display); line-height: 1.3; margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(28px, 4.5vw, 40px); font-weight: 800; }
+h2 { font-size: 20px; font-weight: 600; }
+h3 { font-size: 16px; font-weight: 600; margin-top: 22px; }
+p { margin: 10px 0; }
+code, .mono { font-family: var(--f-mono); font-size: .92em; }
+.lede { color: var(--muted); max-width: 46em; margin-top: 10px; }
+.src { font-size: 12.5px; color: var(--muted); font-family: var(--f-mono); margin-top: 8px; }
+.tabs { display: flex; gap: 4px; margin-top: 22px; border-bottom: 2px solid var(--fg); flex-wrap: wrap; }
+.tabs button { font: 600 15px var(--f-body); background: none; border: 0; color: var(--muted); padding: 10px 16px; cursor: pointer; border-radius: 8px 8px 0 0; }
+.tabs button[aria-selected="true"] { background: var(--fg); color: var(--bg); }
+.tabs button:hover:not([aria-selected="true"]) { color: var(--fg); background: var(--sunk); }
+section[role="tabpanel"] { padding-top: 20px; }
+.desk { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 860px) { .desk { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+.panel + .panel { margin-top: 14px; }
+.ctl { display: grid; gap: 12px; }
+.ctl label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+.ctl input, .ctl select { font: 15px var(--f-mono); padding: 7px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); width: 100%; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font: 13px var(--f-body); padding: 4px 10px; border: 1px solid var(--line); border-radius: 99px; background: var(--bg); color: var(--fg); cursor: pointer; }
+.chip:hover { border-color: var(--accent); color: var(--accent); }
+.checks { display: grid; gap: 6px; font-size: 14px; }
+.checks label { display: flex; align-items: center; gap: 8px; color: var(--fg); font-size: 14px; }
+.sw { display: inline-block; width: 14px; height: 4px; border-radius: 2px; vertical-align: middle; }
+.wgrid { display: grid; grid-template-columns: 1fr 74px; gap: 4px 8px; align-items: center; font-size: 13.5px; }
+.wgrid input { padding: 4px 6px; font: 14px var(--f-mono); text-align: right; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); color: var(--fg); width: 100%; }
+.wsum { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+.btn { font: 600 14px var(--f-body); padding: 9px 14px; border-radius: 7px; border: 1px solid var(--accent); background: var(--accent); color: var(--bg); cursor: pointer; }
+.btn.ghost { background: transparent; color: var(--accent); }
+.btn:disabled { opacity: .45; cursor: default; }
+.btnrow { display: flex; flex-wrap: wrap; gap: 8px; }
+table.data { border-collapse: collapse; width: 100%; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+table.data th, table.data td { padding: 7px 9px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+table.data th:first-child, table.data td:first-child { text-align: left; }
+table.data th { font-weight: 500; font-size: 12px; color: var(--muted); }
+table.data td.num { font-family: var(--f-mono); }
+.scroll { overflow-x: auto; }
+.pos { color: var(--good); } .neg { color: var(--stop); }
+.luck { border-left: 3px solid var(--warn); padding: 10px 14px; background: var(--surface); border-radius: 0 8px 8px 0; margin: 14px 0; font-size: 14px; }
+.chart-wrap { position: relative; }
+svg.chart { display: block; width: 100%; height: auto; }
+.chart text { fill: var(--muted); font-size: 11.5px; font-family: var(--f-mono); }
+.chart .grid { stroke: var(--line); stroke-width: 1; }
+.tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; font-size: 12.5px; box-shadow: 0 4px 14px rgb(0 0 0 / .14); min-width: 200px; opacity: 0; z-index: 2; }
+.tip .d { font-family: var(--f-mono); color: var(--muted); margin-bottom: 4px; }
+.tip .r { display: flex; justify-content: space-between; gap: 14px; font-family: var(--f-mono); }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; color: var(--muted); margin-top: 6px; }
+.day { display: grid; gap: 8px; }
+.day input[type=range] { width: 100%; accent-color: var(--accent); }
+.daycards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
+.dc { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 13px; }
+.dc .h { display: flex; justify-content: space-between; gap: 8px; font-weight: 600; font-size: 13.5px; }
+.dc .v { font-family: var(--f-mono); font-size: 18px; margin: 2px 0 4px; }
+.dc ul { margin: 4px 0 0; padding-left: 16px; }
+.dc .t { color: var(--accent); }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 11px 13px; }
+.tile .k { font-size: 12.5px; color: var(--muted); }
+.tile .v { font-family: var(--f-mono); font-size: 21px; font-variant-numeric: tabular-nums; }
+.tile .s { font-size: 12px; color: var(--muted); }
+.note { font-size: 13.5px; color: var(--muted); }
+.reveal { border: 2px solid var(--accent); border-radius: 10px; padding: 16px; background: var(--accent-soft); margin-bottom: 14px; }
+.reveal h2 { margin-bottom: 6px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 560px) { .wrap { padding-inline: 16px; } .tabs button { padding: 8px 10px; font-size: 14px; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>500 万模拟器</h1>
+    <p class="lede">给一笔虚拟本金，用真实的历史价格跑策略，或者你自己操盘。成交规则和每天自动跑的实盘完全一样：用当天收盘前的数据做决定，下一个交易日收盘价成交，扣手续费 0.10%、滑点 0.05%、汇差 0.25 円/美元，只买整股。不会真的下单。</p>
+    <div class="src" id="src"></div>
+  </header>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" id="tab-replay" aria-controls="t-replay" aria-selected="true">回放实验</button>
+    <button role="tab" id="tab-game" aria-controls="t-game" aria-selected="false">你来操盘</button>
+    <button role="tab" id="tab-live" aria-controls="t-live" aria-selected="false">实盘进度</button>
+  </div>
+
+  <!-- 回放实验 -->
+  <section role="tabpanel" id="t-replay" aria-labelledby="tab-replay">
+    <div class="desk">
+      <div>
+        <div class="panel ctl">
+          <label for="cap">本金（日元）<input id="cap" type="number" step="100000" min="100000" value="5000000"></label>
+          <label for="monthly">每月追加（日元，0 = 不追加）<input id="monthly" type="number" step="10000" min="0" value="0"></label>
+          <label for="start">开始日<input id="start" type="date"></label>
+          <label for="len">期间
+            <select id="len">
+              <option value="21">1 个月</option><option value="63">3 个月</option><option value="126">6 个月</option>
+              <option value="252">1 年</option><option value="756">3 年</option><option value="1260">5 年</option>
+              <option value="all">到最新</option>
+            </select>
+          </label>
+          <div><div class="note" style="margin-bottom:6px">快捷：</div><div class="chips" id="presets"></div></div>
+        </div>
+        <div class="panel">
+          <div class="note" style="margin-bottom:8px">策略</div>
+          <div class="checks" id="stratChecks"></div>
+          <div id="customBox" style="margin-top:10px">
+            <div class="wgrid" id="wgrid"></div>
+            <div class="wsum" id="wsum"></div>
+            <label class="note" style="display:flex;gap:6px;align-items:center;margin-top:6px" for="customFreq">调仓
+              <select id="customFreq" style="font:13px var(--f-body);padding:3px 6px;border:1px solid var(--line);border-radius:5px;background:var(--bg);color:var(--fg)">
+                <option value="monthly">每月初调回比例</option><option value="once">买入后不动</option>
+              </select></label>
+          </div>
+        </div>
+      </div>
+      <div style="min-width:0">
+        <div class="panel">
+          <h2 id="rTitle">结果</h2>
+          <div class="luck" id="luck"></div>
+          <div class="scroll"><table class="data" id="rTable"></table></div>
+        </div>
+        <div class="panel">
+          <h3 style="margin-top:0">资产曲线（日元）</h3>
+          <div id="rChart"></div>
+          <div class="legend" id="rLegend"></div>
+        </div>
+        <div class="panel day">
+          <h3 style="margin-top:0">逐日回放：拖动看任意一天</h3>
+          <input type="range" id="day" min="0" max="0" value="0" aria-label="选择日期">
+          <div class="mono" id="dayLabel"></div>
+          <div class="daycards" id="dayCards"></div>
+        </div>
+        <div class="panel">
+          <h3 style="margin-top:0">成交明细</h3>
+          <div class="chips" id="logPick" style="margin:8px 0"></div>
+          <div class="scroll" style="max-height:420px;overflow-y:auto"><table class="data" id="logTable"></table></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 你来操盘 -->
+  <section role="tabpanel" id="t-game" aria-labelledby="tab-game" hidden>
+    <div id="gameIntro" class="panel">
+      <h2>你来操盘</h2>
+      <p>从 2009 年以后的历史里随机抽一段，<b>日期和价格水平都藏起来</b>（价格换算成"开局 = 100"），你只看得到开局前一年的走势。本金 500 万日元，你自己定比例、自己决定什么时候调仓，然后一周一周往前推。结束时揭晓是哪段时间，并和"全球股一只、开局买入后不动"比较。</p>
+      <p class="note">每次调仓，下一个交易日才成交，同样扣手续费、滑点和汇差。目的不是猜中行情，而是亲身感受一下：频繁操作能不能赢过不动。</p>
+      <div class="btnrow" style="margin-top:12px">
+        <button class="btn" id="g3">开一局：3 个月</button>
+        <button class="btn ghost" id="g6">开一局：6 个月</button>
+      </div>
+      <div id="gHist" style="margin-top:16px"></div>
+    </div>
+    <div id="gameBoard" hidden>
+      <div id="gReveal"></div>
+      <div class="desk">
+        <div>
+          <div class="panel">
+            <div class="tiles" style="grid-template-columns:1fr 1fr">
+              <div class="tile"><div class="k">进度</div><div class="v" id="gDay"></div></div>
+              <div class="tile"><div class="k">你 vs 不动</div><div class="v" id="gDiff"></div></div>
+            </div>
+            <div class="note" style="margin:12px 0 6px">目标比例（%，剩下的是现金）</div>
+            <div class="wgrid" id="gW"></div>
+            <div class="wsum" id="gWsum"></div>
+            <div class="btnrow" style="margin-top:10px">
+              <button class="btn" id="gApply">按这个比例调仓</button>
+            </div>
+            <div class="note" id="gPending" style="margin-top:8px"></div>
+          </div>
+          <div class="panel">
+            <div class="btnrow">
+              <button class="btn ghost" id="gD1">前进 1 天</button>
+              <button class="btn ghost" id="gD5">前进 1 周</button>
+              <button class="btn ghost" id="gD21">前进 1 个月</button>
+              <button class="btn ghost" id="gEnd">直接到结束</button>
+            </div>
+          </div>
+        </div>
+        <div style="min-width:0">
+          <div class="panel"><h3 style="margin-top:0">各资产走势（开局 = 100，可看到开局前一年）</h3><div id="gAssets"></div><div class="legend" id="gAssetLegend"></div></div>
+          <div class="panel"><h3 style="margin-top:0">你的账户 vs 不动</h3><div id="gNav"></div><div class="legend"><span><span class="sw" style="background:var(--accent)"></span>你</span><span><span class="sw" style="background:var(--muted)"></span>全球股一只·不动</span></div></div>
+          <div class="panel"><h3 style="margin-top:0">持仓和成交</h3><div id="gHold"></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 实盘进度 -->
+  <section role="tabpanel" id="t-live" aria-labelledby="tab-live" hidden>
+    <div id="liveBox"></div>
+  </section>
+</div>
+
+<script>/*__ENGINE__*/</script>
+<script>
+const DATA = /*__DATA__*/null;
+const E = window.SimEngine;
+const P = new E.Prices(DATA.sim);
+const NAMES = { VT: "全球股", QQQ: "美国科技（纳指100）", SPY: "美国大盘（S&P500）", VEU: "美国以外股", AGG: "美国债券", BIL: "美国短期国债", GLD: "黄金", "1348.T": "日本股（TOPIX）" };
+const STRAT = {
+  allcountry: { label: "全球股一只·不动", color: "var(--s1)" },
+  core_satellite: { label: "你的目标配置", color: "var(--s2)" },
+  trend: { label: "200 日线趋势", color: "var(--s3)" },
+  dual_momentum: { label: "双动量", color: "var(--s4)" },
+  custom: { label: "你的自定义", color: "var(--s6)" },
+  claude: { label: "Claude 凭判断", color: "var(--s5)" },
+};
+const yen = v => Math.round(v).toLocaleString("ja-JP");
+const pct = (v, d = 2) => v == null ? "—" : (v >= 0 ? "+" : "") + (v * 100).toFixed(d) + "%";
+const cls = v => v > 0 ? "pos" : v < 0 ? "neg" : "";
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const $ = id => document.getElementById(id);
+const store = { get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+                set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
+
+$("src").textContent = `数据：Yahoo Finance 真实日线（含分红再投资），${P.dates[0]} → ${P.dates[P.n - 1]}，${P.n} 个交易日。品种：` +
+  Object.entries(NAMES).map(([s, n]) => `${s} ${n}`).join(" · ");
+
+// ---------------------------------------------------------------- 页签
+const tabs = ["replay", "game", "live"];
+function showTab(t) {
+  for (const x of tabs) { $("tab-" + x).setAttribute("aria-selected", x === t); $("t-" + x).hidden = x !== t; }
+  store.set("jev-sim-tab", t);
+  if (t === "live") renderLive();
+}
+for (const t of tabs) $("tab-" + t).addEventListener("click", () => showTab(t));
+document.querySelector(".tabs").addEventListener("keydown", e => {
+  const i = tabs.findIndex(t => $("tab-" + t).getAttribute("aria-selected") === "true");
+  if (e.key === "ArrowRight" || e.key === "ArrowLeft") { const n = tabs[(i + (e.key === "ArrowRight" ? 1 : 2)) % 3]; showTab(n); $("tab-" + n).focus(); }
+});
+
+// ---------------------------------------------------------------- 折线图（共用）
+function lineChart(host, series, opt = {}) {
+  const W = 900, H = opt.height || 300, L = 78, R = 16, T = 12, B = 30;
+  const n = Math.max(...series.map(s => s.v.length));
+  const all = series.flatMap(s => s.v.filter(v => v != null));
+  let lo = Math.min(...all), hi = Math.max(...all);
+  if (opt.base != null) { lo = Math.min(lo, opt.base); hi = Math.max(hi, opt.base); }
+  const pad = (hi - lo) * 0.08 || hi * 0.02 || 1; lo -= pad; hi += pad;
+  const X = k => L + (n <= 1 ? 0 : k / (n - 1)) * (W - L - R);
+  const Y = v => T + (hi - v) / (hi - lo) * (H - T - B);
+  const step = (() => { const raw = (hi - lo) / 5, m = Math.pow(10, Math.floor(Math.log10(raw))); return [1, 2, 2.5, 5, 10].map(x => x * m).find(x => x >= raw); })();
+  let g = "";
+  for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) g += `<line class="grid" x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}"/><text x="${L - 8}" y="${Y(v) + 4}" text-anchor="end">${opt.yFmt ? opt.yFmt(v) : v}</text>`;
+  if (opt.base != null) g += `<line x1="${L}" x2="${W - R}" y1="${Y(opt.base)}" y2="${Y(opt.base)}" stroke="var(--muted)" stroke-dasharray="4 4"/>`;
+  const labs = opt.xLabels || [];
+  const ticks = Math.min(6, n);
+  for (let t = 0; t < ticks; t++) { const k = Math.round(t * (n - 1) / Math.max(ticks - 1, 1)); g += `<text x="${X(k)}" y="${H - 8}" text-anchor="${t === 0 ? "start" : t === ticks - 1 ? "end" : "middle"}">${esc(labs[k] ?? k)}</text>`; }
+  if (opt.vline != null) g += `<line x1="${X(opt.vline)}" x2="${X(opt.vline)}" y1="${T}" y2="${H - B}" stroke="var(--fg)" stroke-dasharray="3 3" opacity=".7"/>`;
+  let lines = "";
+  for (const s of series) {
+    let d = "", pen = false;
+    s.v.forEach((v, k) => { if (v == null) { pen = false; return; } d += (pen ? "L" : "M") + X(k).toFixed(1) + "," + Y(v).toFixed(1); pen = true; });
+    lines += `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="${s.width || 2}" stroke-linejoin="round" ${s.dash ? 'stroke-dasharray="5 4"' : ""}/>`;
+    const lk = s.v.length - 1; if (s.v[lk] != null) lines += `<circle cx="${X(lk)}" cy="${Y(s.v[lk])}" r="3.5" fill="${s.color}" stroke="var(--surface)" stroke-width="1.5"/>`;
+  }
+  host.innerHTML = `<div class="chart-wrap"><svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(opt.aria || "折线图")}">${g}${lines}<line class="xh" y1="${T}" y2="${H - B}" stroke="var(--muted)" opacity="0"/><rect class="hit" x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="transparent"/></svg><div class="tip"></div></div>`;
+  const svg = host.querySelector("svg"), tip = host.querySelector(".tip"), xh = host.querySelector(".xh"), hit = host.querySelector(".hit");
+  hit.addEventListener("pointermove", ev => {
+    const r = svg.getBoundingClientRect();
+    const k = Math.max(0, Math.min(n - 1, Math.round(((ev.clientX - r.left) / r.width * W - L) / (W - L - R) * (n - 1))));
+    xh.setAttribute("x1", X(k)); xh.setAttribute("x2", X(k)); xh.setAttribute("opacity", ".6");
+    tip.innerHTML = `<div class="d">${esc(labs[k] ?? k)}</div>` + series.map(s => `<div class="r"><span><span class="sw" style="background:${s.color}"></span> ${esc(s.name)}</span><span>${s.v[k] == null ? "—" : (opt.tipFmt ? opt.tipFmt(s.v[k]) : s.v[k])}</span></div>`).join("");
+    const px = X(k) / W * r.width;
+    tip.style.left = Math.max(0, Math.min(px + 12, r.width - 230)) + "px"; tip.style.top = "8px"; tip.style.opacity = 1;
+    if (opt.onHover) opt.onHover(k);
+  });
+  hit.addEventListener("pointerleave", () => { tip.style.opacity = 0; xh.setAttribute("opacity", "0"); });
+  if (opt.onClick) hit.addEventListener("click", ev => { const r = svg.getBoundingClientRect(); opt.onClick(Math.max(0, Math.min(n - 1, Math.round(((ev.clientX - r.left) / r.width * W - L) / (W - L - R) * (n - 1))))); });
+}
+
+// ---------------------------------------------------------------- 比例输入（共用）
+const WSYMS = ["VT", "QQQ", "SPY", "VEU", "1348.T", "AGG", "GLD", "BIL"];
+function weightInputs(host, sumHost, init, onChange, prefix) {
+  host.innerHTML = WSYMS.map(s => `<label for="${prefix}-${s}">${NAMES[s]} <span class="note mono">${s}</span></label><input id="${prefix}-${s}" type="number" min="0" max="100" step="5" value="${init[s] || 0}">`).join("");
+  const read = () => { const w = {}; let t = 0; for (const s of WSYMS) { const v = Math.max(0, Number($(`${prefix}-${s}`).value) || 0); if (v) w[s] = v / 100; t += v; } return { w, t }; };
+  const upd = () => { const { t } = read(); sumHost.innerHTML = t > 100 ? `<span class="neg">合计 ${t}%，超过 100%，请调低</span>` : `合计 ${t}%，现金 ${100 - t}%`; onChange && onChange(); };
+  host.addEventListener("input", upd); upd();
+  return () => { const r = read(); return r.t > 100 ? null : r.w; };
+}
+
+// ---------------------------------------------------------------- 回放实验
+const last = P.n - 1;
+const iMinus = k => Math.max(0, last - k);
+$("start").min = "2009-07-01"; $("start").max = P.dates[iMinus(21)];
+const saved = store.get("jev-sim-replay", null);
+$("start").value = saved?.start || P.dates[iMinus(21)];
+$("len").value = saved?.len || "21";
+$("cap").value = saved?.cap || 5000000;
+$("monthly").value = saved?.monthly ?? 0;
+const PRESETS = [
+  ["一个月前开始", P.dates[iMinus(21)], "21"], ["一年前", P.dates[iMinus(252)], "252"],
+  ["2020 新冠暴跌前", "2020-02-14", "63"], ["2022 加息年", "2022-01-03", "252"],
+  ["2024-07 日元暴升", "2024-07-08", "21"], ["2009-07 至今", "2009-07-01", "all"],
+];
+$("presets").innerHTML = PRESETS.map((p, k) => `<button class="chip" data-k="${k}">${p[0]}</button>`).join("");
+$("presets").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; const p = PRESETS[b.dataset.k]; $("start").value = p[1]; $("len").value = p[2]; run(); });
+
+const checked = new Set(saved?.strats || ["allcountry", "core_satellite", "trend", "dual_momentum"]);
+$("stratChecks").innerHTML = ["allcountry", "core_satellite", "trend", "dual_momentum", "custom"].map(k =>
+  `<label><input type="checkbox" data-k="${k}" ${checked.has(k) ? "checked" : ""} ${k === "allcountry" ? "disabled" : ""}><span class="sw" style="background:${STRAT[k].color}"></span>${STRAT[k].label}${k === "allcountry" ? '<span class="note">（基准，总是显示）</span>' : ""}</label>`).join("");
+$("stratChecks").addEventListener("change", e => { const k = e.target.dataset.k; if (!k) return; e.target.checked ? checked.add(k) : checked.delete(k); run(); });
+const readCustom = weightInputs($("wgrid"), $("wsum"), saved?.custom || { VT: 60, QQQ: 20, AGG: 15 }, () => { if (checked.has("custom")) runSoon(); }, "cw");
+$("customFreq").value = saved?.customFreq || "monthly";
+$("customFreq").addEventListener("change", () => checked.has("custom") && run());
+for (const id of ["cap", "monthly", "start", "len"]) $(id).addEventListener("change", run);
+
+let R = null, logKey = "allcountry", timer = null;
+function runSoon() { clearTimeout(timer); timer = setTimeout(run, 250); }
+
+function run() {
+  const cap = Math.max(100000, Number($("cap").value) || 5000000);
+  const monthly = Math.max(0, Number($("monthly").value) || 0);
+  let i0 = P.indexOf($("start").value || P.dates[iMinus(21)]);
+  i0 = Math.min(i0, last - 2);
+  const len = $("len").value;
+  const i1 = len === "all" ? last : Math.min(last, i0 + Number(len));
+  const strategies = {};
+  for (const k of ["allcountry", "core_satellite", "trend", "dual_momentum"]) if (k === "allcountry" || checked.has(k)) strategies[k] = E.STRATEGIES[k];
+  if (checked.has("custom")) {
+    const w = readCustom();
+    if (w) strategies.custom = { freq: $("customFreq").value, fn: () => w };
+  }
+  const books = E.backtest(P, P.dates[i0], cap, { strategies, monthly, endDate: P.dates[i1] });
+  R = { books, i0, i1, cap, monthly };
+  $("day").max = i1 - i0; $("day").value = i1 - i0;     // 默认看最后一天的持仓
+  store.set("jev-sim-replay", { start: P.dates[i0], len, cap, monthly, strats: [...checked], custom: Object.fromEntries(Object.entries(readCustom() || {}).map(([s, v]) => [s, Math.round(v * 100)])), customFreq: $("customFreq").value });
+  renderReplay();
+}
+
+function renderReplay() {
+  const { books, i0, i1, monthly } = R;
+  const days = i1 - i0;
+  $("rTitle").textContent = `${P.dates[i0]} → ${P.dates[i1]}（${days} 个交易日）的结果`;
+  const st = {}; for (const [k, b] of Object.entries(books)) st[k] = E.stats(b, P);
+  const base = st.allcountry;
+  const head = `<thead><tr><th>策略</th>${monthly ? "<th>投入合计</th>" : ""}<th>最终金额</th><th>收益</th><th>对比不动</th>${monthly ? "<th>年化(XIRR)</th>" : ""}<th>最大回撤</th><th>成交</th><th>手续费等</th></tr></thead>`;
+  const rows = Object.entries(st).map(([k, s]) => `<tr><td><span class="sw" style="background:${STRAT[k].color}"></span> ${STRAT[k].label}</td>${monthly ? `<td class="num">${yen(s.paid)}</td>` : ""}<td class="num">${yen(s.final)}</td><td class="num ${cls(s.ret)}">${pct(s.ret)}</td><td class="num ${cls(s.ret - base.ret)}">${k === "allcountry" ? "—" : pct(s.ret - base.ret)}</td>${monthly ? `<td class="num">${pct(s.xirr, 1)}</td>` : ""}<td class="num">${pct(s.maxDD, 1)}</td><td class="num">${s.trades}</td><td class="num">${yen(s.fees)}</td></tr>`).join("");
+  $("rTable").innerHTML = head + "<tbody>" + rows + "</tbody>";
+
+  // 运气：同样长度的历史期间里，全球股一只的收益分布（VT 日元计）
+  const vt = []; for (let i = 0; i < P.n; i++) { const v = P.jpy("VT", i); if (v != null && P.hasBar("VT", i)) vt.push(v); }
+  const rs = []; for (let k = 0; k + days < vt.length; k++) rs.push(vt[k + days] / vt[k] - 1);
+  rs.sort((a, b) => a - b);
+  const q = f => rs[Math.floor(f * (rs.length - 1))];
+  const me = base.ret;
+  const rank = rs.length ? rs.filter(x => x <= me).length / rs.length : null;
+  const others = Object.entries(st).filter(([k]) => k !== "allcountry").map(([k, s]) => s.ret - me);
+  const spread = others.length ? Math.max(...others.map(Math.abs)) : 0;
+  $("luck").innerHTML = rs.length > 30 && !monthly
+    ? `<b>先看运气有多大：</b>历史上所有 ${days} 个交易日长的期间里，全球股一只的收益从 <b>${pct(q(0.05), 1)}</b>（最差 5%）到 <b>${pct(q(0.95), 1)}</b>（最好 5%）不等。这次是 ${pct(me, 1)}，排在第 ${Math.round(rank * 100)} 百分位。策略之间这次最多差 ${pct(spread, 1).replace("+", "")}。差距如果比这个范围小得多，就说明不了谁更会投资。`
+    : `<b>读法：</b>有每月追加时，"收益"按投入合计计算，年化看 XIRR（考虑了每笔钱投入的时间）。`;
+
+  // 曲线
+  const xl = []; for (let i = i0; i <= i1; i++) xl.push(P.dates[i]);
+  const series = Object.entries(books).map(([k, b]) => ({ name: STRAT[k].label, color: STRAT[k].color, v: b.nav.map(x => x[1]), width: k === "allcountry" ? 2.6 : 2 }));
+  const dayEl = $("day");
+  lineChart($("rChart"), series, { xLabels: xl, yFmt: v => (v / 1e4).toFixed(0) + "万", tipFmt: v => yen(v), aria: "各策略的资产曲线", vline: Number(dayEl.value) <= days ? Number(dayEl.value) : null,
+    onClick: k => { dayEl.value = k; renderDay(); } });
+  $("rLegend").innerHTML = Object.keys(books).map(k => `<span><span class="sw" style="background:${STRAT[k].color}"></span>${STRAT[k].label}</span>`).join("") + '<span>点曲线可跳到那一天</span>';
+  dayEl.max = days; if (Number(dayEl.value) > days) dayEl.value = days;
+  renderDay();
+  // 成交明细
+  if (!books[logKey]) logKey = "allcountry";
+  $("logPick").innerHTML = Object.keys(books).map(k => `<button class="chip" data-k="${k}" style="${k === logKey ? "border-color:var(--accent);color:var(--accent)" : ""}">${STRAT[k].label}（${books[k].trades.length}）</button>`).join("");
+  renderLog();
+}
+$("logPick").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; logKey = b.dataset.k; renderReplay(); });
+$("day").addEventListener("input", renderDay);
+
+// 按 nav 重建某一天的持仓：从 trades 回放（交易本身有日期）
+function holdingsAt(b, i) {
+  const q = new Map(); let cash = R.cap;
+  if (R.monthly) for (const f of b.flows.slice(1)) if (f[0] <= i) cash += R.monthly;
+  for (const t of b.trades) {
+    if (t.i > i) break;
+    if (t.side === "buy") { cash -= t.jpy + t.fee; q.set(t.symbol, (q.get(t.symbol) || 0) + t.qty); }
+    else { cash += t.jpy - t.fee; q.set(t.symbol, (q.get(t.symbol) || 0) - t.qty); if (!q.get(t.symbol)) q.delete(t.symbol); }
+  }
+  return { q, cash };
+}
+function renderDay() {
+  if (!R) return;
+  const k = Number($("day").value), i = R.i0 + k;
+  $("dayLabel").textContent = `第 ${k} 天 · ${P.dates[i]}${k === 0 ? "（决定日：用这天收盘前的数据下单）" : ""}`;
+  $("dayCards").innerHTML = Object.entries(R.books).map(([key, b]) => {
+    const { q, cash } = holdingsAt(b, i);
+    const v = b.nav[k][1];
+    const items = [...q].map(([s, n]) => { const val = n * P.jpy(s, i); return `<li>${NAMES[s]} <span class="mono">${s} ${n} 股 · ${(val / v * 100).toFixed(0)}%</span></li>`; }).join("");
+    const today = b.trades.filter(t => t.i === i).map(t => `<li class="t">${t.side === "buy" ? "买入" : "卖出"} ${t.symbol} ${t.qty} 股 @ ${t.price.toFixed(2)}${t.fx ? " × " + t.fx.toFixed(2) : ""} = ${yen(t.jpy)} 円</li>`).join("");
+    const pend = b.trades.filter(t => t.decided === i && t.i > i).length;
+    return `<div class="dc"><div class="h"><span><span class="sw" style="background:${STRAT[key].color}"></span> ${STRAT[key].label}</span><span class="mono ${cls(v / b.nav[0][1] - 1)}">${pct(v / b.nav[0][1] - 1)}</span></div>
+      <div class="v">${yen(v)} 円</div><div class="note">现金 ${yen(cash)} 円（${(cash / v * 100).toFixed(0)}%）</div>
+      ${items ? `<ul>${items}</ul>` : '<div class="note">还没有持仓</div>'}
+      ${today ? `<div class="note" style="margin-top:6px">这天成交：</div><ul>${today}</ul>` : ""}
+      ${pend ? `<div class="note" style="margin-top:6px">这天下了 ${pend} 笔单，下一个交易日成交</div>` : ""}</div>`;
+  }).join("");
+  // 竖线
+  const svg = $("rChart").querySelector("svg");
+  if (svg) {
+    let vl = svg.querySelector(".vday");
+    const n = R.i1 - R.i0 + 1, W = 900, L = 78, Rr = 16;
+    const x = L + (n <= 1 ? 0 : k / (n - 1)) * (W - L - Rr);
+    if (!vl) { vl = document.createElementNS("http://www.w3.org/2000/svg", "line"); vl.setAttribute("class", "vday"); vl.setAttribute("stroke", "var(--fg)"); vl.setAttribute("stroke-dasharray", "3 3"); vl.setAttribute("y1", 12); vl.setAttribute("y2", 270); svg.insertBefore(vl, svg.querySelector(".hit")); }
+    vl.setAttribute("x1", x); vl.setAttribute("x2", x);
+  }
+}
+function renderLog() {
+  const b = R.books[logKey];
+  $("logTable").innerHTML = `<thead><tr><th>成交日</th><th>决定日</th><th>品种</th><th>买/卖</th><th>数量</th><th>价格*</th><th>汇率</th><th>金额（円）</th><th>手续费</th></tr></thead><tbody>` +
+    (b.trades.length ? b.trades.map(t => `<tr><td class="num">${P.dates[t.i]}</td><td class="num">${P.dates[t.decided]}</td><td>${NAMES[t.symbol]} <span class="note mono">${t.symbol}</span></td><td>${t.side === "buy" ? "买入" : '<span class="neg">卖出</span>'}</td><td class="num">${t.qty}</td><td class="num">${t.price.toFixed(2)}</td><td class="num">${t.fx ? t.fx.toFixed(2) : "—"}</td><td class="num">${yen(t.jpy)}</td><td class="num">${yen(t.fee)}</td></tr>`).join("")
+      : `<tr><td colspan="9" class="note">这段时间没有成交</td></tr>`) + `</tbody><caption style="caption-side:bottom;text-align:left" class="note">* 价格是含分红再投资调整的收盘价（和回测一致），所以早年的价格会比当时的实际成交价低一些。实盘用的是不调整的收盘价，分红另外计入现金。</caption>`;
+}
+
+// ---------------------------------------------------------------- 你来操盘
+const G_ASSETS = ["VT", "QQQ", "1348.T", "AGG", "GLD", "BIL"];
+const G_COLORS = ["var(--s1)", "var(--s2)", "var(--s3)", "var(--s4)", "var(--s5)", "var(--s6)"];
+let G = null;
+const gFirst = Math.max(P.indexOf("2009-07-01"), 260);
+function gStart(len) {
+  const i0 = gFirst + Math.floor(Math.random() * (last - len - gFirst));
+  const book = new E.Book("you", 5000000), bench = new E.Book("bench", 5000000);
+  bench.decide(P, i0, { VT: 1 }, 0.005, "bench");
+  book.nav.push([i0, 5000000]); bench.nav.push([i0, 5000000]);
+  G = { i0, i: i0, end: i0 + len, len, book, bench, applied: 0 };
+  $("gameIntro").hidden = true; $("gameBoard").hidden = false; $("gReveal").innerHTML = "";
+  gRender();
+}
+$("g3").addEventListener("click", () => gStart(63));
+$("g6").addEventListener("click", () => gStart(126));
+const gRead = weightInputs($("gW"), $("gWsum"), { VT: 60, QQQ: 10, AGG: 20 }, null, "gw");
+$("gApply").addEventListener("click", () => {
+  const w = gRead(); if (!w || !G || G.i >= G.end) return;
+  G.book.decide(P, G.i, w, 0.005, "you"); G.applied++;
+  gRender();
+});
+function gStep(n) {
+  if (!G) return;
+  for (let s = 0; s < n && G.i < G.end; s++) { G.i++; G.book.processDay(P, G.i); G.bench.processDay(P, G.i); }
+  gRender();
+  if (G.i >= G.end) gFinish();
+}
+$("gD1").addEventListener("click", () => gStep(1));
+$("gD5").addEventListener("click", () => gStep(5));
+$("gD21").addEventListener("click", () => gStep(21));
+$("gEnd").addEventListener("click", () => gStep(1e6));
+
+function gRender() {
+  const { i0, i, end, book, bench } = G;
+  const d = i - i0;
+  $("gDay").textContent = `${d} / ${G.len} 天`;
+  const you = book.value(P, i) / 5e6 - 1, ben = bench.value(P, i) / 5e6 - 1;
+  $("gDiff").innerHTML = `<span class="${cls(you - ben)}">${pct(you - ben)}</span>`;
+  $("gPending").textContent = book.pending.length ? `已下单 ${book.pending.length} 笔，下一个交易日收盘价成交。` : (book.trades.length ? "" : "还没有下单。设好比例后点「按这个比例调仓」。");
+  // 资产走势：开局 = 100，可看开局前 250 天
+  const from = Math.max(0, i0 - 250), xs = [];
+  for (let k = from; k <= i; k++) xs.push(k - i0 === 0 ? "开局" : (k < i0 ? `开局前 ${i0 - k} 天` : `第 ${k - i0} 天`));
+  const series = G_ASSETS.map((s, c) => { const b0 = P.jpy(s, i0); const v = []; for (let k = from; k <= i; k++) { const x = P.jpy(s, k); v.push(x == null || !b0 ? null : x / b0 * 100); } return { name: NAMES[s], color: G_COLORS[c], v }; });
+  lineChart($("gAssets"), series, { xLabels: xs, base: 100, height: 280, yFmt: v => v.toFixed(0), tipFmt: v => v.toFixed(1), vline: i0 - from, aria: "各资产以开局为 100 的走势（日元计）" });
+  $("gAssetLegend").innerHTML = G_ASSETS.map((s, c) => `<span><span class="sw" style="background:${G_COLORS[c]}"></span>${NAMES[s]}</span>`).join("") + "<span>都按日元计</span>";
+  const xs2 = book.nav.map(x => x[0] === i0 ? "开局" : `第 ${x[0] - i0} 天`);
+  lineChart($("gNav"), [{ name: "你", color: "var(--accent)", v: book.nav.map(x => x[1]), width: 2.6 }, { name: "不动", color: "var(--muted)", v: bench.nav.map(x => x[1]), dash: true }],
+    { xLabels: xs2, base: 5000000, height: 220, yFmt: v => (v / 1e4).toFixed(0) + "万", tipFmt: v => yen(v), aria: "你的账户和不动的比较" });
+  const w = book.weights(P, i);
+  $("gHold").innerHTML = `<div class="note">估值 ${yen(book.value(P, i))} 円 · 现金 ${(w.CASH * 100).toFixed(0)}% · 已调仓 ${G.applied} 次 · 成交 ${book.trades.length} 笔 · 手续费等 ${yen(book.fees)} 円</div>` +
+    `<div class="scroll"><table class="data" style="margin-top:6px"><thead><tr><th>品种</th><th>股数</th><th>占比</th></tr></thead><tbody>` +
+    Object.entries(w).filter(([s]) => s !== "CASH").map(([s, x]) => `<tr><td>${NAMES[s]}</td><td class="num">${book.qty.get(s)}</td><td class="num">${(x * 100).toFixed(1)}%</td></tr>`).join("") + "</tbody></table></div>" +
+    (book.trades.length ? `<div class="note" style="margin-top:8px">最近成交：` + book.trades.slice(-5).reverse().map(t => `第 ${t.i - i0} 天 ${t.side === "buy" ? "买" : "卖"} ${t.symbol} ${t.qty}`).join("、") + "</div>" : "");
+  for (const id of ["gApply", "gD1", "gD5", "gD21", "gEnd"]) $(id).disabled = i >= end;
+}
+
+const EVENTS = [["2008-09-01", "2009-03-31", "雷曼危机"], ["2010-04-15", "2010-07-15", "欧债危机第一波"], ["2011-07-20", "2011-10-31", "美债降级与日元历史高点"], ["2015-08-10", "2016-02-29", "人民币贬值与油价暴跌"], ["2018-10-01", "2018-12-31", "加息与贸易战下跌"], ["2020-02-15", "2020-04-30", "新冠暴跌与反弹"], ["2022-01-01", "2022-10-31", "通胀与加息，股债双杀"], ["2024-07-08", "2024-08-31", "日元套息交易平仓"]];
+function gFinish() {
+  const { i0, end, book, bench } = G;
+  const you = book.value(P, end) / 5e6 - 1, ben = bench.value(P, end) / 5e6 - 1;
+  const ev = EVENTS.find(([a, b]) => P.dates[i0] <= b && P.dates[end] >= a);
+  const others = E.backtest(P, P.dates[i0], 5000000, { endDate: P.dates[end] });
+  const o = Object.entries(others).filter(([k]) => k !== "allcountry").map(([k, b]) => `${STRAT[k].label} ${pct(E.stats(b, P).ret)}`).join("、");
+  const win = you > ben;
+  $("gReveal").innerHTML = `<div class="reveal"><h2>揭晓：${P.dates[i0]} → ${P.dates[end]}</h2>
+    ${ev ? `<p>这段时间赶上了：<b>${ev[2]}</b>。</p>` : ""}
+    <p>你：<b class="${cls(you)}">${pct(you)}</b>（调仓 ${G.applied} 次、成交 ${book.trades.length} 笔、手续费等 ${yen(book.fees)} 円）· 全球股一只·不动：<b class="${cls(ben)}">${pct(ben)}</b> · ${win ? "这局你赢了。" : "这局不动赢了。"}</p>
+    <p class="note">同一段时间里，固定规则的策略：${o}。</p>
+    <p class="note">一局的输赢主要看运气。多玩几局，看下面的胜率，再看调仓次数和输赢的关系。</p>
+    <div class="btnrow"><button class="btn" id="gAgain">再来一局</button></div></div>`;
+  $("gAgain").addEventListener("click", () => { $("gameBoard").hidden = true; $("gameIntro").hidden = false; renderHist(); });
+  const h = store.get("jev-sim-games", []);
+  h.unshift({ start: P.dates[i0], end: P.dates[end], you, ben, moves: G.applied, trades: book.trades.length });
+  store.set("jev-sim-games", h.slice(0, 50));
+}
+function renderHist() {
+  const h = store.get("jev-sim-games", []);
+  if (!h.length) { $("gHist").innerHTML = ""; return; }
+  const wins = h.filter(x => x.you > x.ben).length;
+  const avg = h.reduce((a, x) => a + (x.you - x.ben), 0) / h.length;
+  $("gHist").innerHTML = `<h3>你的战绩（保存在这台设备的浏览器里）</h3><p>${h.length} 局，赢过"不动" ${wins} 局（${Math.round(wins / h.length * 100)}%），平均每局 ${pct(avg)}。</p>
+    <div class="scroll"><table class="data"><thead><tr><th>期间</th><th>你</th><th>不动</th><th>差</th><th>调仓次数</th></tr></thead><tbody>` +
+    h.map(x => `<tr><td class="num">${x.start} → ${x.end}</td><td class="num ${cls(x.you)}">${pct(x.you)}</td><td class="num ${cls(x.ben)}">${pct(x.ben)}</td><td class="num ${cls(x.you - x.ben)}">${pct(x.you - x.ben)}</td><td class="num">${x.moves}</td></tr>`).join("") + "</tbody></table></div>";
+}
+
+// ---------------------------------------------------------------- 实盘进度
+function nextRun() {
+  // 每周二～周六 东京 07:07（= UTC 前一天 22:07）
+  const now = new Date();
+  for (let k = 0; k < 8; k++) {
+    const t = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + k, 22, 7));
+    const jstDay = new Date(t.getTime() + 9 * 3600e3).getUTCDay();   // 东京的星期
+    if (t > now && jstDay >= 2 && jstDay <= 6) return t;
+  }
+  return null;
+}
+function renderLive() {
+  const L = DATA.live;
+  const box = $("liveBox");
+  if (!L) { box.innerHTML = '<p class="note">实盘数据没有嵌入。</p>'; return; }
+  const cap = L.capital, nr = nextRun();
+  const lastDay = L.books.allcountry.nav.at(-1)[0];
+  const base = L.books.allcountry.nav.at(-1)[1] / cap - 1;
+  const started = Object.values(L.books).some(b => b.trades.length);
+  const keys = Object.keys(L.books);
+  let rows = "";
+  for (const k of keys) {
+    const b = L.books[k], v = b.nav.at(-1)[1], r = v / cap - 1;
+    const hold = Object.entries(b.qty || {}).map(([s, q]) => `${NAMES[s] || s} ${q}`).join("、");
+    const pend = (b.pending || []).map(o => `${o.side === "buy" ? "买" : "卖"} ${NAMES[o.symbol] || o.symbol} ${o.qty}`).join("、");
+    rows += `<tr><td><span class="sw" style="background:${STRAT[k].color}"></span> ${STRAT[k].label}</td><td class="num">${yen(v)}</td><td class="num ${cls(r)}">${pct(r)}</td><td class="num ${cls(r - base)}">${k === "allcountry" ? "—" : pct(r - base)}</td><td class="num">${b.trades.length}</td><td style="text-align:left;white-space:normal;min-width:220px">${hold || "—"}${pend ? `<br><span class="note">待成交：${pend}</span>` : ""}</td></tr>`;
+  }
+  box.innerHTML = `
+    <div class="tiles">
+      <div class="tile"><div class="k">开始（决定日）</div><div class="v">${L.start}</div><div class="s">每个账户 ${yen(cap)} 円</div></div>
+      <div class="tile"><div class="k">已处理到</div><div class="v">${lastDay}</div><div class="s">${started ? "已经有成交" : "首批订单还没成交"}</div></div>
+      <div class="tile"><div class="k">下次自动更新</div><div class="v" style="font-size:17px">${nr ? new Date(nr.getTime() + 9 * 3600e3).toISOString().slice(5, 16).replace("T", " ") + " 东京" : "—"}</div><div class="s">每个交易日早上 07:07</div></div>
+      <div class="tile"><div class="k">结束</div><div class="v">${L.end || "—"}</div><div class="s">最后一次写最终报告</div></div>
+    </div>
+    ${started ? "" : `<div class="luck" style="margin-top:14px">现在还没有成交，原因是：决定日是 ${L.start}（周五）的收盘，规则是下一个交易日收盘价成交。美国 10/12（周一）开市，那天收盘后，10/13 早上 07:07 的自动更新会用真实收盘价成交（日本 10/12 是体育日休市，日本股顺延到 10/13 收盘）。在那之前，想看"一个月后会怎样"，请用「回放实验」页签的"一个月前开始"，规则完全一样，只是用的是上个月的真实数据。</div>`}
+    <h3>各账户</h3>
+    <div class="scroll"><table class="data"><thead><tr><th>账户</th><th>估值（円）</th><th>开始以来</th><th>对比不动</th><th>成交</th><th style="text-align:left">持仓 / 待成交</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div id="liveChart" style="margin-top:14px"></div>
+    ${(L.claude || []).map(d => `<h3>Claude 的判断 · ${d.date}</h3><p class="mono note">${Object.entries(d.weights).map(([s, w]) => `${NAMES[s] || s} ${(w * 100).toFixed(0)}%`).join(" · ")} · 其余现金</p><div class="panel" style="white-space:pre-wrap;font-size:14px">${esc(d.rationale)}</div>`).join("")}
+    <p class="note" style="margin-top:14px">这一页在每次自动更新后重新发布，所以打开时看到的就是最新状态。每一笔实盘成交的日期、价格、汇率都记在仓库的 paper/state.json 里，可以和 Yahoo 的数据逐笔核对。</p>`;
+  if (L.books.allcountry.nav.length > 1) {
+    const xl = L.books.allcountry.nav.map(x => x[0]);
+    lineChart($("liveChart"), keys.map(k => ({ name: STRAT[k].label, color: STRAT[k].color, v: L.books[k].nav.map(x => x[1]) })), { xLabels: xl, base: cap, yFmt: v => (v / 1e4).toFixed(0) + "万", tipFmt: v => yen(v), aria: "实盘账户的资产曲线" });
+  }
+}
+
+run();
+renderHist();
+showTab(store.get("jev-sim-tab", "replay"));
+</script>

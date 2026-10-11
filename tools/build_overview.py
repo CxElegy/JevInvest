@@ -1,6 +1,8 @@
-"""web/overview.html（説明ページの雛形）に web/papertrade.json を埋め込んで 1 枚の HTML にする。
+"""説明ページとシミュレーターを、データを埋め込んだ 1 枚ずつの HTML にする。
 
-    python tools/build_overview.py [出力先]     # 既定: reports/overview.html
+    python tools/build_overview.py [出力先ディレクトリ]   # 既定: reports/
+        → overview.html   web/overview.html + web/papertrade.json（+ stress.json・税の例示）
+        → simulator.html  web/simulator.html + web/simengine.js + web/simdata.json + ライブの状態
 
 ページは外部からデータを取りに行かないので、埋め込んだ時点の数字が出る。
 ペーパートレードを進めたら、作り直して公開し直す。
@@ -37,8 +39,30 @@ def tax_examples() -> list[dict]:
     return out
 
 
+def _blob(data) -> str:
+    # </script> を含む文字列でスクリプトが閉じないようにする
+    return json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
+
+
+def build_simulator(out: Path) -> None:
+    html = (ROOT / "web" / "simulator.html").read_text(encoding="utf-8")
+    engine = (ROOT / "web" / "simengine.js").read_text(encoding="utf-8")
+    if "</script" in engine:
+        raise SystemExit("simengine.js に </script が含まれています")
+    pt = json.loads(DATA.read_text(encoding="utf-8"))
+    sim = json.loads((ROOT / "web" / "simdata.json").read_text(encoding="utf-8"))
+    html = html.replace("/*__ENGINE__*/", engine).replace(MARK, _blob({"sim": sim, "live": pt.get("live")}))
+    out.write_text(html, encoding="utf-8")
+    print(f"→ {out}（{out.stat().st_size / 1024:.0f} KB）")
+
+
 def main() -> None:
-    out = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "reports" / "overview.html"
+    arg = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "reports"
+    # 互換: 以前はファイル名を渡していた
+    outdir = arg.parent if arg.suffix == ".html" else arg
+    outdir.mkdir(parents=True, exist_ok=True)
+    out = outdir / "overview.html"
+    build_simulator(outdir / "simulator.html")
     html = TEMPLATE.read_text(encoding="utf-8")
     if MARK not in html:
         raise SystemExit(f"雛形に {MARK} がありません")
@@ -47,10 +71,7 @@ def main() -> None:
     stress = ROOT / "web" / "stress.json"
     if stress.exists():
         data["stress"] = json.loads(stress.read_text(encoding="utf-8"))
-    # </script> を含む文字列でスクリプトが閉じないようにする
-    blob = json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(html.replace(MARK, blob), encoding="utf-8")
+    out.write_text(html.replace(MARK, _blob(data)), encoding="utf-8")
     print(f"→ {out}（{out.stat().st_size / 1024:.0f} KB）")
 
 

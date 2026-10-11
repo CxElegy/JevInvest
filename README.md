@@ -86,6 +86,13 @@ reports/latest.md を読んで分析して
 | `import-csv` | 証券会社の取引履歴 CSV（SBI・楽天）を取り込む |
 | `dashboard` | 単一ファイルの HTML ダッシュボード（`reports/dashboard.html`） |
 
+### ブラウザのシミュレーター
+
+`python tools/build_overview.py reports/` で `reports/simulator.html` ができる（データ込みの 1 ファイル）。
+実際の過去データで、任意の期間・本金・積立・戦略（自分の配分も）を回し、毎日の持仓と約定を確かめられる。
+日付を隠した「自分で売買」モードと、ペーパートレードの実盘の進み具合もある。
+エンジン（`web/simengine.js`）は `src/sim.py` と同じ数字になることを `tests/test_sim_parity.py` で確かめている。
+
 ### Claude Code から操作する（PC が無くてもよい）
 
 Claude Code（ブラウザ・タブレット・スマホのクラウドセッションでも可）で、
