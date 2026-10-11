@@ -1,5 +1,6 @@
 """台帳 → 評価 → ガードレール → レポート → ダッシュボード → CLI を、ネットワーク無しで通す。"""
 
+from datetime import date
 from pathlib import Path
 
 import pytest
@@ -103,17 +104,36 @@ def test_risk_metrics_and_report_and_dashboard(ledger_path, market_data):
     assert "__PAYLOAD__" not in html and "持仓ダッシュボード" in html
 
 
-def test_plan_falls_back_to_core_when_nothing_is_cleared():
+def test_plan_falls_back_to_core_only_when_core_itself_is_cleared():
     cfg = yaml.safe_load((ROOT / "config" / "holdings.example.yaml").read_text(encoding="utf-8"))
     reg = compliance.ComplianceRegistry()
-    plan = build(cfg, compliance=reg, cleared_symbols_by_class={})
+    plan = build(cfg, compliance=reg, cleared_symbols_by_class={"developed_equity": ["VT"]},
+                 today=date(2026, 1, 15))
 
     by = {c.asset_class: c for c in plan.classes}
     assert by["us_equity"].status == "保留→コアへ" and by["jp_equity"].status == "保留→コアへ"
-    assert by["developed_equity"].monthly_amount > 200000 * 0.55 * 100 / 95 - 1
+    assert by["bond"].status == "保留→コアへ"                 # 債券も購入可の銘柄が無ければ積まない
+    assert by["developed_equity"].monthly_amount == pytest.approx(200000)
     assert plan.invested == pytest.approx(200000)              # 全額投資
     assert plan.tsumitate_total <= 1_200_000 / 12 + 1e-6       # つみたて枠の月上限を守る
     assert len(annual_projection(cfg, plan, years=3)) == 3
+
+
+def test_plan_parks_everything_when_nothing_is_cleared():
+    # 購入可の銘柄が 1 つも無いのに、インデックス・債券クラスへ配分してはいけない
+    cfg = yaml.safe_load((ROOT / "config" / "holdings.example.yaml").read_text(encoding="utf-8"))
+    plan = build(cfg, compliance=compliance.ComplianceRegistry(), cleared_symbols_by_class={})
+
+    assert plan.invested == 0
+    assert plan.parked == pytest.approx(200000)
+    assert all(c.status in ("保留", "積立対象外") for c in plan.classes)
+    assert any("購入可と記録された銘柄が無い" in w for w in plan.warnings)
+
+    cfg["contributions"]["on_hold_fallback"] = "cash"
+    plan = build(cfg, cleared_symbols_by_class={"us_equity": ["NVDA"]})
+    by = {c.asset_class: c for c in plan.classes}
+    assert by["developed_equity"].status == "保留" and by["bond"].status == "保留"
+    assert by["us_equity"].growth > 0
 
 
 def test_cli_validate_and_report_end_to_end(ledger_path, market_data, tmp_path, monkeypatch, capsys):
@@ -175,6 +195,45 @@ transactions:
     cli.main([*common, "transactions"])
     out = capsys.readouterr().out
     assert "XIRR" in out and "現金を除く有価証券" in out     # 入出金なし → 売買ベース・有価証券のみ
+
+
+@pytest.mark.parametrize("extra_position, extra_tx, needle", [
+    # 台帳にあるが取引履歴に無い銘柄 → 評価額だけが乗って XIRR が膨らむ
+    ("""  - {symbol: 7203.T, asset_class: jp_equity, account: NISA, quantity: 100,
+     cost_basis_per_unit: 2800, currency: JPY}
+""", "", "7203.T"),
+    # 価格の取れない銘柄 → 評価額から黙って抜けて XIRR が縮む
+    ("""  - {symbol: NVDA, asset_class: us_equity, account: NISA, quantity: 10,
+     cost_basis_per_unit: 100, currency: USD, cost_fx_rate: 150}
+""", """  - {date: 2025-01-06, type: buy, symbol: NVDA, account: NISA, quantity: 10, price: 100,
+     currency: USD, fx_rate: 150, asset_class: us_equity}
+""", "評価不能"),
+], ids=["ledger-only-symbol", "unpriced"])
+def test_cli_xirr_refuses_when_terminal_value_does_not_match_history(
+        tmp_path, market_data, monkeypatch, capsys, extra_position, extra_tx, needle):
+    monkeypatch.setattr("src.marketdata.DEFAULT_DB", tmp_path / "cli.sqlite")
+    monkeypatch.setattr("src.marketdata.MarketData._download",
+                        lambda self, symbols, start=None, period=None:
+                        {s: market_data.data[s].copy() for s in symbols if s in market_data.data})
+    holdings = tmp_path / "holdings.yaml"
+    holdings.write_text("""
+base_currency: JPY
+accounts: [{name: NISA, type: nisa}]
+positions:
+  - {symbol: VT, asset_class: developed_equity, account: NISA, quantity: 10,
+     cost_basis_per_unit: 120.5, currency: USD, cost_fx_rate: 150.2}
+""" + extra_position, encoding="utf-8")
+    txs = tmp_path / "tx.yaml"
+    txs.write_text("""
+transactions:
+  - {date: 2025-01-06, type: buy, symbol: VT, account: NISA, quantity: 10, price: 120.5,
+     currency: USD, fx_rate: 150.2, asset_class: developed_equity}
+""" + extra_tx, encoding="utf-8")
+
+    cli.main(["--holdings", str(holdings), "--transactions", str(txs), "transactions"])
+    out = capsys.readouterr().out
+    assert "計算しません" in out and needle in out
+    assert "XIRR        :" not in out
 
 
 def test_single_position_cap_can_exempt_core_index_and_bond_classes(tmp_path, market_data):

@@ -121,9 +121,31 @@ def _series_payload(a: Analysis, plan=None) -> dict:
     }
 
 
+def _strip_amounts(data: dict) -> None:
+    """匿名モード。表示を「—」にするだけでなく、埋め込む JSON からも絶対額を消す。
+
+    HTML のソースを開けば金額が読めてしまうので、比率に置き換える。
+    グラフは相対値で描くので、比率に置き換えても形は変わらない。
+    """
+    data["total"] = data["cost"] = data["pnl"] = 0.0
+    for d in data["alloc"]:
+        d["value"] = d["pct"]
+        d["pnl"] = 0.0
+    for d in data["conc"]:
+        d["value"] = d["pct"]
+    if data["plan"]:
+        monthly = data["plan"]["monthly"] or 1.0
+        for r in data["plan"]["rows"]:
+            for k in ("tsumitate", "growth", "taxable", "cash"):
+                r[k] = r[k] / monthly * 100.0
+        data["plan"]["monthly"] = 0.0
+
+
 def to_html(a: Analysis, plan=None, anonymize: bool = False) -> str:
     data = _series_payload(a, plan)
     data["anonymize"] = bool(anonymize)
+    if anonymize:
+        _strip_amounts(data)
     payload = json.dumps(data, ensure_ascii=False)
 
     return _TEMPLATE.replace("__PAYLOAD__", payload).replace(
@@ -516,7 +538,7 @@ function render(){
     + (n?`<div class="n">${n}</div>`:'')}));
   tile('評価額', fmtM(D.total) + ' ' + D.currency, '取得原価 ' + fmtM(D.cost));
   tile('損益', (D.anonymize?'—':(D.pnl>=0?'+':'')+fmtM(D.pnl)), fmtP(D.pnl_pct),
-       D.pnl>=0?'up':'down');
+       D.pnl_pct>=0?'up':'down');
   if (D.concentration['実質銘柄数'])
     tile('実質銘柄数', D.concentration['実質銘柄数'].toFixed(2),
          '実 ' + D.concentration['実銘柄数'] + ' 銘柄 / HHI ' + D.concentration.hhi.toFixed(3));
@@ -542,7 +564,8 @@ function render(){
 
   /* --- 積立計画 --- */
   app.appendChild(card('毎月の積立の割り振り',
-    D.plan ? `月 ${fmtM(D.plan.monthly)} ${D.currency} を NISA 枠に当てはめた結果。`
+    D.plan ? (D.anonymize ? '毎月の投入額に対する割合（%）を NISA 枠に当てはめた結果。'
+                          : `月 ${fmtM(D.plan.monthly)} ${D.currency} を NISA 枠に当てはめた結果。`)
            : '', planBars()));
 
   /* --- 相関 --- */

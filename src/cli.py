@@ -262,6 +262,24 @@ def cmd_transactions(args) -> None:
                 "（--write-derived で導出結果を出して台帳に反映してください）"
             )
 
+        # 売買ベースでは、台帳にあって取引履歴に買いの無い銘柄の評価額は
+        # 「タダで手に入れた資産」として年率を押し上げる
+        untracked = ledger_symbols - tx_symbols
+        if led.flow_mode == "trade" and untracked:
+            blockers.append(
+                f"台帳にある {', '.join(sorted(untracked))} が取引履歴（保有中）に無い。"
+                "買いのキャッシュフローが無いまま評価額だけが乗るため XIRR が過大になります"
+            )
+
+        # 評価不能の銘柄は評価額から抜けるので、黙って計算すると XIRR が過小になる
+        if a.unpriced_count:
+            unpriced = sorted({v.position.symbol for v in a.valuations if not v.priced})
+            blockers.append(
+                f"{', '.join(unpriced)} が評価不能（価格または為替が取れない）。"
+                "評価額から抜けるため XIRR は実際より低く出ます"
+                "（取れない原因を解消するか price_override を入れてください）"
+            )
+
         if blockers:
             print("  ⚠ 計算しません:")
             for b in blockers:
@@ -525,6 +543,9 @@ def cmd_plan(args) -> None:
     plan = build(cfg, compliance=reg, cleared_symbols_by_class=cleared)
 
     print(f"毎月の投入額: {plan.monthly:,.0f} 円")
+    if plan.months_left < 12:
+        print(f"（今年の残り {plan.months_left} か月の割り当て。NISA の年枠の残りを"
+              f"残り月数で割っている。来年以降の割り当ては下の累計表に反映）")
     print()
     df = plan.to_frame()
     for c in ("月額", "つみたて枠", "成長枠", "課税口座", "留保(現金)"):
@@ -558,6 +579,8 @@ def cmd_plan(args) -> None:
     print()
     proj = annual_projection(cfg, plan, years=args.years)
     print(proj.map(lambda v: f"{v:,.0f}").to_markdown())
+    for n in proj.attrs.get("notes", []):
+        print(f"  ※ {n}")
 
 
 def cmd_quotes(args) -> None:

@@ -36,7 +36,7 @@ XIRR のキャッシュフローの取り方:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import date, datetime
 from pathlib import Path
 
@@ -60,6 +60,13 @@ class Transaction:
     fx_rate: float = 1.0
     fee: float = 0.0
     amount: float = 0.0
+    # 実際に台帳へ反映した数量。売却の切り詰め・飛ばしがあると quantity と食い違う。
+    # XIRR のキャッシュフローはこちらを使う（None は quantity どおり反映した意味）。
+    applied_quantity: float | None = None
+
+    @property
+    def effective_quantity(self) -> float:
+        return self.quantity if self.applied_quantity is None else self.applied_quantity
 
 
 @dataclass
@@ -185,9 +192,8 @@ def load(path: str | Path, base_currency: str = "JPY") -> Ledger:
         ))
 
     parsed.sort(key=lambda t: t.date)   # 安定ソート。同日はファイルの順
-    led.transactions = parsed
 
-    for t in parsed:
+    for i, t in enumerate(parsed):
         key = (t.symbol, t.account)
         if t.type == "buy":
             lot = led.lots.setdefault(key, Lot(t.symbol, t.name, t.asset_class,
@@ -202,6 +208,7 @@ def load(path: str | Path, base_currency: str = "JPY") -> Ledger:
             lot = led.lots.get(key)
             if lot is None or lot.quantity <= EPS:
                 led.warnings.append(f"{t.date} {t.symbol}: 保有が無いのに売却があります。飛ばしました")
+                parsed[i] = replace(t, applied_quantity=0.0)
                 continue
             qty = t.quantity
             if qty > lot.quantity + EPS:
@@ -210,6 +217,7 @@ def load(path: str | Path, base_currency: str = "JPY") -> Ledger:
                     f"保有数量までに切り詰めました"
                 )
                 qty = lot.quantity
+                parsed[i] = replace(t, applied_quantity=qty)
             frac = qty / lot.quantity
             cost_gross = lot.cost_base_gross * frac
             cost_fee = lot.fees_base * frac
@@ -223,6 +231,7 @@ def load(path: str | Path, base_currency: str = "JPY") -> Ledger:
         elif t.type == "dividend":
             led.dividends_total += t.amount * t.fx_rate
 
+    led.transactions = parsed
     return led
 
 
@@ -241,7 +250,10 @@ def cash_flows(led: Ledger, current_value: float, as_of: date | None = None) -> 
             if t.type == "buy":
                 flows.append((t.date, -(t.quantity * t.price * t.fx_rate + t.fee)))
             elif t.type == "sell":
-                flows.append((t.date, t.quantity * t.price * t.fx_rate - t.fee))
+                # 飛ばした売却は台帳に何も起きていないので、手数料も含めて出入りにしない
+                if t.effective_quantity <= EPS:
+                    continue
+                flows.append((t.date, t.effective_quantity * t.price * t.fx_rate - t.fee))
             elif t.type == "dividend":
                 flows.append((t.date, t.amount * t.fx_rate))
 
