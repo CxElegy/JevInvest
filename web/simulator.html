@@ -180,6 +180,8 @@ svg.chart { display: block; width: 100%; height: auto; }
         <button class="btn" id="g3">开一局：3 个月</button>
         <button class="btn ghost" id="g6">开一局：6 个月</button>
       </div>
+      <div style="margin-top:14px"><div class="note" style="margin-bottom:6px">危机特训：知道是哪一段，但不知道接下来几周会怎样。看看你能不能拿得住。</div>
+        <div class="chips" id="gCrisis"></div></div>
       <div id="gHist" style="margin-top:16px"></div>
     </div>
     <div id="gameBoard" hidden>
@@ -555,16 +557,20 @@ const G_ASSETS = ["VT", "QQQ", "1348.T", "AGG", "GLD", "BIL"];
 const G_COLORS = ["var(--s1)", "var(--s2)", "var(--s3)", "var(--s4)", "var(--s5)", "var(--s6)"];
 let G = null;
 const gFirst = Math.max(P.indexOf("2009-07-01"), 260);
-function gStart(len) {
-  const i0 = gFirst + Math.floor(Math.random() * (last - len - gFirst));
+function gStart(len, fixedI0, label) {
+  // 2008 年的场景早于 1348.T 的数据，日本股那天还没有价格，买不了（会提示）
+  const i0 = fixedI0 != null ? Math.min(fixedI0, last - len) : gFirst + Math.floor(Math.random() * (last - len - gFirst));
   const book = new E.Book("you", 5000000), bench = new E.Book("bench", 5000000);
   bench.decide(P, i0, { VT: 1 }, 0.005, "bench");
   book.nav.push([i0, 5000000]); bench.nav.push([i0, 5000000]);
-  G = { i0, i: i0, end: i0 + len, len, book, bench, applied: 0 };
+  G = { i0, i: i0, end: i0 + len, len, book, bench, applied: 0, label: label || null };
   $("gameIntro").hidden = true; $("gameBoard").hidden = false; $("gReveal").innerHTML = "";
   gRender();
 }
 $("g3").addEventListener("click", () => gStart(63));
+const CRISES = [["2008 雷曼危机（9 个月）", "2008-09-02", 189], ["2011 美债降级 + 日元暴升（6 个月）", "2011-07-01", 126], ["2020 新冠暴跌（4 个月）", "2020-02-14", 84], ["2022 加息年（12 个月）", "2022-01-03", 252], ["2024-07 日元暴升（3 个月）", "2024-07-08", 63]];
+$("gCrisis").innerHTML = CRISES.map((c, k) => `<button class="chip" data-k="${k}">${c[0]}</button>`).join("");
+$("gCrisis").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; const c = CRISES[b.dataset.k]; gStart(c[2], P.indexOf(c[1]), c[0]); });
 $("g6").addEventListener("click", () => gStart(126));
 const gRead = weightInputs($("gW"), $("gWsum"), { VT: 60, QQQ: 10, AGG: 20 }, null, "gw");
 $("gApply").addEventListener("click", () => {
@@ -587,6 +593,7 @@ function gRender() {
   const { i0, i, end, book, bench } = G;
   const d = i - i0;
   $("gDay").textContent = `${d} / ${G.len} 天`;
+  if (G.label) $("gDay").title = G.label;
   const you = book.value(P, i) / 5e6 - 1, ben = bench.value(P, i) / 5e6 - 1;
   $("gDiff").innerHTML = `<span class="${cls(you - ben)}">${pct(you - ben)}</span>`;
   $("gPending").textContent = book.pending.length ? `已下单 ${book.pending.length} 笔，下一个交易日收盘价成交。` : (book.trades.length ? "" : "还没有下单。设好比例后点「按这个比例调仓」。");
@@ -623,7 +630,7 @@ function gFinish() {
     <div class="btnrow"><button class="btn" id="gAgain">再来一局</button></div></div>`;
   $("gAgain").addEventListener("click", () => { $("gameBoard").hidden = true; $("gameIntro").hidden = false; renderHist(); });
   const h = store.get("jev-sim-games", []);
-  h.unshift({ start: P.dates[i0], end: P.dates[end], you, ben, moves: G.applied, trades: book.trades.length });
+  h.unshift({ start: P.dates[i0], end: P.dates[end], you, ben, moves: G.applied, trades: book.trades.length, label: G.label });
   store.set("jev-sim-games", h.slice(0, 50));
 }
 function renderHist() {
@@ -633,7 +640,7 @@ function renderHist() {
   const avg = h.reduce((a, x) => a + (x.you - x.ben), 0) / h.length;
   $("gHist").innerHTML = `<h3>你的战绩（保存在这台设备的浏览器里）</h3><p>${h.length} 局，赢过"不动" ${wins} 局（${Math.round(wins / h.length * 100)}%），平均每局 ${pct(avg)}。</p>
     <div class="scroll"><table class="data"><thead><tr><th>期间</th><th>你</th><th>不动</th><th>差</th><th>调仓次数</th></tr></thead><tbody>` +
-    h.map(x => `<tr><td class="num">${x.start} → ${x.end}</td><td class="num ${cls(x.you)}">${pct(x.you)}</td><td class="num ${cls(x.ben)}">${pct(x.ben)}</td><td class="num ${cls(x.you - x.ben)}">${pct(x.you - x.ben)}</td><td class="num">${x.moves}</td></tr>`).join("") + "</tbody></table></div>";
+    h.map(x => `<tr><td class="num">${x.label ? esc(x.label.split("（")[0]) + " · " : ""}${x.start} → ${x.end}</td><td class="num ${cls(x.you)}">${pct(x.you)}</td><td class="num ${cls(x.ben)}">${pct(x.ben)}</td><td class="num ${cls(x.you - x.ben)}">${pct(x.you - x.ben)}</td><td class="num">${x.moves}</td></tr>`).join("") + "</tbody></table></div>";
 }
 
 // ---------------------------------------------------------------- 实盘进度
