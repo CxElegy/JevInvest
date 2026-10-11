@@ -14610,7 +14610,7 @@
   "start": "2026-10-09",
   "end": "2026-11-11",
   "capital": 5000000,
-  "updated_at": "2026-10-11T15:22:00+00:00",
+  "updated_at": "2026-10-11T16:30:16+00:00",
   "books": {
    "allcountry": {
     "label": "全世界株 1 本・ほったらかし",
@@ -14738,6 +14738,450 @@
       "qty": 381.0,
       "decided": "2026-10-09",
       "reason": "dual_momentum"
+     }
+    ],
+    "income": [],
+    "notes": []
+   },
+   "sp500": {
+    "label": "S&P500 1 本・ほったらかし",
+    "nav": [
+     [
+      "2026-10-09",
+      5000000.0
+     ]
+    ],
+    "trades": [],
+    "qty": {},
+    "cash": 5000000,
+    "fees": 0.0,
+    "pending": [
+     {
+      "symbol": "SPY",
+      "side": "buy",
+      "qty": 40.0,
+      "decided": "2026-10-09",
+      "reason": "sp500"
+     }
+    ],
+    "income": [],
+    "notes": []
+   },
+   "sixty_forty": {
+    "label": "株 60 / 債券 40",
+    "nav": [
+     [
+      "2026-10-09",
+      5000000.0
+     ]
+    ],
+    "trades": [],
+    "qty": {},
+    "cash": 5000000,
+    "fees": 0.0,
+    "pending": [
+     {
+      "symbol": "AGG",
+      "side": "buy",
+      "qty": 133.0,
+      "decided": "2026-10-09",
+      "reason": "sixty_forty"
+     },
+     {
+      "symbol": "VT",
+      "side": "buy",
+      "qty": 118.0,
+      "decided": "2026-10-09",
+      "reason": "sixty_forty"
+     }
+    ],
+    "income": [],
+    "notes": []
+   },
+   "permanent": {
+    "label": "パーマネント・ポートフォリオ",
+    "nav": [
+     [
+      "2026-10-09",
+      5000000.0
+     ]
+    ],
+    "trades": [],
+    "qty": {},
+    "cash": 5000000,
+    "fees": 0.0,
+    "pending": [
+     {
+      "symbol": "BIL",
+      "side": "buy",
+      "qty": 86.0,
+      "decided": "2026-10-09",
+      "reason": "permanent"
+     },
+     {
+      "symbol": "GLD",
+      "side": "buy",
+      "qty": 20.0,
+      "decided": "2026-10-09",
+      "reason": "permanent"
+     },
+     {
+      "symbol": "SPY",
+      "side": "buy",
+      "qty": 10.0,
+      "decided": "2026-10-09",
+      "reason": "permanent"
+     },
+     {
+      "symbol": "TLT",
+      "side": "buy",
+      "qty": 101.0,
+      "decided": "2026-10-09",
+      "reason": "permanent"
+     }
+    ],
+    "income": [],
+    "notes": []
+   },
+   "all_weather": {
+    "label": "オールウェザー（近似）",
+    "nav": [
+     [
+      "2026-10-09",
+      5000000.0
+     ]
+    ],
+    "trades": [],
+    "qty": {},
+    "cash": 5000000,
+    "fees": 0.0,
+    "pending": [
+     {
+      "symbol": "DBC",
+      "side": "buy",
+      "qty": 71.0,
+      "decided": "2026-10-09",
+      "reason": "all_weather"
+     },
+     {
+      "symbol": "GLD",
+      "side": "buy",
+      "qty": 6.0,
+      "decided": "2026-10-09",
+      "reason": "all_weather"
+     },
+     {
+      "symbol": "IEF",
+      "side": "buy",
+      "qty": 53.0,
+      "decided": "2026-10-09",
+      "reason": "all_weather"
+     },
+     {
+      "symbol": "SPY",
+      "side": "buy",
+      "qty": 12.0,
+      "decided": "2026-10-09",
+      "reason": "all_weather"
+     },
+     {
+      "symbol": "TLT",
+      "side": "buy",
+      "qty": 162.0,
+      "decided": "2026-10-09",
+      "reason": "all_weather"
+     }
+    ],
+    "income": [],
+    "notes": []
+   },
+   "ivy": {
+    "label": "アイビー 5 資産・均等",
+    "nav": [
+     [
+      "2026-10-09",
+      5000000.0
+     ]
+    ],
+    "trades": [],
+    "qty": {},
+    "cash": 5000000,
+    "fees": 0.0,
+    "pending": [
+     {
+      "symbol": "DBC",
+      "side": "buy",
+      "qty": 191.0,
+      "decided": "2026-10-09",
+      "reason": "ivy"
+     },
+     {
+      "symbol": "IEF",
+      "side": "buy",
+      "qty": 70.0,
+      "decided": "2026-10-09",
+      "reason": "ivy"
+     },
+     {
+      "symbol": "SPY",
+      "side": "buy",
+      "qty": 8.0,
+      "decided": "2026-10-09",
+      "reason": "ivy"
+     },
+     {
+      "symbol": "VEU",
+      "side": "buy",
+      "qty": 76.0,
+      "decided": "2026-10-09",
+      "reason": "ivy"
+     },
+     {
+      "symbol": "VNQ",
+      "side": "buy",
+      "qty": 69.0,
+      "decided": "2026-10-09",
+      "reason": "ivy"
+     }
+    ],
+    "income": [],
+    "notes": []
+   },
+   "ivy_timing": {
+    "label": "アイビー 5 資産・200 日線",
+    "nav": [
+     [
+      "2026-10-09",
+      5000000.0
+     ]
+    ],
+    "trades": [],
+    "qty": {},
+    "cash": 5000000,
+    "fees": 0.0,
+    "pending": [
+     {
+      "symbol": "DBC",
+      "side": "buy",
+      "qty": 191.0,
+      "decided": "2026-10-09",
+      "reason": "ivy_timing"
+     },
+     {
+      "symbol": "SPY",
+      "side": "buy",
+      "qty": 8.0,
+      "decided": "2026-10-09",
+      "reason": "ivy_timing"
+     },
+     {
+      "symbol": "VEU",
+      "side": "buy",
+      "qty": 76.0,
+      "decided": "2026-10-09",
+      "reason": "ivy_timing"
+     }
+    ],
+    "income": [],
+    "notes": []
+   },
+   "risk_parity": {
+    "label": "リスクパリティ（逆ボラ）",
+    "nav": [
+     [
+      "2026-10-09",
+      5000000.0
+     ]
+    ],
+    "trades": [],
+    "qty": {},
+    "cash": 5000000,
+    "fees": 0.0,
+    "pending": [
+     {
+      "symbol": "DBC",
+      "side": "buy",
+      "qty": 169.0,
+      "decided": "2026-10-09",
+      "reason": "risk_parity"
+     },
+     {
+      "symbol": "GLD",
+      "side": "buy",
+      "qty": 12.0,
+      "decided": "2026-10-09",
+      "reason": "risk_parity"
+     },
+     {
+      "symbol": "TLT",
+      "side": "buy",
+      "qty": 159.0,
+      "decided": "2026-10-09",
+      "reason": "risk_parity"
+     },
+     {
+      "symbol": "VT",
+      "side": "buy",
+      "qty": 54.0,
+      "decided": "2026-10-09",
+      "reason": "risk_parity"
+     }
+    ],
+    "income": [],
+    "notes": []
+   },
+   "momentum_top3": {
+    "label": "相対モメンタム上位 3",
+    "nav": [
+     [
+      "2026-10-09",
+      5000000.0
+     ]
+    ],
+    "trades": [],
+    "qty": {},
+    "cash": 5000000,
+    "fees": 0.0,
+    "pending": [
+     {
+      "symbol": "1348.T",
+      "side": "buy",
+      "qty": 387.0,
+      "decided": "2026-10-09",
+      "reason": "momentum_top3"
+     },
+     {
+      "symbol": "DBC",
+      "side": "buy",
+      "qty": 319.0,
+      "decided": "2026-10-09",
+      "reason": "momentum_top3"
+     },
+     {
+      "symbol": "QQQ",
+      "side": "buy",
+      "qty": 14.0,
+      "decided": "2026-10-09",
+      "reason": "momentum_top3"
+     }
+    ],
+    "income": [],
+    "notes": []
+   },
+   "vol_target": {
+    "label": "ボラティリティ・ターゲット",
+    "nav": [
+     [
+      "2026-10-09",
+      5000000.0
+     ]
+    ],
+    "trades": [],
+    "qty": {},
+    "cash": 5000000,
+    "fees": 0.0,
+    "pending": [
+     {
+      "symbol": "VT",
+      "side": "buy",
+      "qty": 197.0,
+      "decided": "2026-10-09",
+      "reason": "vol_target"
+     }
+    ],
+    "income": [],
+    "notes": []
+   },
+   "spy_timing": {
+    "label": "S&P500・200 日線",
+    "nav": [
+     [
+      "2026-10-09",
+      5000000.0
+     ]
+    ],
+    "trades": [],
+    "qty": {},
+    "cash": 5000000,
+    "fees": 0.0,
+    "pending": [
+     {
+      "symbol": "SPY",
+      "side": "buy",
+      "qty": 40.0,
+      "decided": "2026-10-09",
+      "reason": "spy_timing"
+     }
+    ],
+    "income": [],
+    "notes": []
+   },
+   "buy_the_dip": {
+    "label": "押し目待ち（-10% で買う）",
+    "nav": [
+     [
+      "2026-10-09",
+      5000000.0
+     ]
+    ],
+    "trades": [],
+    "qty": {},
+    "cash": 5000000,
+    "fees": 0.0,
+    "pending": [],
+    "income": [],
+    "notes": []
+   },
+   "sell_in_may": {
+    "label": "セル・イン・メイ",
+    "nav": [
+     [
+      "2026-10-09",
+      5000000.0
+     ]
+    ],
+    "trades": [],
+    "qty": {},
+    "cash": 5000000,
+    "fees": 0.0,
+    "pending": [
+     {
+      "symbol": "BIL",
+      "side": "buy",
+      "qty": 345.0,
+      "decided": "2026-10-09",
+      "reason": "sell_in_may"
+     }
+    ],
+    "income": [],
+    "notes": []
+   },
+   "home_bias": {
+    "label": "日本株 50 / 全世界 50",
+    "nav": [
+     [
+      "2026-10-09",
+      5000000.0
+     ]
+    ],
+    "trades": [],
+    "qty": {},
+    "cash": 5000000,
+    "fees": 0.0,
+    "pending": [
+     {
+      "symbol": "1348.T",
+      "side": "buy",
+      "qty": 581.0,
+      "decided": "2026-10-09",
+      "reason": "home_bias"
+     },
+     {
+      "symbol": "VT",
+      "side": "buy",
+      "qty": 98.0,
+      "decided": "2026-10-09",
+      "reason": "home_bias"
      }
     ],
     "income": [],

@@ -35,7 +35,12 @@
    "realized": 0.0,
    "fees": 0.0,
    "last_day": "2026-10-09",
-   "last_decision": "2026-10-09"
+   "last_decision": "2026-10-09",
+   "taxable": false,
+   "tax_paid": 0.0,
+   "tax_year": null,
+   "year_gain": 0.0,
+   "year_tax": 0.0
   },
   "core_satellite": {
    "name": "core_satellite",
@@ -84,7 +89,12 @@
    "realized": 0.0,
    "fees": 0.0,
    "last_day": "2026-10-09",
-   "last_decision": "2026-10-09"
+   "last_decision": "2026-10-09",
+   "taxable": false,
+   "tax_paid": 0.0,
+   "tax_year": null,
+   "year_gain": 0.0,
+   "year_tax": 0.0
   },
   "trend": {
    "name": "trend",
@@ -126,7 +136,12 @@
    "realized": 0.0,
    "fees": 0.0,
    "last_day": "2026-10-09",
-   "last_decision": "2026-10-09"
+   "last_decision": "2026-10-09",
+   "taxable": false,
+   "tax_paid": 0.0,
+   "tax_year": null,
+   "year_gain": 0.0,
+   "year_tax": 0.0
   },
   "dual_momentum": {
    "name": "dual_momentum",
@@ -154,7 +169,573 @@
    "realized": 0.0,
    "fees": 0.0,
    "last_day": "2026-10-09",
-   "last_decision": "2026-10-09"
+   "last_decision": "2026-10-09",
+   "taxable": false,
+   "tax_paid": 0.0,
+   "tax_year": null,
+   "year_gain": 0.0,
+   "year_tax": 0.0
+  },
+  "sp500": {
+   "name": "sp500",
+   "cash": 5000000,
+   "qty": {},
+   "cost": {},
+   "pending": [
+    {
+     "symbol": "SPY",
+     "side": "buy",
+     "qty": 40.0,
+     "decided": "2026-10-09",
+     "reason": "sp500"
+    }
+   ],
+   "trades": [],
+   "nav": [
+    [
+     "2026-10-09",
+     5000000.0
+    ]
+   ],
+   "income": [],
+   "notes": [],
+   "realized": 0.0,
+   "fees": 0.0,
+   "last_day": "2026-10-09",
+   "last_decision": "2026-10-09",
+   "taxable": false,
+   "tax_paid": 0.0,
+   "tax_year": null,
+   "year_gain": 0.0,
+   "year_tax": 0.0
+  },
+  "sixty_forty": {
+   "name": "sixty_forty",
+   "cash": 5000000,
+   "qty": {},
+   "cost": {},
+   "pending": [
+    {
+     "symbol": "AGG",
+     "side": "buy",
+     "qty": 133.0,
+     "decided": "2026-10-09",
+     "reason": "sixty_forty"
+    },
+    {
+     "symbol": "VT",
+     "side": "buy",
+     "qty": 118.0,
+     "decided": "2026-10-09",
+     "reason": "sixty_forty"
+    }
+   ],
+   "trades": [],
+   "nav": [
+    [
+     "2026-10-09",
+     5000000.0
+    ]
+   ],
+   "income": [],
+   "notes": [],
+   "realized": 0.0,
+   "fees": 0.0,
+   "last_day": "2026-10-09",
+   "last_decision": "2026-10-09",
+   "taxable": false,
+   "tax_paid": 0.0,
+   "tax_year": null,
+   "year_gain": 0.0,
+   "year_tax": 0.0
+  },
+  "permanent": {
+   "name": "permanent",
+   "cash": 5000000,
+   "qty": {},
+   "cost": {},
+   "pending": [
+    {
+     "symbol": "BIL",
+     "side": "buy",
+     "qty": 86.0,
+     "decided": "2026-10-09",
+     "reason": "permanent"
+    },
+    {
+     "symbol": "GLD",
+     "side": "buy",
+     "qty": 20.0,
+     "decided": "2026-10-09",
+     "reason": "permanent"
+    },
+    {
+     "symbol": "SPY",
+     "side": "buy",
+     "qty": 10.0,
+     "decided": "2026-10-09",
+     "reason": "permanent"
+    },
+    {
+     "symbol": "TLT",
+     "side": "buy",
+     "qty": 101.0,
+     "decided": "2026-10-09",
+     "reason": "permanent"
+    }
+   ],
+   "trades": [],
+   "nav": [
+    [
+     "2026-10-09",
+     5000000.0
+    ]
+   ],
+   "income": [],
+   "notes": [],
+   "realized": 0.0,
+   "fees": 0.0,
+   "last_day": "2026-10-09",
+   "last_decision": "2026-10-09",
+   "taxable": false,
+   "tax_paid": 0.0,
+   "tax_year": null,
+   "year_gain": 0.0,
+   "year_tax": 0.0
+  },
+  "all_weather": {
+   "name": "all_weather",
+   "cash": 5000000,
+   "qty": {},
+   "cost": {},
+   "pending": [
+    {
+     "symbol": "DBC",
+     "side": "buy",
+     "qty": 71.0,
+     "decided": "2026-10-09",
+     "reason": "all_weather"
+    },
+    {
+     "symbol": "GLD",
+     "side": "buy",
+     "qty": 6.0,
+     "decided": "2026-10-09",
+     "reason": "all_weather"
+    },
+    {
+     "symbol": "IEF",
+     "side": "buy",
+     "qty": 53.0,
+     "decided": "2026-10-09",
+     "reason": "all_weather"
+    },
+    {
+     "symbol": "SPY",
+     "side": "buy",
+     "qty": 12.0,
+     "decided": "2026-10-09",
+     "reason": "all_weather"
+    },
+    {
+     "symbol": "TLT",
+     "side": "buy",
+     "qty": 162.0,
+     "decided": "2026-10-09",
+     "reason": "all_weather"
+    }
+   ],
+   "trades": [],
+   "nav": [
+    [
+     "2026-10-09",
+     5000000.0
+    ]
+   ],
+   "income": [],
+   "notes": [],
+   "realized": 0.0,
+   "fees": 0.0,
+   "last_day": "2026-10-09",
+   "last_decision": "2026-10-09",
+   "taxable": false,
+   "tax_paid": 0.0,
+   "tax_year": null,
+   "year_gain": 0.0,
+   "year_tax": 0.0
+  },
+  "ivy": {
+   "name": "ivy",
+   "cash": 5000000,
+   "qty": {},
+   "cost": {},
+   "pending": [
+    {
+     "symbol": "DBC",
+     "side": "buy",
+     "qty": 191.0,
+     "decided": "2026-10-09",
+     "reason": "ivy"
+    },
+    {
+     "symbol": "IEF",
+     "side": "buy",
+     "qty": 70.0,
+     "decided": "2026-10-09",
+     "reason": "ivy"
+    },
+    {
+     "symbol": "SPY",
+     "side": "buy",
+     "qty": 8.0,
+     "decided": "2026-10-09",
+     "reason": "ivy"
+    },
+    {
+     "symbol": "VEU",
+     "side": "buy",
+     "qty": 76.0,
+     "decided": "2026-10-09",
+     "reason": "ivy"
+    },
+    {
+     "symbol": "VNQ",
+     "side": "buy",
+     "qty": 69.0,
+     "decided": "2026-10-09",
+     "reason": "ivy"
+    }
+   ],
+   "trades": [],
+   "nav": [
+    [
+     "2026-10-09",
+     5000000.0
+    ]
+   ],
+   "income": [],
+   "notes": [],
+   "realized": 0.0,
+   "fees": 0.0,
+   "last_day": "2026-10-09",
+   "last_decision": "2026-10-09",
+   "taxable": false,
+   "tax_paid": 0.0,
+   "tax_year": null,
+   "year_gain": 0.0,
+   "year_tax": 0.0
+  },
+  "ivy_timing": {
+   "name": "ivy_timing",
+   "cash": 5000000,
+   "qty": {},
+   "cost": {},
+   "pending": [
+    {
+     "symbol": "DBC",
+     "side": "buy",
+     "qty": 191.0,
+     "decided": "2026-10-09",
+     "reason": "ivy_timing"
+    },
+    {
+     "symbol": "SPY",
+     "side": "buy",
+     "qty": 8.0,
+     "decided": "2026-10-09",
+     "reason": "ivy_timing"
+    },
+    {
+     "symbol": "VEU",
+     "side": "buy",
+     "qty": 76.0,
+     "decided": "2026-10-09",
+     "reason": "ivy_timing"
+    }
+   ],
+   "trades": [],
+   "nav": [
+    [
+     "2026-10-09",
+     5000000.0
+    ]
+   ],
+   "income": [],
+   "notes": [],
+   "realized": 0.0,
+   "fees": 0.0,
+   "last_day": "2026-10-09",
+   "last_decision": "2026-10-09",
+   "taxable": false,
+   "tax_paid": 0.0,
+   "tax_year": null,
+   "year_gain": 0.0,
+   "year_tax": 0.0
+  },
+  "risk_parity": {
+   "name": "risk_parity",
+   "cash": 5000000,
+   "qty": {},
+   "cost": {},
+   "pending": [
+    {
+     "symbol": "DBC",
+     "side": "buy",
+     "qty": 169.0,
+     "decided": "2026-10-09",
+     "reason": "risk_parity"
+    },
+    {
+     "symbol": "GLD",
+     "side": "buy",
+     "qty": 12.0,
+     "decided": "2026-10-09",
+     "reason": "risk_parity"
+    },
+    {
+     "symbol": "TLT",
+     "side": "buy",
+     "qty": 159.0,
+     "decided": "2026-10-09",
+     "reason": "risk_parity"
+    },
+    {
+     "symbol": "VT",
+     "side": "buy",
+     "qty": 54.0,
+     "decided": "2026-10-09",
+     "reason": "risk_parity"
+    }
+   ],
+   "trades": [],
+   "nav": [
+    [
+     "2026-10-09",
+     5000000.0
+    ]
+   ],
+   "income": [],
+   "notes": [],
+   "realized": 0.0,
+   "fees": 0.0,
+   "last_day": "2026-10-09",
+   "last_decision": "2026-10-09",
+   "taxable": false,
+   "tax_paid": 0.0,
+   "tax_year": null,
+   "year_gain": 0.0,
+   "year_tax": 0.0
+  },
+  "momentum_top3": {
+   "name": "momentum_top3",
+   "cash": 5000000,
+   "qty": {},
+   "cost": {},
+   "pending": [
+    {
+     "symbol": "1348.T",
+     "side": "buy",
+     "qty": 387.0,
+     "decided": "2026-10-09",
+     "reason": "momentum_top3"
+    },
+    {
+     "symbol": "DBC",
+     "side": "buy",
+     "qty": 319.0,
+     "decided": "2026-10-09",
+     "reason": "momentum_top3"
+    },
+    {
+     "symbol": "QQQ",
+     "side": "buy",
+     "qty": 14.0,
+     "decided": "2026-10-09",
+     "reason": "momentum_top3"
+    }
+   ],
+   "trades": [],
+   "nav": [
+    [
+     "2026-10-09",
+     5000000.0
+    ]
+   ],
+   "income": [],
+   "notes": [],
+   "realized": 0.0,
+   "fees": 0.0,
+   "last_day": "2026-10-09",
+   "last_decision": "2026-10-09",
+   "taxable": false,
+   "tax_paid": 0.0,
+   "tax_year": null,
+   "year_gain": 0.0,
+   "year_tax": 0.0
+  },
+  "vol_target": {
+   "name": "vol_target",
+   "cash": 5000000,
+   "qty": {},
+   "cost": {},
+   "pending": [
+    {
+     "symbol": "VT",
+     "side": "buy",
+     "qty": 197.0,
+     "decided": "2026-10-09",
+     "reason": "vol_target"
+    }
+   ],
+   "trades": [],
+   "nav": [
+    [
+     "2026-10-09",
+     5000000.0
+    ]
+   ],
+   "income": [],
+   "notes": [],
+   "realized": 0.0,
+   "fees": 0.0,
+   "last_day": "2026-10-09",
+   "last_decision": "2026-10-09",
+   "taxable": false,
+   "tax_paid": 0.0,
+   "tax_year": null,
+   "year_gain": 0.0,
+   "year_tax": 0.0
+  },
+  "spy_timing": {
+   "name": "spy_timing",
+   "cash": 5000000,
+   "qty": {},
+   "cost": {},
+   "pending": [
+    {
+     "symbol": "SPY",
+     "side": "buy",
+     "qty": 40.0,
+     "decided": "2026-10-09",
+     "reason": "spy_timing"
+    }
+   ],
+   "trades": [],
+   "nav": [
+    [
+     "2026-10-09",
+     5000000.0
+    ]
+   ],
+   "income": [],
+   "notes": [],
+   "realized": 0.0,
+   "fees": 0.0,
+   "last_day": "2026-10-09",
+   "last_decision": "2026-10-09",
+   "taxable": false,
+   "tax_paid": 0.0,
+   "tax_year": null,
+   "year_gain": 0.0,
+   "year_tax": 0.0
+  },
+  "buy_the_dip": {
+   "name": "buy_the_dip",
+   "cash": 5000000,
+   "qty": {},
+   "cost": {},
+   "pending": [],
+   "trades": [],
+   "nav": [
+    [
+     "2026-10-09",
+     5000000.0
+    ]
+   ],
+   "income": [],
+   "notes": [],
+   "realized": 0.0,
+   "fees": 0.0,
+   "last_day": "2026-10-09",
+   "last_decision": null,
+   "taxable": false,
+   "tax_paid": 0.0,
+   "tax_year": null,
+   "year_gain": 0.0,
+   "year_tax": 0.0
+  },
+  "sell_in_may": {
+   "name": "sell_in_may",
+   "cash": 5000000,
+   "qty": {},
+   "cost": {},
+   "pending": [
+    {
+     "symbol": "BIL",
+     "side": "buy",
+     "qty": 345.0,
+     "decided": "2026-10-09",
+     "reason": "sell_in_may"
+    }
+   ],
+   "trades": [],
+   "nav": [
+    [
+     "2026-10-09",
+     5000000.0
+    ]
+   ],
+   "income": [],
+   "notes": [],
+   "realized": 0.0,
+   "fees": 0.0,
+   "last_day": "2026-10-09",
+   "last_decision": "2026-10-09",
+   "taxable": false,
+   "tax_paid": 0.0,
+   "tax_year": null,
+   "year_gain": 0.0,
+   "year_tax": 0.0
+  },
+  "home_bias": {
+   "name": "home_bias",
+   "cash": 5000000,
+   "qty": {},
+   "cost": {},
+   "pending": [
+    {
+     "symbol": "1348.T",
+     "side": "buy",
+     "qty": 581.0,
+     "decided": "2026-10-09",
+     "reason": "home_bias"
+    },
+    {
+     "symbol": "VT",
+     "side": "buy",
+     "qty": 98.0,
+     "decided": "2026-10-09",
+     "reason": "home_bias"
+    }
+   ],
+   "trades": [],
+   "nav": [
+    [
+     "2026-10-09",
+     5000000.0
+    ]
+   ],
+   "income": [],
+   "notes": [],
+   "realized": 0.0,
+   "fees": 0.0,
+   "last_day": "2026-10-09",
+   "last_decision": "2026-10-09",
+   "taxable": false,
+   "tax_paid": 0.0,
+   "tax_year": null,
+   "year_gain": 0.0,
+   "year_tax": 0.0
   },
   "claude": {
    "name": "claude",
@@ -203,8 +784,13 @@
    "realized": 0.0,
    "fees": 0.0,
    "last_day": "2026-10-09",
-   "last_decision": "2026-10-09"
+   "last_decision": "2026-10-09",
+   "taxable": false,
+   "tax_paid": 0.0,
+   "tax_year": null,
+   "year_gain": 0.0,
+   "year_tax": 0.0
   }
  },
- "updated_at": "2026-10-11T15:22:00+00:00"
+ "updated_at": "2026-10-11T16:30:16+00:00"
 }
