@@ -32,7 +32,10 @@ guards:
 contributions:
   monthly: 200000
   invest_full_contribution: true      # 毎月の投入額は全額投資し、現金は初期資金で賄う
-  on_hold_fallback: core              # 承認待ちの分は cash（現金留保）か core（コアへ暫定）
+  # 購入可（compliance.yaml で DESC 確認済み・事前承認済み）の銘柄が無いクラスには積まない。
+  # その分を cash（現金留保）にするか core（購入可の銘柄があるコアへ暫定）にするか。
+  # core でも、コア自体に購入可の銘柄が無ければ現金で留保する。
+  on_hold_fallback: core
   nisa:
     tsumitate_annual: 1200000         # つみたて投資枠 年間
     growth_annual: 2400000            # 成長投資枠 年間
@@ -49,7 +52,8 @@ nisa_eligibility:
   bond: growth_only
   cash: none
 
-# 個別株で埋めるため、購入前に銘柄ごとの承認が要るクラス（compliance.yaml のゲートを通す）
+# 個別株で埋めるため、購入前に銘柄ごとの承認が要るクラス。
+# ゲート（購入可の銘柄が無いクラスには積まない）はここに無いクラスにも掛かる。
 requires_stock_clearance:
   - us_equity
   - jp_equity

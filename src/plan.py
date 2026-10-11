@@ -5,8 +5,8 @@
   1. 目標配分         … 各資産クラスの比率
   2. NISA 枠          … つみたて枠は指定インデックス投信のみ・年 120 万円、
                          成長枠は個別株も可・年 240 万円
-  3. independence     … 個別株で埋めるクラスは、事前承認が取れた銘柄が
-                         無ければ積立を保留する
+  3. independence     … 購入可（DESC 確認済み・事前承認済み）と記録された銘柄が
+                         無いクラスには積み立てない。インデックスや債券のクラスも同じ
 
 3 を無視した計画は実行できない。だから「買えない分」は現金に留保して明示する。
 """
@@ -159,37 +159,39 @@ def build(
 
     # --- 2) independence のゲート ---
     #
-    # 承認が取れていないクラスは積めない。その分の扱いは 2 通りある:
+    # 購入可と記録された銘柄が無いクラスには積めない。個別株のクラスだけでなく、
+    # インデックスや債券のクラスも同じ（投信・ETF も DESC の対象になりうる）。
+    # requires_stock_clearance は「銘柄ごとの事前承認が要る」ことの表示に使う。
+    #
+    # 積めない分の扱いは 2 通りある:
     #   cash … 現金で留保。承認後そのまま買えるが、待つ間 NISA 枠も消化されない
-    #   core … 最大比率のインデックスへ暫定的に回す。資金は遊ばないが
-    #          承認後にリバランスが必要になる
+    #   core … 購入可の銘柄があるインデックスクラスへ暫定的に回す。資金は遊ばないが
+    #          承認後にリバランスが必要になる。回せる先が無ければ現金で留保する
     fallback = str(contrib.get("on_hold_fallback", "cash")).lower()
     redirected = 0.0
 
     for p in plans:
         if p.status:
             continue
-        if p.asset_class in needs_clearance:
-            ok = cleared.get(p.asset_class) or []
-            if not ok:
-                if fallback == "core":
-                    redirected += p.monthly_amount
-                    p.status = "保留→コアへ"
-                    p.note = (
-                        "事前承認済みの銘柄が無い。暫定的にコアへ回す"
-                        "（承認後にリバランスが必要）"
-                    )
-                else:
-                    p.held_cash = p.monthly_amount
-                    p.status = "保留"
-                    p.note = (
-                        "個別株で埋めるクラスだが、事前承認済みの銘柄が無い。"
-                        "承認が取れるまで現金で留保する"
-                    )
-            else:
-                p.note = f"承認済み: {', '.join(ok)}"
+        ok = cleared.get(p.asset_class) or []
+        if ok:
+            p.note = f"購入可: {', '.join(ok)}"
+            continue
+        why = (
+            "個別株で埋めるクラスだが、事前承認済みの銘柄が無い"
+            if p.asset_class in needs_clearance
+            else "購入可（DESC 確認済み・事前承認済み）と記録された銘柄が無い"
+        )
+        if fallback == "core":
+            redirected += p.monthly_amount
+            p.status = "保留→コアへ"
+            p.note = f"{why}。暫定的にコアへ回す（承認後にリバランスが必要）"
+        else:
+            p.held_cash = p.monthly_amount
+            p.status = "保留"
+            p.note = f"{why}。確認が取れるまで現金で留保する"
 
-    # 回した分を、つみたて枠が使える最大比率のクラスに足す
+    # 回した分を、購入可の銘柄があり、つみたて枠も使える最大比率のクラスに足す
     if redirected > 0:
         core = max(
             (p for p in plans if not p.status and p.nisa_eligibility == "both"),
@@ -198,19 +200,32 @@ def build(
         )
         if core is None:
             warnings.append(
-                "on_hold_fallback: core を指定していますが、回せるインデックス"
-                "クラスがありません。現金留保に切り替えてください"
+                "on_hold_fallback: core ですが、購入可の銘柄があるインデックスクラスが"
+                "無いため、承認待ちの分は現金で留保しました"
             )
             for p in plans:
                 if p.status == "保留→コアへ":
                     p.held_cash = p.monthly_amount
                     p.status = "保留"
+                    p.note = p.note.replace(
+                        "暫定的にコアへ回す（承認後にリバランスが必要）",
+                        "回せるコアも無いため現金で留保する",
+                    )
         else:
             core.monthly_amount += redirected
             core.note = (
                 f"承認待ちの {redirected:,.0f} 円を暫定的に受け入れている"
                 f"（本来の目標は {monthly * core.target_pct / 100:,.0f} 円）"
             )
+
+    held = [p for p in plans if p.status == "保留"]
+    if held:
+        warnings.append(
+            f"購入可と記録された銘柄が無いため、月 {sum(p.held_cash for p in held):,.0f} 円を"
+            f"現金で留保しています（{', '.join(p.asset_class for p in held)}）。"
+            "DESC 確認と事前承認の結果を compliance.yaml に記録すると積立に回ります"
+            "（判定するのは台帳に保有している銘柄だけ）"
+        )
 
     # --- 3) つみたて枠を、使える資産クラスから埋める ---
     for p in plans:

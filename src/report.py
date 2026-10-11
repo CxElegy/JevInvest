@@ -334,7 +334,29 @@ def to_markdown(
     if not a.rebalance.empty:
         L.append("## 目標配分との乖離")
         L.append("")
-        L.append(_table(a.rebalance, ("現在額", "目標額", "調整額"), ccy, anonymize))
+        reb = a.rebalance
+        if compliance is not None:
+            # クラスごとに購入可の銘柄を並べる。無いクラスの「買い増し」は実行できない
+            reb = reb.copy()
+            col = []
+            for cls, row in reb.iterrows():
+                syms = sorted({
+                    v.position.symbol for v in a.valuations
+                    if v.position.asset_class == cls and not v.position.is_cash
+                    and compliance.can_buy(v.position.symbol)
+                })
+                is_cash = any(v.position.asset_class == cls and v.position.is_cash
+                              for v in a.valuations)
+                if syms:
+                    col.append(", ".join(syms))
+                elif is_cash:
+                    col.append("（現金）")
+                elif pd.notna(row["調整額"]) and row["調整額"] > 0:
+                    col.append("なし — 買い増し不可")
+                else:
+                    col.append("なし")
+            reb["購入可の銘柄"] = col
+        L.append(_table(reb, ("現在額", "目標額", "調整額"), ccy, anonymize))
         L.append("")
         if "状態" in a.rebalance.columns:
             L.append(
@@ -358,7 +380,8 @@ def to_markdown(
             )
             L.append(
                 "> **⚠ この調整額は independence のゲートを通っていません。**"
-                "資産クラス単位の計算であり、個別銘柄の購入可否は別途確認が必要です。"
+                "資産クラス単位の計算です。「購入可の銘柄」が「なし」のクラスは、"
+                "調整額が正でも買い増しできません（台帳に保有している銘柄だけを見ています）。"
             )
             if buyable:
                 L.append(f"> 現時点で購入可と記録されているのは: {', '.join(buyable)}")

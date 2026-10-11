@@ -84,3 +84,11 @@ def test_risk_weights_sum_accounts_and_count_yen_cash(market_data):
     assert w["7203.T"] == pytest.approx(_weight(a, "7203.T"))
     assert w.sum() == pytest.approx(100.0)                       # 円現金も無リスク資産として入る
     assert a.risk["カバー率%"] == pytest.approx(100.0)
+
+
+def test_report_marks_classes_without_buyable_symbol_in_rebalance(market_data):
+    from src.compliance import ComplianceRegistry
+
+    a = analyze(_multi_account_with_cash(), market_data, with_risk=False)
+    text = to_markdown(a, compliance=ComplianceRegistry())
+    assert "購入可の銘柄" in text and "買い増し不可" in text

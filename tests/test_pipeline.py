@@ -103,17 +103,35 @@ def test_risk_metrics_and_report_and_dashboard(ledger_path, market_data):
     assert "__PAYLOAD__" not in html and "持仓ダッシュボード" in html
 
 
-def test_plan_falls_back_to_core_when_nothing_is_cleared():
+def test_plan_falls_back_to_core_only_when_core_itself_is_cleared():
     cfg = yaml.safe_load((ROOT / "config" / "holdings.example.yaml").read_text(encoding="utf-8"))
     reg = compliance.ComplianceRegistry()
-    plan = build(cfg, compliance=reg, cleared_symbols_by_class={})
+    plan = build(cfg, compliance=reg, cleared_symbols_by_class={"developed_equity": ["VT"]})
 
     by = {c.asset_class: c for c in plan.classes}
     assert by["us_equity"].status == "保留→コアへ" and by["jp_equity"].status == "保留→コアへ"
-    assert by["developed_equity"].monthly_amount > 200000 * 0.55 * 100 / 95 - 1
+    assert by["bond"].status == "保留→コアへ"                 # 債券も購入可の銘柄が無ければ積まない
+    assert by["developed_equity"].monthly_amount == pytest.approx(200000)
     assert plan.invested == pytest.approx(200000)              # 全額投資
     assert plan.tsumitate_total <= 1_200_000 / 12 + 1e-6       # つみたて枠の月上限を守る
     assert len(annual_projection(cfg, plan, years=3)) == 3
+
+
+def test_plan_parks_everything_when_nothing_is_cleared():
+    # 購入可の銘柄が 1 つも無いのに、インデックス・債券クラスへ配分してはいけない
+    cfg = yaml.safe_load((ROOT / "config" / "holdings.example.yaml").read_text(encoding="utf-8"))
+    plan = build(cfg, compliance=compliance.ComplianceRegistry(), cleared_symbols_by_class={})
+
+    assert plan.invested == 0
+    assert plan.parked == pytest.approx(200000)
+    assert all(c.status in ("保留", "積立対象外") for c in plan.classes)
+    assert any("購入可と記録された銘柄が無い" in w for w in plan.warnings)
+
+    cfg["contributions"]["on_hold_fallback"] = "cash"
+    plan = build(cfg, cleared_symbols_by_class={"us_equity": ["NVDA"]})
+    by = {c.asset_class: c for c in plan.classes}
+    assert by["developed_equity"].status == "保留" and by["bond"].status == "保留"
+    assert by["us_equity"].growth > 0
 
 
 def test_cli_validate_and_report_end_to_end(ledger_path, market_data, tmp_path, monkeypatch, capsys):
