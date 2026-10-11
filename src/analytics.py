@@ -167,19 +167,26 @@ def _group(vals: list[PositionValuation], key) -> pd.DataFrame:
 
 
 def _concentration(vals: list[PositionValuation], total: float) -> dict:
-    weights = np.array(
-        [v.market_value_base / total for v in vals if v.priced and v.market_value_base > 0]
-    )
-    if weights.size == 0:
+    # 銘柄単位で口座をまたいで合算する（ガードレールと同じ基準）。
+    # 現金は銘柄ではないので数えない。入れると現金の厚い台帳ほど「分散している」と出る。
+    by_symbol: dict[str, float] = {}
+    for v in vals:
+        if v.priced and not v.position.is_cash and v.market_value_base > 0:
+            s = v.position.symbol
+            by_symbol[s] = by_symbol.get(s, 0.0) + v.market_value_base
+    if not by_symbol or total <= 0:
         return {}
 
-    hhi = float((weights**2).sum())
-    order = np.sort(weights)[::-1]
+    mv = np.array(list(by_symbol.values()))
+    # HHI は有価証券の中での偏り。比率（最大1銘柄% など）は総資産に対する割合。
+    shares = mv / mv.sum()
+    hhi = float((shares**2).sum())
+    order = np.sort(mv / total)[::-1]
     return {
         "hhi": hhi,
         # 1/HHI。「実質何銘柄に分散できているか」。等ウェイト n 銘柄なら n になる。
         "実質銘柄数": 1.0 / hhi if hhi else 0.0,
-        "実銘柄数": int(weights.size),
+        "実銘柄数": int(mv.size),
         "最大1銘柄%": float(order[0] * 100.0),
         "上位3銘柄%": float(order[:3].sum() * 100.0),
         "上位5銘柄%": float(order[:5].sum() * 100.0),
@@ -404,7 +411,7 @@ def _base_currency_series(
         if p.is_cash:
             # 為替の index に合わせた定数系列
             if p.currency == h.base_currency:
-                continue  # 円現金は基準通貨建てで完全に無リスク。計算に入れても 0
+                continue  # 円現金は系列を作らず、_risk でリターン 0 の資産としてウェイトに入れる
             base_fx = fx_series[p.currency]
             cols[p.symbol] = pd.Series(1.0, index=base_fx.index) * base_fx
             continue
@@ -439,20 +446,38 @@ def _risk(
     rets = prices.pct_change().dropna(how="all")
     covered = [c for c in prices.columns]
 
-    mv = {v.position.symbol: v.market_value_base for v in vals if v.priced}
+    # 同じ銘柄を複数口座で持つことがあるので、銘柄単位で合算する
+    mv: dict[str, float] = {}
+    for v in vals:
+        if v.priced:
+            mv[v.position.symbol] = mv.get(v.position.symbol, 0.0) + v.market_value_base
+
+    # 円現金は価格系列を持たないが、リターン 0 の資産としてウェイトに入れる。
+    # 外すと残りの資産のウェイトが膨らみ、ボラ・DD・ベータが実態より大きく出る。
+    base_cash = {
+        v.position.symbol for v in vals
+        if v.priced and v.position.is_cash and v.position.currency == h.base_currency
+    }
+    cash_total = sum(mv[s] for s in base_cash)
+
     covered_total = sum(mv.get(c, 0.0) for c in covered)
     if covered_total <= 0:
         return {"notes": notes + ["リスク計算対象の評価額が 0 です"]}
+    denom = covered_total + cash_total
 
-    w = pd.Series({c: mv.get(c, 0.0) / covered_total for c in covered})
+    w = pd.Series({c: mv.get(c, 0.0) / denom for c in covered})
 
     port_ret = (rets[covered].fillna(0.0) * w).sum(axis=1)
     equity = (1.0 + port_ret).cumprod()
     dd = equity / equity.cummax() - 1.0
 
+    vol = rets[covered].std(ddof=0) * np.sqrt(TRADING_DAYS) * 100.0
+    for s in sorted(base_cash):
+        w[s] = mv[s] / denom
+        vol[s] = 0.0
     per_symbol = pd.DataFrame(
         {
-            "年率ボラ%": rets[covered].std(ddof=0) * np.sqrt(TRADING_DAYS) * 100.0,
+            "年率ボラ%": vol,
             "ウェイト%": w * 100.0,
         }
     ).sort_values("ウェイト%", ascending=False)
@@ -460,7 +485,7 @@ def _risk(
     out: dict = {
         "対象期間": f"{prices.index[0].date()} 〜 {prices.index[-1].date()}",
         "営業日数": int(len(prices)),
-        "カバー率%": covered_total / sum(mv.values()) * 100.0 if mv else 0.0,
+        "カバー率%": denom / sum(mv.values()) * 100.0 if mv else 0.0,
         "年率ボラ%": float(port_ret.std(ddof=0) * np.sqrt(TRADING_DAYS) * 100.0),
         "最大DD%": float(dd.min() * 100.0),
         "銘柄別": per_symbol,

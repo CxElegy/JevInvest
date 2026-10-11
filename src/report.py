@@ -270,6 +270,11 @@ def to_markdown(
         c = a.concentration
         L.append("## 集中度")
         L.append("")
+        L.append(
+            "現金は除き、同じ銘柄は口座をまたいで合算。"
+            "比率は総資産（現金込み）に対する割合、HHI は有価証券の中での偏り。"
+        )
+        L.append("")
         L.append("| 指標 | 値 |")
         L.append("|---|---:|")
         L.append(f"| 実銘柄数 | {c['実銘柄数']} |")
