@@ -6,8 +6,9 @@
 
 - `python -m src.cli validate` 台帳の検証 / `quotes` 価格確認 / `report` レポート生成
 - `python -m src.cli plan` 積立計画 / `compliance` 独立性の確認状況 / `transactions` 取引履歴と XIRR
+- `python -m src.cli import-csv FILE.csv` 証券会社の取引履歴 CSV を取り込む（SBI・楽天。金額は画面に出さない）
 - 出力した `reports/latest.md` を読んで、集中度・相関・目標配分・為替・税制の観点で判断する
-- スラッシュコマンド: `/review` `/add-trade` `/plan` `/compliance` `/influencers` `/influencers-watch`（定期実行用）
+- スラッシュコマンド: `/review` `/add-trade` `/import-csv` `/plan` `/compliance` `/influencers` `/influencers-watch`（定期実行用）
 - 金額を Claude に渡したくないとき: `web/ledger.html`（ブラウザ内だけに保存）で本人が入力し、
   比率だけの要約を貼ってもらう。金額を聞き出さない。
 

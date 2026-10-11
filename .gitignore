@@ -3,6 +3,8 @@ config/holdings.yaml
 config/compliance.yaml
 config/transactions.yaml
 config/holdings.derived.yaml
+config/transactions.imported.yaml
+config/import_map.yaml
 .env
 
 # 生成物・キャッシュ

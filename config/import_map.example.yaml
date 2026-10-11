@@ -1,0 +1,28 @@
+# 証券会社 CSV 取り込み（python -m src.cli import-csv）の対応表のひな形。
+# config/import_map.yaml にコピーして使う（.gitignore 済み。保有銘柄が分かるため）。
+#
+# CSV には資産クラスが書かれていない。ここに無い銘柄は
+#   国内株 → jp_equity、米国株 → us_equity、投信 → 空
+# で取り込み、推測したことを警告に出す。ETF は既定値と違うことが多いので書いておく。
+
+symbols:
+  VT:
+    asset_class: developed_equity
+    name: Vanguard Total World Stock ETF
+  1306.T:
+    asset_class: jp_equity
+    name: TOPIX 連動型上場投信
+
+# 投信は CSV にコードが無くファンド名しかない。ファンド名は CSV の表記のまま書く
+# （全角・半角や空白の違いは無視して照合する）。symbol は FUND- で始める。
+funds:
+  eMAXIS Slim 全世界株式(オール・カントリー):
+    symbol: FUND-ALLCOUNTRY
+    asset_class: developed_equity
+
+# 口座区分の文字列 → holdings.yaml の accounts の name。
+# 書かなければ「NISA を含む → NISA、それ以外 → 特定口座」。
+accounts:
+  NISA成長: NISA
+  NISAつみたて: NISA
+  特定: 特定口座

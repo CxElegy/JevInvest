@@ -5,6 +5,7 @@
     python -m src.cli report --no-risk        # 履歴取得を省いて高速に
     python -m src.cli quotes                  # 価格だけ確認
     python -m src.cli validate                # 台帳の検証だけ
+    python -m src.cli import-csv FILE.csv     # 証券会社の取引履歴 CSV を取り込む
 
 出力した Markdown を Claude Code に読ませて判断させる想定。
 このスクリプト自体は LLM を一切呼ばないので、API クレジットは不要。
@@ -322,6 +323,62 @@ def _write_derived(path: Path, h, lots) -> None:
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def cmd_import_csv(args) -> None:
+    """証券会社の取引履歴 CSV を transactions.yaml の書式に変換する。
+
+    金額は画面に出さない（件数と銘柄だけ）。Claude Code に金額を渡さずに済むように。
+    """
+    from .importers import convert, decode, drop_existing, dump, load_map
+
+    mapping = load_map(args.map)
+    collected: list[dict] = []
+    failed = False
+    for f in args.files:
+        print(f"── {f.name} ──")
+        try:
+            text = decode(f.read_bytes())
+        except (OSError, ValueError) as e:
+            print(f"  ⚠ 読めません: {e}")
+            failed = True
+            continue
+        res = convert(text, preset_key=args.broker, mapping=mapping)
+        if res.preset:
+            print(f"  書式: {res.preset.label}（{res.preset.key}）")
+        buys = sum(1 for t in res.transactions if t["type"] == "buy")
+        sells = len(res.transactions) - buys
+        print(f"  取り込み: {len(res.transactions)} 件（買付 {buys} / 売付 {sells}）")
+        for w in res.warnings:
+            print(f"  ⚠ {w}")
+        if res.preset is None:
+            failed = True
+        collected.extend(res.transactions)
+
+    if not collected:
+        print("\n取り込める取引がありませんでした。")
+        raise SystemExit(1 if failed else 0)
+
+    new, dropped = drop_existing(collected, args.transactions)
+    print()
+    if dropped:
+        print(f"{args.transactions.name} に既にある {dropped} 件は除きました（二重計上の防止）")
+    if not new:
+        print("新しい取引はありません。")
+        return
+
+    out = args.out
+    out.write_text(dump(new), encoding="utf-8")
+    symbols = sorted({t["symbol"] for t in new})
+    print(f"新しい取引 {len(new)} 件を書き出しました: {out}")
+    print(f"  期間: {min(t['date'] for t in new)} 〜 {max(t['date'] for t in new)}")
+    print(f"  銘柄: {', '.join(symbols)}")
+    print()
+    print("次にやること:")
+    print(f"  1. {out.name} の asset_class と account を確認する（警告に出た銘柄は特に）")
+    print(f"  2. 中身を {args.transactions.name} の transactions に追記する")
+    print("  3. python -m src.cli transactions --no-quotes --write-derived で保有を導出する")
+    print("  ※ 入金・配当は CSV に含まれないので、XIRR を正しく出すには deposit を手で足す")
+
+
 def cmd_plan(args) -> None:
     """積立計画を出す。NISA 枠の割り当てと independence のゲートを含む。"""
     import yaml
@@ -490,6 +547,17 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--write-derived", action="store_true",
                    help="導出した保有を config/holdings.derived.yaml に書き出す")
     p.set_defaults(func=cmd_transactions)
+
+    p = sub.add_parser("import-csv", help="証券会社の取引履歴 CSV を取り込む")
+    p.add_argument("files", type=Path, nargs="+", help="CSV ファイル（複数可）")
+    p.add_argument("--broker", default=None,
+                   help="書式を明示する: sbi_jp / rakuten_jp / rakuten_us / rakuten_fund"
+                        "（省略時は列名で自動判定）")
+    p.add_argument("--map", type=Path, default=ROOT / "config" / "import_map.yaml",
+                   help="銘柄・投信・口座の対応表（既定: config/import_map.yaml）")
+    p.add_argument("--out", type=Path, default=ROOT / "config" / "transactions.imported.yaml",
+                   help="出力先（既定: config/transactions.imported.yaml）")
+    p.set_defaults(func=cmd_import_csv)
 
     p = sub.add_parser("quotes", help="価格と為替の取得を確認する")
     p.add_argument("--force", action="store_true", help="キャッシュを無視して取り直す")
