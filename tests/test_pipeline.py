@@ -177,6 +177,45 @@ transactions:
     assert "XIRR" in out and "現金を除く有価証券" in out     # 入出金なし → 売買ベース・有価証券のみ
 
 
+@pytest.mark.parametrize("extra_position, extra_tx, needle", [
+    # 台帳にあるが取引履歴に無い銘柄 → 評価額だけが乗って XIRR が膨らむ
+    ("""  - {symbol: 7203.T, asset_class: jp_equity, account: NISA, quantity: 100,
+     cost_basis_per_unit: 2800, currency: JPY}
+""", "", "7203.T"),
+    # 価格の取れない銘柄 → 評価額から黙って抜けて XIRR が縮む
+    ("""  - {symbol: NVDA, asset_class: us_equity, account: NISA, quantity: 10,
+     cost_basis_per_unit: 100, currency: USD, cost_fx_rate: 150}
+""", """  - {date: 2025-01-06, type: buy, symbol: NVDA, account: NISA, quantity: 10, price: 100,
+     currency: USD, fx_rate: 150, asset_class: us_equity}
+""", "評価不能"),
+], ids=["ledger-only-symbol", "unpriced"])
+def test_cli_xirr_refuses_when_terminal_value_does_not_match_history(
+        tmp_path, market_data, monkeypatch, capsys, extra_position, extra_tx, needle):
+    monkeypatch.setattr("src.marketdata.DEFAULT_DB", tmp_path / "cli.sqlite")
+    monkeypatch.setattr("src.marketdata.MarketData._download",
+                        lambda self, symbols, start=None, period=None:
+                        {s: market_data.data[s].copy() for s in symbols if s in market_data.data})
+    holdings = tmp_path / "holdings.yaml"
+    holdings.write_text("""
+base_currency: JPY
+accounts: [{name: NISA, type: nisa}]
+positions:
+  - {symbol: VT, asset_class: developed_equity, account: NISA, quantity: 10,
+     cost_basis_per_unit: 120.5, currency: USD, cost_fx_rate: 150.2}
+""" + extra_position, encoding="utf-8")
+    txs = tmp_path / "tx.yaml"
+    txs.write_text("""
+transactions:
+  - {date: 2025-01-06, type: buy, symbol: VT, account: NISA, quantity: 10, price: 120.5,
+     currency: USD, fx_rate: 150.2, asset_class: developed_equity}
+""" + extra_tx, encoding="utf-8")
+
+    cli.main(["--holdings", str(holdings), "--transactions", str(txs), "transactions"])
+    out = capsys.readouterr().out
+    assert "計算しません" in out and needle in out
+    assert "XIRR        :" not in out
+
+
 def test_single_position_cap_can_exempt_core_index_and_bond_classes(tmp_path, market_data):
     p = tmp_path / "h.yaml"
     p.write_text(LEDGER.replace(

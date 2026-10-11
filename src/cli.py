@@ -262,6 +262,24 @@ def cmd_transactions(args) -> None:
                 "（--write-derived で導出結果を出して台帳に反映してください）"
             )
 
+        # 売買ベースでは、台帳にあって取引履歴に買いの無い銘柄の評価額は
+        # 「タダで手に入れた資産」として年率を押し上げる
+        untracked = ledger_symbols - tx_symbols
+        if led.flow_mode == "trade" and untracked:
+            blockers.append(
+                f"台帳にある {', '.join(sorted(untracked))} が取引履歴（保有中）に無い。"
+                "買いのキャッシュフローが無いまま評価額だけが乗るため XIRR が過大になります"
+            )
+
+        # 評価不能の銘柄は評価額から抜けるので、黙って計算すると XIRR が過小になる
+        if a.unpriced_count:
+            unpriced = sorted({v.position.symbol for v in a.valuations if not v.priced})
+            blockers.append(
+                f"{', '.join(unpriced)} が評価不能（価格または為替が取れない）。"
+                "評価額から抜けるため XIRR は実際より低く出ます"
+                "（取れない原因を解消するか price_override を入れてください）"
+            )
+
         if blockers:
             print("  ⚠ 計算しません:")
             for b in blockers:
