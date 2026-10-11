@@ -145,3 +145,17 @@ def test_final_cutoff_after_us_close():
     # 東京 07:07（UTC 22:07）なら、その UTC 日付の米国終値は確定
     assert P.final_cutoff(pd.Timestamp("2026-10-13 22:07")) == pd.Timestamp("2026-10-13")
     assert P.final_cutoff(pd.Timestamp("2026-10-13 20:00")) == pd.Timestamp("2026-10-12")
+
+
+def test_taxable_account_withholds_and_refunds_within_the_year():
+    from src.sim import TAX_RATE
+
+    b = Book("t", cash=0.0, taxable=True)
+    b._withhold(2026, 100_000)
+    assert b.cash == pytest.approx(-100_000 * TAX_RATE)
+    b._withhold(2026, -60_000)                 # 同じ年の損 → 払いすぎた分が戻る
+    assert b.tax_paid == pytest.approx(40_000 * TAX_RATE)
+    b._withhold(2026, -100_000)                # 通算でマイナス → 払った分は全部戻るが、それ以上は戻らない
+    assert b.tax_paid == pytest.approx(0)
+    b._withhold(2027, 50_000)                  # 年が変わると通算はリセット（繰越控除はしない）
+    assert b.tax_paid == pytest.approx(50_000 * TAX_RATE)

@@ -12,6 +12,7 @@
   "use strict";
 
   const COSTS = { fee: 0.0010, slip: 0.0005, spread: 0.25 };
+  const TAX_RATE = 0.20315;
   const isJpy = s => s.endsWith(".T");
   const lotOf = () => 1;
 
@@ -104,6 +105,15 @@
       this.qty = new Map(); this.cost = new Map();
       this.pending = []; this.trades = []; this.nav = []; this.notes = [];
       this.realized = 0; this.fees = 0; this.lastDecision = null;
+      // 課税口座（特定口座・源泉徴収あり）: 売却益にその場で課税、同じ年の損は払った分まで還付
+      this.taxable = false; this.taxPaid = 0; this.taxYear = null; this.yearGain = 0; this.yearTax = 0;
+    }
+    _withhold(year, gain) {
+      if (this.taxYear !== year) { this.taxYear = year; this.yearGain = 0; this.yearTax = 0; }
+      this.yearGain += gain;
+      const due = Math.max(this.yearGain, 0) * TAX_RATE;
+      const delta = due - this.yearTax;
+      this.cash -= delta; this.yearTax += delta; this.taxPaid += delta;
     }
     value(p, i) {
       let t = this.cash;
@@ -176,6 +186,7 @@
         const basis = (this.cost.get(s) || 0) * qty / have;
         this.cash += gross - fee;
         this.realized += gross - fee - basis;
+        if (this.taxable) this._withhold(Number(p.dates[i].slice(0, 4)), gross - fee - basis);
         this.qty.set(s, have - qty);
         this.cost.set(s, (this.cost.get(s) || 0) - basis);
         if (this.qty.get(s) === 0) { this.qty.delete(s); this.cost.delete(s); }
@@ -296,7 +307,7 @@
     const i0 = p.indexOf(startDate);
     const i1 = opts.endDate ? p.indexOf(opts.endDate + "￿") - 1 : p.n - 1;
     const books = {}, flows = {};
-    for (const k of Object.keys(strategies)) { books[k] = new Book(k, capital); flows[k] = [[i0, -capital]]; }
+    for (const k of Object.keys(strategies)) { books[k] = new Book(k, capital); books[k].taxable = !!opts.taxable; flows[k] = [[i0, -capital]]; }
     let prev = null;
     for (let i = i0; i <= i1; i++) {
       const nm = newMonth(p, i, prev);
@@ -340,7 +351,7 @@
     const end = nav[nav.length - 1];
     const fl = (b.flows || []).concat([[b.nav[b.nav.length - 1][0], end]]);
     return { final: end, paid, ret: paid ? end / paid - 1 : 0, maxDD: dd, trades: b.trades.length, fees: b.fees,
-             realized: b.realized, xirr: xirr(fl, p.dates) };
+             realized: b.realized, taxPaid: b.taxPaid, xirr: xirr(fl, p.dates) };
   }
 
   // 21 営業日リターンの分布。比べる口座と同じ期間の基準と比べる

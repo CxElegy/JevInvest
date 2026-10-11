@@ -128,6 +128,13 @@ class Book:
     fees: float = 0.0
     last_day: str | None = None
     last_decision: str | None = None
+    # 課税口座（特定口座・源泉徴収あり）として扱うか。売却益にその場で 20.315% を課し、
+    # 同じ年のうちに損が出たら、その年に払った分を上限に還付する（年をまたいだ繰越はしない）
+    taxable: bool = False
+    tax_paid: float = 0.0
+    tax_year: int | None = None
+    year_gain: float = 0.0
+    year_tax: float = 0.0
 
     # ---- 評価
 
@@ -227,6 +234,8 @@ class Book:
             basis = self.cost.get(s, 0.0) * qty / have
             self.cash += gross - fee
             self.realized += gross - fee - basis
+            if self.taxable:
+                self._withhold(day.year, gross - fee - basis)
             self.qty[s] = have - qty
             self.cost[s] = self.cost.get(s, 0.0) - basis
             if self.qty[s] == 0:
@@ -238,6 +247,17 @@ class Book:
             "qty": qty, "price": round(px, 4), "fx": None if is_jpy(s) else round(fx, 4),
             "jpy": round(gross, 0), "fee": round(fee, 0), "reason": o.get("reason", ""),
         })
+
+    def _withhold(self, year: int, gain: float) -> None:
+        """源泉徴収ありの特定口座と同じ考え方: その年の通算益に対する税を、売るたびに精算する。"""
+        if self.tax_year != year:
+            self.tax_year, self.year_gain, self.year_tax = year, 0.0, 0.0
+        self.year_gain += gain
+        due = max(self.year_gain, 0.0) * TAX_RATE
+        delta = due - self.year_tax          # 負なら還付
+        self.cash -= delta
+        self.year_tax += delta
+        self.tax_paid += delta
 
     def _dividends(self, prices: Prices, day: pd.Timestamp, costs: Costs) -> None:
         for s, q in list(self.qty.items()):
@@ -522,6 +542,7 @@ class BacktestResult:
     fees: float
     realized: float
     flows: list = field(default_factory=list)   # 投資家から見た入金（負）。積立の金額加重リターン用
+    tax_paid: float = 0.0                       # 課税口座で実際に差し引いた税（還付後）
 
     def money_weighted(self) -> float | None:
         """積立の年率（XIRR）。入金と最終評価額から出す。"""
@@ -550,14 +571,14 @@ class BacktestResult:
 def backtest(prices: Prices, start: pd.Timestamp, capital: float,
              strategies: dict | None = None, costs: Costs = Costs(),
              end: pd.Timestamp | None = None,
-             monthly: float = 0.0) -> dict[str, BacktestResult]:
+             monthly: float = 0.0, taxable: bool = False) -> dict[str, BacktestResult]:
     """monthly > 0 なら、毎月最初の営業日にその額を現金で足してから判断する（積立）。
 
     積立のときは「買って持つだけ」の戦略も毎月判断する（新しい現金を目標どおりに買う）。
     """
     strategies = strategies or STRATEGIES
     cal = [d for d in prices.calendar() if d >= start and (end is None or d <= end)]
-    books = {n: Book(name=n, cash=capital) for n in strategies}
+    books = {n: Book(name=n, cash=capital, taxable=taxable) for n in strategies}
     flows: dict[str, list[tuple]] = {n: [(cal[0].date(), -capital)] for n in strategies} if cal else {}
     prev = None
     for day in cal:
@@ -578,6 +599,7 @@ def backtest(prices: Prices, start: pd.Timestamp, capital: float,
         nav = pd.Series({pd.Timestamp(d): v for d, v in b.nav})
         r = BacktestResult(name, nav, len(b.trades), b.fees, b.realized)
         r.flows = flows.get(name, [])
+        r.tax_paid = b.tax_paid
         out[name] = r
     return out
 
