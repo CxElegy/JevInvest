@@ -77,3 +77,11 @@ def test_panic_sell_exits_after_30pct_drop_and_returns_at_old_high():
         h = {"VT": pd.Series(path[:k], index=idx[:k], dtype=float)}
         states.append(next(iter(sim.panic_sell(h))))
     assert states == ["VT", "VT", "BIL", "BIL", "BIL", "VT", "VT"]
+
+
+def test_panic_sell_ignores_peaks_before_its_start():
+    idx = pd.bdate_range("2020-01-01", periods=5)
+    h = {"VT": pd.Series([200, 120, 100, 105, 110], index=idx, dtype=float)}
+    # 履歴全体では 200 から -50%。でも 3 日目から持ち始めた人にとっての高値は 100 以降
+    assert sim.panic_sell(h) == {"BIL": 1.0}
+    assert sim.panic_sell(h, start=idx[2]) == {"VT": 1.0}

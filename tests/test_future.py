@@ -71,3 +71,16 @@ def test_haircut_applies_only_to_the_invested_part(tmp_path):
     r = _run(f, weights={"1348.T": 0.5}, haircut=0.12)
     monthly_cut = (1.12 ** (1 / 12) - 1) * 0.5
     assert r["final"]["p50"] == pytest.approx(1_000_000 * (1 - monthly_cut) ** 120, rel=1e-9)
+
+
+def test_partial_last_month_is_dropped(tmp_path):
+    """データの最終日が月の途中なら、その月は使わない（途中までの騰落を 1 か月分とみなさない）。"""
+    f = _data(tmp_path, 0.01, months=24)
+    d = json.loads(f.read_text())
+    out = subprocess.run(["node", "-e", f"""
+const E=require({json.dumps(str(ROOT / 'web' / 'simengine.js'))});
+const p=new E.Prices(JSON.parse(require('fs').readFileSync({json.dumps(str(f))},'utf8')));
+const m=E.monthlyReturns(p,['1348.T']);console.log(JSON.stringify(m.months.slice(-1)));"""],
+                         capture_output=True, text=True, check=True).stdout
+    last_data_month = d["dates"][-1][:7]
+    assert json.loads(out)[0] < last_data_month

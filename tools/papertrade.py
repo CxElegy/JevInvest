@@ -30,7 +30,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from src.sim import (  # noqa: E402
-    ALL_STRATEGIES, FX_SYMBOL, STRATEGY_LABELS, is_due, TAX_RATE, UNIVERSE, Book, Costs, Prices,
+    ALL_STRATEGIES, FX_SYMBOL, STRATEGY_LABELS, call_strategy, is_due, TAX_RATE, UNIVERSE, Book, Costs, Prices,
     backtest, is_jpy, is_rebalance_day, window_returns,
 )
 
@@ -170,7 +170,7 @@ def cmd_init(args) -> None:
         raise SystemExit(f"{d0.date()} の終値はまだ確定していません（確定済みは {prices.fx.index[-1].date()} まで）")
     books = {n: Book(name=n, cash=args.capital) for n in [*ALL_STRATEGIES, "claude"]}
     for name, (fn, _) in ALL_STRATEGIES.items():
-        target = fn(prices.upto(d0), d0)
+        target = call_strategy(fn, prices.upto(d0), d0, d0)
         if target is not None:
             books[name].decide(prices, d0, target, reason=name)
     for b in books.values():
@@ -231,7 +231,7 @@ def cmd_run(args) -> None:
                 idle = (freq == "once" and is_rebalance_day(day, prev)
                         and b.cash > 0.005 * b.value(prices, day))
                 if due or idle:
-                    target = fn(prices.upto(day), day)
+                    target = call_strategy(fn, prices.upto(day), day, pd.Timestamp(st["start"]))
                     if target is not None:
                         b.decide(prices, day, target, reason=name)
                         if not due:

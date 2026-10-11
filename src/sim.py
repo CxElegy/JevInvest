@@ -464,13 +464,16 @@ def sell_in_may(hist, day=None):
     return {"BIL": 1.0} if 5 <= m <= 10 else {"VT": 1.0}
 
 
-def panic_sell(hist, day=None):
+def panic_sell(hist, day=None, start=None):
     """よくある行動の誤り: 最高値から 30% 下げたら全部売り、元の最高値に戻ったら買い直す。
 
     状態を持たずに履歴から判定する: 直近の最高値 P の後に 0.7P 以下まで下げたことがあり、
     いまも P を下回っていれば「売って待っている」状態。
     """
-    a = _vals(hist, "VT")
+    v = hist.get("VT")
+    if v is not None and start is not None:
+        v = v.loc[pd.Timestamp(start):]        # 持ち始める前の高値は知らない（その人の最高値は持ってからのもの）
+    a = [] if v is None else [float(x) for x in v.dropna().values]
     if not a:
         return {"VT": 1.0}
     peak, peak_i = a[0], 0
@@ -510,6 +513,11 @@ MORE_STRATEGIES = {
     "panic_sell": (panic_sell, "monthly"),
 }
 ALL_STRATEGIES = {**STRATEGIES, **MORE_STRATEGIES}
+panic_sell.needs_start = True     # 開始日を受け取る戦略（backtest・実盘が start= で渡す）
+
+
+def call_strategy(fn, hist, day, start):
+    return fn(hist, day, start=start) if getattr(fn, "needs_start", False) else fn(hist, day)
 
 STRATEGY_LABELS = {
     "allcountry": "全世界株 1 本・ほったらかし",
@@ -613,7 +621,7 @@ def backtest(prices: Prices, start: pd.Timestamp, capital: float,
                 flows[name].append((day.date(), -monthly))
             b.process_day(prices, day, costs)
             if is_due(freq, day, prev, b.last_decision is not None, bool(monthly)):
-                target = fn(prices.upto(day), day)
+                target = call_strategy(fn, prices.upto(day), day, start)
                 if target is not None:          # None は「今のまま」（押し目待ちなど）
                     b.decide(prices, day, target, reason=name)
                     if freq == "yearly" and prev is not None and day.year == prev.year:

@@ -289,9 +289,10 @@
     home_bias: { freq: "monthly", fn: fixed({ "1348.T": 0.5, VT: 0.5 }) },
     // 狼狽売り: 最高値から 30% 下げたら売り、元の最高値に戻ったら買い直す（src/sim.py の panic_sell）
     panic_sell: {
-      freq: "monthly",
-      fn: (p, i) => {
-        const a = vals(p, "VT", i);
+      freq: "monthly", needsStart: true,
+      fn: (p, i, i0) => {
+        // 持ち始める前の高値は使わない（src/sim.py と同じ）
+        const a = vals(p, "VT", i).length ? (() => { const u = p.upto("VT", i), out = []; for (let k = 0; k < u.end; k++) if (u.ix[k] >= (i0 || 0)) out.push(u.a[u.ix[k]]); return out; })() : [];
         if (!a.length) return { VT: 1.0 };
         let peak = a[0], pk = 0;
         for (let k = 0; k < a.length; k++) if (a[k] >= peak) { peak = a[k]; pk = k; }
@@ -329,7 +330,7 @@
         if (monthly && nm && prev !== null) { b.cash += monthly; flows[k].push([i, -monthly]); }
         b.processDay(p, i);
         if (isDue(st.freq, p, i, prev, b.lastDecision !== null, !!monthly)) {
-          const target = st.fn(p, i);
+          const target = st.needsStart ? st.fn(p, i, i0) : st.fn(p, i);
           if (target !== null) {                                    // null は「今のまま」
             b.decide(p, i, target, 0.005, k);
             // 年 1 回の戦略は、年の途中の積立月には買い増しだけ（src/sim.py と同じ）
@@ -403,8 +404,15 @@
     for (const s of symbols) level[s] = [];
     for (let i = 0; i < p.n; i++) {
       const m = p.dates[i].slice(0, 7);
-      const last = i === p.n - 1 || p.dates[i + 1].slice(0, 7) !== m;
+      const lastDay = i === p.n - 1;
+      const last = lastDay || p.dates[i + 1].slice(0, 7) !== m;
       if (!last) continue;
+      if (lastDay) {
+        // データの最終日が月末でなければ、その月は途中までしか無いので使わない
+        const d = new Date(p.dates[i] + "T00:00:00Z");
+        do { d.setUTCDate(d.getUTCDate() + 1); } while (d.getUTCDay() === 0 || d.getUTCDay() === 6);
+        if (d.toISOString().slice(0, 7) === m) continue;
+      }
       if (need.some(s => p.jpy(s, i) == null)) continue;
       const vals = symbols.map(s => p.jpy(s, i));
       months.push(m);
@@ -439,9 +447,10 @@
       let v = opts.initial, peakRatio = 1, worst = 0, t = 0;
       values[0][j] = v;
       while (t < T) {
-        const start = Math.floor(rnd() * (n - B + 1));
+        // 円環ブロック: 期間の最初と最後の月も、真ん中の月と同じ頻度で選ばれるようにする
+        const start = Math.floor(rnd() * n);
         for (let b = 0; b < B && t < T; b++, t++) {
-          v = v * (1 + port[start + b] - hc) + opts.monthly;
+          v = v * (1 + port[(start + b) % n] - hc) + opts.monthly;
           values[t + 1][j] = v;
           const ratio = v / paidAt(t + 1);           // 入れた額に対する倍率で下落を測る（積立で見かけが膨らむのを除く）
           peakRatio = Math.max(peakRatio, ratio);

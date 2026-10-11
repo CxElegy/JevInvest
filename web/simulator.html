@@ -285,6 +285,7 @@ svg.chart { display: block; width: 100%; height: auto; }
             而不卖出</label>
           <div class="luck" id="ddAnswer"></div>
           <div class="scroll"><table class="data" id="ddTable"></table></div>
+          <p class="note">这张表的未来部分用的是 2008-07 起的历史（含金融危机），上面的分布图和下面的对比表用的是 2009-06 起的历史（为了能放进日本股），所以同一个配置的数字会不一样。危机在不在样本里，结果差别很大，这本身就说明了未来的不确定性。</p>
         </div>
         <div class="panel"><h3 style="margin-top:0">同样的投入，换个配置</h3><div class="scroll"><table class="data" id="fCompare"></table></div>
           <p class="note">每个配置都用同一段历史、同一组随机抽样（1000 条路径），所以差别只来自配置本身。</p></div>
@@ -672,7 +673,7 @@ const INFO = {
   vol_target: ["全球股最近 60 天的年化波动超过 12% 时，按比例减仓到短期国债。", "Moreira & Muir (2017) Journal of Finance「Volatility-Managed Portfolios」", ""],
   spy_timing: ["S&P500 在 200 日均线上方时全仓，下方时全换短期国债。", "Faber (2007)", "前半段看起来很好，后半段明显变差，这是过度拟合的典型样子。"],
   sell_in_may: ["5～10 月持有短期国债，11～4 月持有全球股。", "Bouman & Jacobsen (2002) American Economic Review「The Halloween Indicator」", "股市格言的检验。"],
-  panic_sell: ["一直持有全球股，但从最高点跌了 30% 时受不了全部卖掉，等价格回到原来的最高点才敢买回来。", "行为金融学：DALBAR、Morningstar「Mind the Gap」（见 docs/PLAYBOOK.md）", "这不是一个推荐的策略，而是最常见的错误。它在底部附近卖出，又在已经涨回去之后才买回来。"],
+  panic_sell: ["一直持有全球股，但从（开始持有以后的）最高点跌了 30% 时受不了全部卖掉，等价格回到原来的最高点才敢买回来。", "行为金融学：DALBAR、Morningstar「Mind the Gap」（见 docs/PLAYBOOK.md）", "这不是一个推荐的策略，而是最常见的错误。它在底部附近卖出，又在已经涨回去之后才买回来。"],
   buy_the_dip: ["钱先放着，等全球股从一年高点跌 10% 时全部买入，之后不卖；定投时每月的钱也等下一次回调。", "Maggiulli (2019)「Even God Couldn't Beat Dollar-Cost Averaging」", "等的那段时间钱是闲着的。上涨行情里往往等不到。"],
 };
 let bView = "lump", bSort = { key: null, dir: -1 };
@@ -810,7 +811,7 @@ function runFuture() {
   const r = E.bootstrap(P, opts);
   const yrs = opts.years;
   $("fTitle").textContent = `${yrs} 年后：投入合计 ${man(r.paid)}`;
-  $("fNote").innerHTML = `<b>怎么算的：</b>把 ${r.from} ～ ${r.to} 共 ${r.months} 个月的真实月度回报（日元计，含分红，扣除这个配置的现金部分），按 12 个月一段随机抽取、拼接成 2000 条未来路径。这段历史是美股牛市加日元贬值${DATA.fx ? `（日元每年贬值约 ${(DATA.fx.fx_cagr * 100).toFixed(1)}%）` : ""}，照搬会偏乐观，所以默认每年扣 2%，大致相当于去掉日元贬值的那一部分。另外，日本股的数据从 2009 年才有，为了让所有配置用同一段历史，<b>2008 年金融危机最惨的几个月不在里面</b>，回撤数字因此偏小；那种极端情况请看总览页的压力测试（目标配置约 -51%）。这是"如果未来像过去那样波动"的范围，不是预测。`;
+  $("fNote").innerHTML = `<b>怎么算的：</b>把 ${r.from} ～ ${r.to} 共 ${r.months} 个月的真实月度回报（日元计，含分红，扣除这个配置的现金部分），按 12 个月一段随机抽取（首尾相接，每个月被抽到的机会相同）、拼接成 2000 条未来路径。假设每月调回比例、每月的钱在月末投入。这段历史是美股牛市加日元贬值${DATA.fx ? `（日元每年贬值约 ${(DATA.fx.fx_cagr * 100).toFixed(1)}%）` : ""}，照搬会偏乐观，所以默认每年扣 2%，大致相当于去掉日元贬值的那一部分。另外，日本股的数据从 2009 年才有，为了让所有配置用同一段历史，<b>2008 年金融危机最惨的几个月不在里面</b>，回撤数字因此偏小；那种极端情况请看总览页的压力测试（目标配置约 -51%）。这是"如果未来像过去那样波动"的范围，不是预测。`;
   const f = r.final;
   $("fTiles").innerHTML = [
     ["中位数（一半路径高于它）", man(f.p50), `是投入的 ${(f.p50 / r.paid).toFixed(2)} 倍`],
@@ -844,7 +845,7 @@ function renderBudget() {
         const target = other === "AGG" ? { VT: w, AGG: 1 - w } : (w ? { VT: w } : {});
         const b = E.backtest(P, "2008-07-01", 5000000, { strategies: { m: { freq: "monthly", fn: () => Object.assign({}, target) } } }).m;
         const st = E.stats(b, P);
-        const f = w || other === "AGG" ? E.bootstrap(P, Object.assign({}, opts, { weights: other === "AGG" ? { VT: w, AGG: 1 - w } : { VT: w }, paths: 1000, seed: 7, window: ["VT", "AGG"] })) : null;
+        const f = w || other === "AGG" ? E.bootstrap(P, Object.assign({}, opts, { weights: other === "AGG" ? { VT: w, AGG: 1 - w } : { VT: w }, paths: 1000, seed: 20261011, window: ["VT", "AGG"] })) : null;
         ddGrid.push({ x, other, dd: st.maxDD, cagr: Math.pow(st.final / 5000000, 365.25 / ((Date.parse(P.dates[P.n - 1]) - Date.parse("2008-07-01")) / 864e5)) - 1,
                       p50: f ? f.final.p50 : opts.initial + opts.monthly * opts.years * 12, p05: f ? f.final.p05 : opts.initial + opts.monthly * opts.years * 12 });
       }
