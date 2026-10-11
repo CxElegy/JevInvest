@@ -338,6 +338,15 @@ class BacktestResult:
     trades: int
     fees: float
     realized: float
+    flows: list = field(default_factory=list)   # 投資家から見た入金（負）。積立の金額加重リターン用
+
+    def money_weighted(self) -> float | None:
+        """積立の年率（XIRR）。入金と最終評価額から出す。"""
+        from .transactions import xirr
+
+        if not self.flows:
+            return None
+        return xirr(self.flows + [(self.nav.index[-1].date(), float(self.nav.iloc[-1]))])
 
     def stats(self) -> dict:
         nav = self.nav
@@ -357,23 +366,38 @@ class BacktestResult:
 
 def backtest(prices: Prices, start: pd.Timestamp, capital: float,
              strategies: dict | None = None, costs: Costs = Costs(),
-             end: pd.Timestamp | None = None) -> dict[str, BacktestResult]:
+             end: pd.Timestamp | None = None,
+             monthly: float = 0.0) -> dict[str, BacktestResult]:
+    """monthly > 0 なら、毎月最初の営業日にその額を現金で足してから判断する（積立）。
+
+    積立のときは「買って持つだけ」の戦略も毎月判断する（新しい現金を目標どおりに買う）。
+    """
     strategies = strategies or STRATEGIES
     cal = [d for d in prices.calendar() if d >= start and (end is None or d <= end)]
     books = {n: Book(name=n, cash=capital) for n in strategies}
+    flows: dict[str, list[tuple]] = {n: [(cal[0].date(), -capital)] for n in strategies} if cal else {}
     prev = None
     for day in cal:
+        new_month = is_rebalance_day(day, prev)
         for name, (fn, freq) in strategies.items():
             b = books[name]
+            if monthly and new_month and prev is not None:
+                b.cash += monthly
+                flows[name].append((day.date(), -monthly))
             b.process_day(prices, day, costs)
-            due = (b.last_decision is None) if freq == "once" else is_rebalance_day(day, prev)
+            if freq == "once" and not monthly:
+                due = b.last_decision is None
+            else:
+                due = new_month
             if due:
                 b.decide(prices, day, fn(prices.upto(day)), reason=name)
         prev = day
     out = {}
     for name, b in books.items():
         nav = pd.Series({pd.Timestamp(d): v for d, v in b.nav})
-        out[name] = BacktestResult(name, nav, len(b.trades), b.fees, b.realized)
+        r = BacktestResult(name, nav, len(b.trades), b.fees, b.realized)
+        r.flows = flows.get(name, [])
+        out[name] = r
     return out
 
 

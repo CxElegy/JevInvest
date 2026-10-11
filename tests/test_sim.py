@@ -101,3 +101,16 @@ def test_backtest_buy_and_hold_trades_once_and_monthly_rebalances():
     assert res["hold"].trades == 1
     assert res["mix"].trades > 2          # 月初ごとに配分を戻す
     assert len(window_returns(res["hold"].nav, 21)) == n - 21
+
+
+def test_monthly_contributions_are_invested_and_tracked():
+    idx = pd.bdate_range("2026-01-01", "2026-06-30")
+    n = len(idx)
+    p = Prices({"VT": pd.Series([100.0] * n, index=idx)}, pd.Series([150.0] * n, index=idx))
+    res = backtest(p, idx[0], 1_000_000, costs=ZERO, monthly=200_000,
+                   strategies={"hold": (lambda h: {"VT": 1.0}, "once")})
+    r = res["hold"]
+    assert -sum(a for _, a in r.flows) == 1_000_000 + 5 * 200_000   # 2〜6 月の 5 回
+    assert r.nav.iloc[-1] == pytest.approx(2_000_000)
+    assert r.trades >= 5                       # 積立のたびに買い足す
+    assert abs(r.money_weighted()) < 1e-6      # 価格が動かなければ年率 0

@@ -350,8 +350,36 @@ def cmd_backtest(args) -> None:
         prev = pd.concat([pd.Series([first]), y.iloc[:-1]]).values
         yearly[n] = {int(k): float(v / p - 1) for k, v, p in zip(y.index, y.values, prev)}
 
+    # あなたの計画に近い形: 初期 100 万円 + 毎月 20 万円の積立
+    dca = backtest(prices, start, args.dca_initial, monthly=args.dca_monthly)
+    dca_stats = {}
+    for n, r in dca.items():
+        paid = -sum(a for _, a in r.flows)
+        dca_stats[n] = {"paid": paid, "final": float(r.nav.iloc[-1]),
+                        "xirr": r.money_weighted(), "trades": r.trades, "fees": r.fees,
+                        "tax_if_taxable": max(r.realized, 0.0) * TAX_RATE}
+
+    # 開始年をずらした 10 年の積立。2009 年開始だけを見ると、上げ相場と円安を拾った結論になりうる
+    rolling = {}
+    last_day = res["allcountry"].nav.index[-1]
+    for y in range(start.year, 2027):
+        s0 = pd.Timestamp(f"{y}-{start.month:02d}-01")
+        e0 = s0 + pd.DateOffset(years=args.window)
+        if e0 > last_day:
+            break
+        rr = backtest(prices, s0, args.dca_initial, monthly=args.dca_monthly, end=e0)
+        rolling[f"{y}"] = {n: {"xirr": r.money_weighted(),
+                               "final": float(r.nav.iloc[-1]),
+                               "paid": -sum(a for _, a in r.flows)} for n, r in rr.items()}
+        print(f"  {y}〜{e0.year}: " + " / ".join(
+            f"{n} {rolling[f'{y}'][n]['xirr'] * 100:+.1f}%" for n in rr))
+
     data = json.loads(BT_JSON.read_text(encoding="utf-8")) if BT_JSON.exists() else {}
     data.update({
+        "dca": {"initial": args.dca_initial, "monthly": args.dca_monthly, "stats": dca_stats,
+                "nav": {n: [[str(d.date()), round(float(v))] for d, v in r.nav.resample("W-FRI").last().dropna().items()]
+                        for n, r in dca.items()}},
+        "rolling": {"years": args.window, "windows": rolling},
         "generated": date.today().isoformat(),
         "start": str(res["allcountry"].nav.index[0].date()),
         "end": str(res["allcountry"].nav.index[-1].date()),
@@ -392,6 +420,21 @@ def cmd_backtest(args) -> None:
           "|---|" + "---:|" * len(res)]
     for yr in sorted(next(iter(yearly.values()))):
         L.append(f"| {yr} | " + " | ".join(_pct(yearly[n][yr]) for n in res) + " |")
+    L += ["", f"## 積立にした場合（初期 {args.dca_initial:,.0f} 円 + 毎月 {args.dca_monthly:,.0f} 円）", "",
+          "毎月最初の営業日に入金し、その日の終値までで判断、翌営業日に約定。"
+          "年率は入金のタイミングを反映した金額加重（XIRR）。", "",
+          "| 戦略 | 入れた額 | 最終額 | 年率（XIRR） | 約定回数 | 手数料等 | 課税口座なら税 |",
+          "|---|---:|---:|---:|---:|---:|---:|"]
+    for n, s in dca_stats.items():
+        L.append(f"| {STRATEGY_LABELS[n]} | {s['paid']:,.0f} | {s['final']:,.0f} | {_pct(s['xirr'])} | "
+                 f"{s['trades']} | {s['fees']:,.0f} | {s['tax_if_taxable']:,.0f} |")
+    L += ["", f"## 開始年をずらした {args.window} 年の積立（年率 XIRR）", "",
+          "2009 年開始だけだと、上げ相場と円安の時期をたまたま拾った結論になりうる。開始年を 1 年ずつずらした。", "",
+          "| 開始 | " + " | ".join(STRATEGY_LABELS[n] for n in res) + " | 1 位 |",
+          "|---|" + "---:|" * len(res) + "---|"]
+    for y, row in rolling.items():
+        best = max(row, key=lambda n: row[n]["xirr"])
+        L.append(f"| {y} | " + " | ".join(_pct(row[n]["xirr"]) for n in res) + f" | {STRATEGY_LABELS[best]} |")
     L += ["", "※ 過去の結果は将来を保証しない。戦略は結果を見る前に固定した（src/sim.py）。", ""]
     BT_MD.write_text("\n".join(L), encoding="utf-8")
     print("\n".join(L[:20 + len(stats)]))
@@ -406,6 +449,9 @@ def main(argv=None) -> None:
     p.add_argument("--start", default="2009-07-01")
     p.add_argument("--years", type=float, default=18.5)
     p.add_argument("--capital", type=float, default=5_000_000)
+    p.add_argument("--dca-initial", type=float, default=1_000_000)
+    p.add_argument("--dca-monthly", type=float, default=200_000)
+    p.add_argument("--window", type=int, default=10, help="開始年をずらす比較の年数")
     p.set_defaults(func=cmd_backtest)
 
     p = sub.add_parser("init")

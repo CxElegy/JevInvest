@@ -541,6 +541,27 @@ function backtest() {
     <figure><div class="canvas" id="dist"></div>
     <figcaption><b>所有"一个月"的回报分布</b>（起点逐日滑动的 21 个交易日窗口）。细线是最差 5% 到最好 5%，粗块是中间一半，竖线是中位数。每个策略的区间都有十几个百分点宽，而策略之间中位数的差不到 1 个百分点。所以一个月后谁赢了，基本说明不了水平。悬停可看具体数字。</figcaption></figure>
     <div class="note">读法：<b>你的目标配置</b>年化 14.4%，全球股一只不动是 14.7%，但前者最大回撤从 -34% 降到 -27%。这就是配置债券和分散的作用：收益稍低，跌得更少，更容易拿得住。个股部分用 QQQ 代替，因为拿今天的大公司去回测过去会有幸存者偏差。<b>主动择时的两个策略</b>（趋势、双动量）都输给了"不动"，交易次数多，如果在课税账户还要多交约 300～450 万日元的税。</div>`;
+  if (DATA.dca) {
+    const d = DATA.dca;
+    let r2 = "";
+    for (const k of ks) {
+      const s = d.stats[k]; if (!s) continue;
+      r2 += `<tr><td><span class="sw" style="background:${COLOR[k]}"></span>${SHORT[k]}</td><td class="num">${yen(s.paid)}</td><td class="num">${yen(s.final)}</td><td class="num">${pct(s.xirr)}</td><td class="num">${s.trades}</td><td class="num">${yen(s.fees)}</td><td class="num">${yen(s.tax_if_taxable)}</td></tr>`;
+    }
+    let r3 = "";
+    const wins = {};
+    for (const [y, row] of Object.entries((DATA.rolling || {}).windows || {})) {
+      const best = ks.reduce((a, b) => row[b].xirr > row[a].xirr ? b : a);
+      wins[best] = (wins[best] || 0) + 1;
+      r3 += `<tr><td class="num">${esc(y)} → ${+y + DATA.rolling.years}</td>${ks.map(k => `<td class="num" style="${k === best ? "font-weight:700;color:var(--fg)" : "color:var(--muted)"}">${pct(row[k].xirr)}</td>`).join("")}</tr>`;
+    }
+    el.insertAdjacentHTML("beforeend", `
+      <h3>换成你的实际节奏：起步 ${yen(d.initial)} + 每月 ${yen(d.monthly)}</h3>
+      <div class="scroll"><table class="data"><thead><tr><th>策略</th><th>投入合计</th><th>最终金额</th><th>年化（XIRR）</th><th>成交笔数</th><th>手续费等</th><th>若在课税账户：税</th></tr></thead><tbody>${r2}</tbody></table></div>
+      <h3>换个开始年份，结论还成立吗（每段 ${DATA.rolling.years} 年定投，年化 XIRR）</h3>
+      <div class="scroll"><table class="data"><thead><tr><th>期间</th>${ks.map(k => `<th><span class="sw" style="background:${COLOR[k]}"></span>${SHORT[k]}</th>`).join("")}</tr></thead><tbody>${r3}</tbody></table></div>
+      <div class="note"><b>要老实说的一点：</b>"你的目标配置"在 ${wins.core_satellite || 0} 段里排第一，但优势几乎全来自代替个股的那 20% QQQ（纳斯达克 100）。它恰好是这十几年最强的指数，换个年代未必如此，所以这不能证明你的个股会选得好。可以确定的有两点：①主动择时的两个策略在每一段都输给"不动"；②它们交易更多，如果在课税账户，税会多出几百万到上千万日元。</div>`);
+  }
   navChart(document.getElementById("nav"));
   distChart(document.getElementById("dist"));
 }
