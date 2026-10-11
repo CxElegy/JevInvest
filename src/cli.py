@@ -661,6 +661,44 @@ def cmd_plan(args) -> None:
         print(f"  ※ {n}")
 
 
+def cmd_checkup(args) -> None:
+    """目標配分の健康診断。台帳からは比率と月の積立額だけを読む（保有額は使わない）。"""
+    import yaml
+
+    from . import checkup
+
+    cfg = yaml.safe_load(args.holdings.read_text(encoding="utf-8")) or {}
+    target = cfg.get("target_allocation") or {}
+    if not target:
+        raise SystemExit("target_allocation が台帳にありません")
+    monthly = float((cfg.get("contributions") or {}).get("monthly") or 0)
+    try:
+        r = checkup.run(target, args.initial, monthly, args.tolerance)
+    except ValueError as e:
+        raise SystemExit(str(e)) from e
+    print("── 計画の健康診断（実データでの過去の再現・将来の保証ではない） ──")
+    print("代用 ETF: " + " / ".join(f"{s} {v * 100:.0f}%" for s, v in r.weights.items())
+          + (f" / 円の現金 {(1 - sum(r.weights.values())) * 100:.0f}%" if sum(r.weights.values()) < 0.999 else ""))
+    print()
+    print(f"  年率（{r.start[:4]} 年〜）      : この配分 {r.cagr * 100:.1f}% / 全世界株 1 本 {r.base_cagr * 100:.1f}%")
+    print(f"  最大下落              : この配分 {r.max_dd * 100:.0f}% / 全世界株 1 本 {r.base_dd * 100:.0f}%")
+    print(f"  2008 年金融危機の下落 : この配分 {r.crisis_dd * 100:.0f}% / 全世界株 1 本 {r.base_crisis_dd * 100:.0f}%")
+    print(f"  外貨建ての比率: 約 {r.foreign * 100:.0f}%")
+    if r.nisa_years is None:
+        print("  NISA の生涯枠（1,800 万円）: 40 年以内には埋まらない")
+    else:
+        print(f"  NISA の生涯枠（1,800 万円）が埋まるまで: 約 {r.nisa_years:.1f} 年"
+              f"（初期 {args.initial:,.0f} 円 + 月 {monthly:,.0f} 円）")
+    print()
+    mark = {"ok": "✔", "warn": "▲", "info": "●"}
+    for kind, title, detail in r.findings:
+        print(f"  {mark[kind]} {title}")
+        print(f"      {detail}")
+    for n in r.notes:
+        print(f"  ※ {n}")
+    print("  ※ 税・手数料は売買コストのみ反映。配分の判断材料で、銘柄を勧めるものではない")
+
+
 def cmd_taxplan(args) -> None:
     """iDeCo の節税額とふるさと納税の上限の目安。年収はファイルに書かない（標準出力だけ）。"""
     from .taxplan import Household, render
@@ -813,6 +851,11 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--out", type=Path, default=ROOT / "config" / "transactions.imported.yaml",
                    help="出力先（既定: config/transactions.imported.yaml）")
     p.set_defaults(func=cmd_import_csv)
+
+    p = sub.add_parser("checkup", help="目標配分を実データで点検する（下落・外貨・NISA 枠）")
+    p.add_argument("--tolerance", type=float, default=0.4, help="耐えられる下落（0.4 = 40%%）")
+    p.add_argument("--initial", type=float, default=0, help="最初にまとめて入れる額（NISA 枠の計算用。台帳からは読まない）")
+    p.set_defaults(func=cmd_checkup)
 
     p = sub.add_parser("taxplan", help="iDeCo の節税額とふるさと納税の上限の目安（2026 年分・概算）")
     p.add_argument("--salary", type=int, required=True, help="給与収入（年額、源泉徴収票の支払金額）")
