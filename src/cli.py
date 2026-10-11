@@ -421,6 +421,9 @@ def cmd_plan(args) -> None:
     plan = build(cfg, compliance=reg, cleared_symbols_by_class=cleared)
 
     print(f"毎月の投入額: {plan.monthly:,.0f} 円")
+    if plan.months_left < 12:
+        print(f"（今年の残り {plan.months_left} か月の割り当て。NISA の年枠の残りを"
+              f"残り月数で割っている。来年以降の割り当ては下の累計表に反映）")
     print()
     df = plan.to_frame()
     for c in ("月額", "つみたて枠", "成長枠", "課税口座", "留保(現金)"):
@@ -454,6 +457,8 @@ def cmd_plan(args) -> None:
     print()
     proj = annual_projection(cfg, plan, years=args.years)
     print(proj.map(lambda v: f"{v:,.0f}").to_markdown())
+    for n in proj.attrs.get("notes", []):
+        print(f"  ※ {n}")
 
 
 def cmd_quotes(args) -> None:

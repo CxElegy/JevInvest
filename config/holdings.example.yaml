@@ -41,8 +41,13 @@ contributions:
     growth_annual: 2400000            # 成長投資枠 年間
     lifetime: 18000000                # 生涯投資枠
     growth_lifetime_max: 12000000     # 成長投資枠の生涯上限
-    used_tsumitate_this_year: 0       # 今年すでに使った分
+    used_tsumitate_this_year: 0       # 今年すでに使った分。年枠の残りを今年の残り月数で割る
     used_growth_this_year: 0
+    # 任意。NISA の生涯枠をこれまでに使った累計（今年の分を含む・取得価額ベース）。
+    # 書くと積立計画と累計表が生涯枠 1,800 万・成長枠 1,200 万の残りで頭打ちになり、
+    # 超える分は課税口座として出る。書かなければ今年の使用分だけを使用済みとみなす。
+    used_lifetime: 0
+    used_growth_lifetime: 0           # うち成長枠の分
 
 # 資産クラスごとの NISA 適合: both（つみたて・成長とも可）/ growth_only / none（対象外）
 nisa_eligibility:

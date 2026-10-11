@@ -1,5 +1,6 @@
 """台帳 → 評価 → ガードレール → レポート → ダッシュボード → CLI を、ネットワーク無しで通す。"""
 
+from datetime import date
 from pathlib import Path
 
 import pytest
@@ -106,7 +107,8 @@ def test_risk_metrics_and_report_and_dashboard(ledger_path, market_data):
 def test_plan_falls_back_to_core_only_when_core_itself_is_cleared():
     cfg = yaml.safe_load((ROOT / "config" / "holdings.example.yaml").read_text(encoding="utf-8"))
     reg = compliance.ComplianceRegistry()
-    plan = build(cfg, compliance=reg, cleared_symbols_by_class={"developed_equity": ["VT"]})
+    plan = build(cfg, compliance=reg, cleared_symbols_by_class={"developed_equity": ["VT"]},
+                 today=date(2026, 1, 15))
 
     by = {c.asset_class: c for c in plan.classes}
     assert by["us_equity"].status == "保留→コアへ" and by["jp_equity"].status == "保留→コアへ"
