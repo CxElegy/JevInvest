@@ -80,6 +80,7 @@ reports/latest.md を読んで分析して
 | `compliance` | 独立性の確認状況を一覧し、次にやることを出す |
 | `transactions` | 取引履歴から保有（総平均法）・実現損益・XIRR を出す |
 | `check-trade` | 売買の前の点検（`--pct` で金額を出さずに使える） |
+| `stress` | 2008・2011・2020・2022・2024 の急落と円高を、今の保有（無ければ目標配分）に当てはめる |
 | `scoreboard` | 遊び枠（個別株）を「同じ日に同じ額を VT に入れていたら」と比べる |
 | `import-csv` | 証券会社の取引履歴 CSV（SBI・楽天）を取り込む |
 | `dashboard` | 単一ファイルの HTML ダッシュボード（`reports/dashboard.html`） |

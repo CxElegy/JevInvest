@@ -462,6 +462,76 @@ def cmd_scoreboard(args) -> None:
           "（3 年続けて負けたら本体に合流）と合わせて読む")
 
 
+def cmd_stress(args) -> None:
+    """過去の急落を今の配分（保有、無ければ目標配分）に当てはめる。"""
+    from .marketdata import MarketData
+    from .stress import PROXIES, SERIES, Exposure, replay, usd_share
+
+    h = _load(args.holdings)
+    md = MarketData()
+    try:
+        exposures: list[Exposure] = []
+        source = "目標配分"
+        if not args.target:
+            from .analytics import analyze
+
+            a = analyze(h, md, with_risk=False)
+            if a.unpriced_count:
+                print(f"⚠ 評価不能の保有が {a.unpriced_count} 件あり、比率に入っていません")
+            if a.total_value_base > 0 and any(v.priced and not v.position.is_cash for v in a.valuations):
+                source = "今の保有"
+                for v in a.valuations:
+                    if v.priced:
+                        exposures.append(Exposure(v.position.asset_class, v.position.currency,
+                                                  v.market_value_base / a.total_value_base))
+        if not exposures:
+            tot = sum(h.target_allocation.values())
+            exposures = [Exposure(c, h.base_currency, w / tot) for c, w in h.target_allocation.items()]
+        unknown = sorted({e.asset_class for e in exposures} - set(PROXIES) - {"cash"})
+        if unknown:
+            raise SystemExit(f"代用の指数が決まっていない資産クラス: {', '.join(unknown)}（src/stress.py の PROXIES）")
+        hist = md.get_history(SERIES, years=19.5)
+        missing = [s for s in SERIES if s not in hist]
+        if missing:
+            for e in dict.fromkeys(md.fetch_errors):
+                print(f"  - {e}")
+            raise SystemExit(f"履歴を取得できません: {', '.join(missing)}。ストレステストは出しません")
+        series = {s: hist[s]["adj_close"] for s in SERIES}
+    finally:
+        md.close()
+
+    res = replay(exposures, series, args.bond_proxy)   # 金額は出さない（比率だけ）
+    print(f"ストレステスト（{source}・債券の代用 {args.bond_proxy}）")
+    mix = {}
+    for e in exposures:
+        mix[e.asset_class] = mix.get(e.asset_class, 0) + e.weight
+    print("  配分: " + "、".join(f"{c} {w * 100:.0f}%" for c, w in mix.items()))
+    print(f"  ドル建ての部分: {usd_share(exposures, args.bond_proxy) * 100:.0f}%（円高で目減りする）")
+    print()
+    rows = []
+    for r in res:
+        rows.append({"場面": r.name, "期間": f"{r.start}〜{r.end}", "円建て": f"{r.total * 100:+.1f}%",
+                     "うち値動き": f"{r.price_part * 100:+.1f}%", "うち為替": f"{r.fx_part * 100:+.1f}%",
+                     "ドル円": f"{r.fx_move * 100:+.1f}%"})
+    print(pd_frame(rows).to_markdown(index=False))
+    print()
+    share = usd_share(exposures, args.bond_proxy)
+    if args.json:
+        import json
+
+        args.json.write_text(json.dumps({
+            "source": source, "bond_proxy": args.bond_proxy, "mix": mix, "usd_share": share,
+            "episodes": [{"name": r.name, "start": r.start, "end": r.end, "note": r.note,
+                          "total": r.total, "price": r.price_part, "fx": r.fx_part,
+                          "fx_move": r.fx_move} for r in res],
+        }, ensure_ascii=False, indent=1), encoding="utf-8")
+        print(f"  → {args.json}")
+    print(f"  仮定: 値動きが無く円だけ 20% 高くなる（158 円 → 126 円）と {share * -20:+.1f}%")
+    print()
+    print("  ※ 代用 ETF での近似（src/stress.py）。実際のファンドとは信託報酬・指数の違いでずれる。")
+    print("     最悪の場面でも売らずに持ち続けられる配分かを確かめるためのもの。")
+
+
 def cmd_import_csv(args) -> None:
     """証券会社の取引履歴 CSV を transactions.yaml の書式に変換する。
 
@@ -701,6 +771,13 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--classes", nargs="+", help="対象の資産クラス（既定: requires_stock_clearance）")
     p.add_argument("--benchmark", default="VT", help="比べる基準（既定 VT）")
     p.set_defaults(func=cmd_scoreboard)
+
+    p = sub.add_parser("stress", help="過去の急落と円高を今の配分に当てはめる")
+    p.add_argument("--target", action="store_true", help="保有ではなく目標配分で計算する")
+    p.add_argument("--bond-proxy", choices=["AGG", "JPY0"], default="AGG",
+                   help="債券の代用: AGG（外国債券・ヘッジなし）/ JPY0（国内債券・値動き 0）")
+    p.add_argument("--json", type=Path, help="結果を JSON でも書き出す（比率のみ）")
+    p.set_defaults(func=cmd_stress)
 
     p = sub.add_parser("import-csv", help="証券会社の取引履歴 CSV を取り込む")
     p.add_argument("files", type=Path, nargs="+", help="CSV ファイル（複数可）")

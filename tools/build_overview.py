@@ -24,6 +24,9 @@ def main() -> None:
     if MARK not in html:
         raise SystemExit(f"雛形に {MARK} がありません")
     data = json.loads(DATA.read_text(encoding="utf-8"))
+    stress = ROOT / "web" / "stress.json"
+    if stress.exists():
+        data["stress"] = json.loads(stress.read_text(encoding="utf-8"))
     # </script> を含む文字列でスクリプトが閉じないようにする
     blob = json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     out.parent.mkdir(parents=True, exist_ok=True)

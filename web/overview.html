@@ -333,7 +333,11 @@ table.data td.num { font-family: var(--f-mono); }
   <p class="prose">先说这一节最重要的结论：<b>一个月的成绩几乎全看运气。</b>下面第二张图是过去 17 年里所有"一个月"的回报分布。11 月 12 日出来的结果，只会落在这个范围里的某个位置。</p>
   <div id="bt"></div>
 
-  <h2><span class="no">06</span>交易前检查怎么工作</h2>
+  <h2><span class="no">06</span>压力测试：把历史上的暴跌放到你的配置上</h2>
+  <p class="prose">现在 1 美元约 158 日元，处在高位，而你的目标配置大约 90% 是美元资产。日元一旦升值，就算股价不动，换算成日元也会缩水。下面把 5 次真实发生过的危机套到你的目标配置上，看最多会跌多少，以及其中多少是汇率造成的。时间段按事件本身固定，不是看结果挑的。用命令 <code>python -m src.cli stress</code> 也能对你的实际持仓跑一遍。</p>
+  <div id="stress"></div>
+
+  <h2><span class="no">07</span>交易前检查怎么工作</h2>
   <p class="prose">PLAYBOOK 里的数据：晨星统计，投资者因为自己的买卖时机，每年平均少赚约 1.2 个百分点（8.7% 对比基金本身的 9.9%）。按你的计划（100 万起步，每月 20 万），20 年下来约差 1,050 万日元。这个工具就是在你下单前拦住这类损失。</p>
   <figure>
     <div class="canvas">
@@ -366,7 +370,7 @@ table.data td.num { font-family: var(--f-mono); }
     <figcaption><b>先列出不该做的理由。</b>可以用 <code>--pct 3</code>（占总资产的 %）代替金额，这样不用把金额告诉我。第一次考虑某笔交易时会记下时间，24 小时后再运行同一条命令，冷静期这一项才会通过。</figcaption>
   </figure>
 
-  <h2><span class="no">07</span>调研要点（每条都有出处）</h2>
+  <h2><span class="no">08</span>调研要点（每条都有出处）</h2>
   <div class="two">
     <div class="card">
       <h4>基金成本 · <code>docs/FUNDS.md</code></h4>
@@ -388,7 +392,7 @@ table.data td.num { font-family: var(--f-mono); }
     </div>
   </div>
 
-  <h2><span class="no">08</span>命令速查</h2>
+  <h2><span class="no">09</span>命令速查</h2>
   <div class="cmds">
     <div><code>/import-csv 文件.csv</code><span>导入券商成交记录</span></div>
     <div><code>/before-trade NVDA 买 3%</code><span>交易前检查</span></div>
@@ -396,6 +400,7 @@ table.data td.num { font-family: var(--f-mono); }
     <div><code>python -m src.cli scoreboard</code><span>游玩仓对比 VT 的成绩</span></div>
     <div><code>python tools/papertrade.py run</code><span>手动推进模拟盘</span></div>
     <div><code>python tools/papertrade.py backtest</code><span>重新跑回测</span></div>
+    <div><code>python -m src.cli stress</code><span>历史危机套到你的持仓上</span></div>
   </div>
   <p class="note blue">分析和决策辅助到此为止，不会实际下单。是否买卖，以 DESC 和 Independence &amp; Conflicts Network 的结论为准，由你自己决定。</p>
 </div>
@@ -566,5 +571,41 @@ function backtest() {
   distChart(document.getElementById("dist"));
 }
 
-meta(); live(); backtest();
+function stress() {
+  const el = document.getElementById("stress");
+  const st = DATA && DATA.stress;
+  if (!st) { el.innerHTML = '<p class="note">压力测试数据未嵌入。</p>'; return; }
+  const W = 960, rowH = 58, L = 210, R = 30, T = 30;
+  const H = T + st.episodes.length * rowH + 30;
+  const lo = -0.6, hi = 0.25;
+  const X = v => L + (v - lo) / (hi - lo) * (W - L - R);
+  let g = "";
+  for (let v = -0.6; v <= 0.2501; v += 0.1) {
+    const vv = Math.round(v * 10) / 10;
+    g += `<line class="grid" x1="${X(vv)}" x2="${X(vv)}" y1="${T - 10}" y2="${H - 28}" ${vv === 0 ? 'style="stroke:var(--muted)"' : ""}/><text x="${X(vv)}" y="${H - 10}" text-anchor="middle">${pct(vv, 0)}</text>`;
+  }
+  let rows = "";
+  st.episodes.forEach((e, i) => {
+    const cy = T + i * rowH + 14;
+    const bar = (v, y, color) => `<rect x="${Math.min(X(0), X(v))}" y="${y}" width="${Math.max(Math.abs(X(v) - X(0)), 1)}" height="12" rx="3" fill="${color}"/>`;
+    rows += `<text x="${L - 12}" y="${cy + 10}" text-anchor="end" style="fill:var(--fg);font-family:var(--f-body);font-size:13px">${esc(e.name)}</text>
+      <text x="${L - 12}" y="${cy + 27}" text-anchor="end">${esc(e.start)} → ${esc(e.end.slice(5))}</text>
+      ${bar(e.price, cy, "var(--s1)")}${bar(e.fx, cy + 15, "var(--s2)")}
+      <line x1="${X(e.total)}" x2="${X(e.total)}" y1="${cy - 4}" y2="${cy + 31}" stroke="var(--fg)" stroke-width="2.5"/>
+      <text x="${X(e.total) + (e.total < -0.4 ? 8 : -8)}" y="${cy - 6}" text-anchor="${e.total < -0.4 ? "start" : "end"}" style="fill:var(--fg);font-weight:500">${pct(e.total)}</text>`;
+  });
+  const worst = st.episodes.reduce((a, b) => a.total < b.total ? a : b);
+  el.innerHTML = `
+    <div class="tiles">
+      <div class="tile"><div class="k">美元资产占比</div><div class="v">${(st.usd_share * 100).toFixed(0)}%</div><div class="s">日元升值时会缩水的部分</div></div>
+      <div class="tile"><div class="k">只有日元升值 20%（158→126）</div><div class="v">${pct(-0.2 * st.usd_share)}</div><div class="s">股价不动的情况</div></div>
+      <div class="tile"><div class="k">最差的一次（${esc(worst.name.split(" ")[1] || worst.name)}）</div><div class="v">${pct(worst.total)}</div><div class="s">按日元计，你的目标配置</div></div>
+    </div>
+    <figure><div class="canvas"><svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="五次历史危机套用到目标配置的日元损益，拆成价格变动和汇率两部分">${g}${rows}</svg></div>
+    <div class="legend"><span><span class="sw" style="background:var(--s1)"></span>价格变动（当地货币）</span><span><span class="sw" style="background:var(--s2)"></span>汇率（日元升贬）</span><span><span class="sw" style="background:var(--fg)"></span>合计（日元）</span></div>
+    <figcaption><b>2008 年那样的危机，你的目标配置按日元会跌掉一半左右。</b>其中一部分来自日元升值。2022 年正好相反：股债一起跌了两成多，但日元大幅贬值，换算成日元只跌了几个百分点。汇率对你来说是双刃剑，你的收入是日元，这一点要心里有数。代用指数：发达国家股 SPY+EFA，个股 QQQ，日本股 EWJ 换算成日元，债券 AGG（不对冲汇率）。</figcaption></figure>
+    <div class="note blue">这张图的用处：<b>先想清楚，跌到这个程度时你能不能不卖。</b>回测里"不动"之所以赢，前提是在 -50% 的时候没有卖。如果做不到，就该在现在多配一些日元资产（日元现金、个人向け国債、国内债券），而不是等到大跌时再卖。</div>`;
+}
+
+meta(); live(); backtest(); stress();
 </script>
