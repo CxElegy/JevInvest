@@ -12,7 +12,7 @@ def _series(moves: dict[str, float], fx_move: float):
     out = {}
     for sym in SERIES:
         m = fx_move if sym == FX else moves.get(sym, 0.0)
-        vals, level = [], 100.0
+        vals = []
         for d in days:
             # 開始日は 100、終了日は 100 × (1 + m)。場面が重ならないので交互に置ける
             is_end = any(pd.Timestamp(e) == d for _, _, e, _ in EPISODES)

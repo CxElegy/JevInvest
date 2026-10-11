@@ -84,5 +84,5 @@ def shadow(transactions: list, symbols: set[str], bench_jpy: pd.Series,
     r.shadow_value = r.shadow_units * last
     r.actual_value = current_value + r.dividends
     if r.shadow_units < 0:
-        r.warnings.append(f"基準側の残高がマイナスです。基準で持っていたら、引き出した額ほどは増えていなかったという意味です")
+        r.warnings.append("基準側の残高がマイナスです。基準で持っていたら、引き出した額ほどは増えていなかったという意味です")
     return r

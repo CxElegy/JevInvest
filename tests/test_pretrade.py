@@ -9,7 +9,6 @@ from src.analytics import analyze
 from src.holdings import load
 from src.pretrade import CAUTION, OK, STOP, Intent, run_checks, verdict
 
-from conftest import FakeMarketData  # noqa: F401  (fixture の型)
 
 LEDGER = """
 base_currency: JPY

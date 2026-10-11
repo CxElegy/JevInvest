@@ -30,7 +30,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from src.sim import (  # noqa: E402
-    ALL_STRATEGIES, FX_SYMBOL, STRATEGIES, STRATEGY_LABELS, is_due, TAX_RATE, UNIVERSE, Book, Costs, Prices,
+    ALL_STRATEGIES, FX_SYMBOL, STRATEGY_LABELS, is_due, TAX_RATE, UNIVERSE, Book, Costs, Prices,
     backtest, is_jpy, is_rebalance_day, window_returns,
 )
 
@@ -247,7 +247,7 @@ def cmd_brief(args) -> None:
 
     判断に使ってよいのは、ここに出る「最後に処理した日までの」数字だけ。
     """
-    from src.sim import _above_sma, _ret, _vals, _vol
+    from src.sim import _ret, _vals, _vol
 
     st = load_state()
     prices = settled(live_prices())

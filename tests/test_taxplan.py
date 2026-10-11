@@ -3,7 +3,6 @@
 社会保険料は明示して渡す（既定の 15% 概算に依存させない）。
 """
 
-import pytest
 
 from src.cli import main
 from src.taxplan import (

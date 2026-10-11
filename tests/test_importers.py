@@ -1,7 +1,5 @@
 """証券会社 CSV の取り込み。合成した CSV だけを使い、ネットワークには出ない。"""
 
-from pathlib import Path
-
 import pytest
 import yaml
 
