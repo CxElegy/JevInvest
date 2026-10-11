@@ -274,6 +274,16 @@ svg.chart { display: block; width: 100%; height: auto; }
         </div>
         <div class="panel"><h3 style="margin-top:0">2000 条可能的路径（日元）</h3><div id="fFan"></div>
           <div class="legend"><span><span class="sw" style="background:var(--accent)"></span>中位数</span><span><span class="sw" style="background:var(--accent);opacity:.35;height:10px"></span>中间一半（25%～75%）</span><span><span class="sw" style="background:var(--accent);opacity:.15;height:10px"></span>90% 的路径（5%～95%）</span><span><span class="sw" style="background:var(--muted)"></span>投入合计</span></div></div>
+        <div class="panel">
+          <h3 style="margin-top:0">按你能承受的下跌，选股票的比例</h3>
+          <p class="note">资产配置里最重要的问题，是大跌的时候你会不会卖。下面把全球股的比例从 0% 到 100% 每 10% 试一遍，"另一半"分两种：美国债券，或者日元现金。历史最大回撤用的是 <b>2008 年 7 月以来的真实数据，包括金融危机</b>，一次性投入、每月调回比例、按日元计算。</p>
+          <label class="note" for="ddBudget" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">我最多能忍受资产跌掉
+            <select id="ddBudget" style="font:14px var(--f-mono);padding:4px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg)">
+              <option value="0.15">15%</option><option value="0.2">20%</option><option value="0.25">25%</option><option value="0.3" selected>30%</option><option value="0.35">35%</option><option value="0.4">40%</option><option value="0.5">50%</option><option value="0.6">60%</option></select>
+            而不卖出</label>
+          <div class="luck" id="ddAnswer"></div>
+          <div class="scroll"><table class="data" id="ddTable"></table></div>
+        </div>
         <div class="panel"><h3 style="margin-top:0">同样的投入，换个配置</h3><div class="scroll"><table class="data" id="fCompare"></table></div>
           <p class="note">每个配置都用同一段历史、同一组随机抽样（1000 条路径），所以差别只来自配置本身。</p></div>
       </div>
@@ -779,6 +789,7 @@ function initFuture() {
   $("fPresets").innerHTML = Object.keys(F_PRESETS).map(k => `<button class="chip" data-k="${k}">${k}</button>`).join("");
   $("fPresets").addEventListener("click", e => { const b = e.target.closest("button"); if (b) fSetWeights(F_PRESETS[b.dataset.k]); });
   for (const id of ["fInit", "fMonthly", "fYears", "fCut"]) $(id).addEventListener("change", runFuture);
+  $("ddBudget").addEventListener("change", renderBudget);
 }
 function runFuture() {
   initFuture();
@@ -801,6 +812,7 @@ function runFuture() {
     ["途中最大回撤（最差 5%）", pct(r.dd.p05, 0), "这时你能不卖吗？"],
   ].map(([k, v, x]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${x}</div></div>`).join("");
   fan(r, opts);
+  renderBudget();
   // 比较
   const rows = Object.entries(F_PRESETS).map(([name, pw]) => {
     const ww = Object.fromEntries(Object.entries(pw).map(([s, v]) => [s, v / 100]));
@@ -809,6 +821,44 @@ function runFuture() {
   }).join("");
   $("fCompare").innerHTML = `<thead><tr><th>配置</th><th>最差 5%</th><th>中位数</th><th>最好 5%</th><th>亏本概率</th><th>回撤（最差 5%）</th></tr></thead><tbody>${rows}</tbody>`;
 }
+// 回撤预算：股票比例 0..100% × 另一半（美国债券 / 日元现金）
+let ddGrid = null, ddKey = "";
+function renderBudget() {
+  const opts = { initial: Math.max(0, Number($("fInit").value) || 0), monthly: Math.max(0, Number($("fMonthly").value) || 0),
+                 years: Number($("fYears").value), haircut: Number($("fCut").value) };
+  const key = JSON.stringify(opts);
+  if (key !== ddKey) {
+    ddKey = key; ddGrid = [];
+    for (let x = 0; x <= 100; x += 10) {
+      const w = x / 100;
+      for (const other of ["AGG", "CASH"]) {
+        const target = other === "AGG" ? { VT: w, AGG: 1 - w } : (w ? { VT: w } : {});
+        const b = E.backtest(P, "2008-07-01", 5000000, { strategies: { m: { freq: "monthly", fn: () => Object.assign({}, target) } } }).m;
+        const st = E.stats(b, P);
+        const f = w || other === "AGG" ? E.bootstrap(P, Object.assign({}, opts, { weights: other === "AGG" ? { VT: w, AGG: 1 - w } : { VT: w }, paths: 1000, seed: 7, window: ["VT", "AGG"] })) : null;
+        ddGrid.push({ x, other, dd: st.maxDD, cagr: Math.pow(st.final / 5000000, 365.25 / ((Date.parse(P.dates[P.n - 1]) - Date.parse("2008-07-01")) / 864e5)) - 1,
+                      p50: f ? f.final.p50 : opts.initial + opts.monthly * opts.years * 12, p05: f ? f.final.p05 : opts.initial + opts.monthly * opts.years * 12 });
+      }
+    }
+  }
+  const budget = Number($("ddBudget").value);
+  const best = o => ddGrid.filter(r => r.other === o && -r.dd <= budget).sort((a, b) => b.x - a.x)[0];
+  const bA = best("AGG"), bC = best("CASH");
+  const yrs = opts.years;
+  $("ddAnswer").innerHTML = `能忍受 <b>${(budget * 100).toFixed(0)}%</b> 的下跌：` +
+    (bA ? `全球股 + 美国债券最多放 <b>${bA.x}%</b> 股票（历史最大回撤 ${pct(bA.dd, 0)}）` : "全球股 + 美国债券的任何比例都超过这个跌幅（美国债券本身按日元也会跌）") + "；" +
+    (bC ? `全球股 + 日元现金最多放 <b>${bC.x}%</b> 股票（历史最大回撤 ${pct(bC.dd, 0)}）。` : "全球股 + 日元现金也做不到。") +
+    `<br>你的目标配置约 80% 是股票（全球股 55 + 个股 20 + 日本股 5）。<b>注意：</b>按日元算，美国债券也不是"安全资产"，2008～2011 年日元升值时它也跌了 20%。如果要的是"跌的时候能稳住"，日元现金或日元债券更直接，代价是没有日元贬值带来的收益。`;
+  const rows = [];
+  for (let x = 0; x <= 100; x += 10) {
+    const a = ddGrid.find(r => r.x === x && r.other === "AGG"), c = ddGrid.find(r => r.x === x && r.other === "CASH");
+    const mark = r => (-r.dd <= budget ? "" : ' style="color:var(--muted)"');
+    rows.push(`<tr><td class="num">${x}%</td><td class="num"${mark(a)}>${pct(a.dd, 0)}</td><td class="num"${mark(a)}>${pct(a.cagr, 1)}</td><td class="num"${mark(a)}>${man(a.p50)}</td><td class="num"${mark(a)}>${man(a.p05)}</td><td class="num"${mark(c)}>${pct(c.dd, 0)}</td><td class="num"${mark(c)}>${pct(c.cagr, 1)}</td><td class="num"${mark(c)}>${man(c.p50)}</td></tr>`);
+  }
+  $("ddTable").innerHTML = `<thead><tr><th rowspan="2">全球股</th><th colspan="4">另一半 = 美国债券（AGG）</th><th colspan="3">另一半 = 日元现金（利息 0）</th></tr><tr><th>历史最大回撤</th><th>历史年化</th><th>${yrs} 年中位数</th><th>${yrs} 年最差 5%</th><th>历史最大回撤</th><th>历史年化</th><th>${yrs} 年中位数</th></tr></thead><tbody>${rows.join("")}</tbody>` +
+    `<caption style="caption-side:bottom;text-align:left" class="note">灰色 = 超过你选的回撤。历史部分：2008-07 起一次性 500 万、每月调回；${yrs} 年部分：用上面的起步和每月投入、同样的保守折扣，1000 条路径。日元现金按利息 0 计算（现在的存款利息很低，长期会有一点差别）。</caption>`;
+}
+
 function fan(r, opts) {
   const W = 900, H = 320, L = 78, R = 16, T = 12, B = 30;
   const n = r.bands.length, hi = Math.max(...r.bands.map(b => b[4])) * 1.05;

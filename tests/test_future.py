@@ -64,3 +64,10 @@ def test_same_seed_same_paths(tmp_path):
     a = _run(f, seed=3)
     b = _run(f, seed=3)
     assert a == b
+
+
+def test_haircut_applies_only_to_the_invested_part(tmp_path):
+    f = _data(tmp_path, 0.0)
+    r = _run(f, weights={"1348.T": 0.5}, haircut=0.12)
+    monthly_cut = (1.12 ** (1 / 12) - 1) * 0.5
+    assert r["final"]["p50"] == pytest.approx(1_000_000 * (1 - monthly_cut) ** 120, rel=1e-9)

@@ -413,7 +413,10 @@
     const n = months.length;
     const port = new Array(n).fill(0);
     for (let k = 0; k < n; k++) for (const s of syms) port[k] += opts.weights[s] * r[s][k];
-    const hc = Math.pow(1 + (opts.haircut || 0), 1 / 12) - 1;
+    // 割引は投資している部分だけに掛ける（現金は元々リターン 0 なので割り引かない）
+    let invested = 0;
+    for (const s of syms) invested += opts.weights[s];
+    const hc = (Math.pow(1 + (opts.haircut || 0), 1 / 12) - 1) * invested;
     const T = Math.round(opts.years * 12), N = opts.paths || 2000, B = opts.block || 12;
     const rnd = mulberry32(opts.seed || 1);
     const values = Array.from({ length: T + 1 }, () => new Float64Array(N));
