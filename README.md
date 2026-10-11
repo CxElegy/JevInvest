@@ -96,7 +96,7 @@ reports/latest.md を読んで分析して
 - 策略排行榜: 17 戦略の成績（NISA/課税、一括/積立、開始年ずらし、前半後半、パラメータ感度）。
   `python tools/strategy_lab.py` と `python tools/strategy_sensitivity.py` で作り直す
 - 未来模拟: 実データの月次リターンを 12 か月ブロックで復元抽出した 2000 経路で、積立の将来の幅を見る
-- 实盘进度: ペーパートレード 18 口座（`python tools/papertrade.py run`、判断材料は `brief`）
+- 实盘进度: ペーパートレード 19 口座（`python tools/papertrade.py run`、判断材料は `brief`）
 エンジン（`web/simengine.js`）は `src/sim.py` と同じ数字になることを `tests/test_sim_parity.py` で確かめている。
 
 ### Claude Code から操作する（PC が無くてもよい）
