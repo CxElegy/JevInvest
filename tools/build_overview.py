@@ -56,7 +56,10 @@ def build_simulator(out: Path) -> None:
     if lab:
         for v in lab["strategies"].values():
             v.pop("nav", None)          # ページでは使わない（容量を抑える）
-    html = html.replace("/*__ENGINE__*/", engine).replace(MARK, _blob({"sim": sim, "live": pt.get("live"), "lab": lab}))
+    sens_path = ROOT / "web" / "strategy_sensitivity.json"
+    sens = json.loads(sens_path.read_text(encoding="utf-8")) if sens_path.exists() else None
+    html = html.replace("/*__ENGINE__*/", engine).replace(
+        MARK, _blob({"sim": sim, "live": pt.get("live"), "lab": lab, "sens": sens}))
     out.write_text(html, encoding="utf-8")
     print(f"→ {out}（{out.stat().st_size / 1024:.0f} KB）")
 

@@ -243,6 +243,11 @@ svg.chart { display: block; width: 100%; height: auto; }
       <div class="scroll"><table class="data" id="bOosTable"></table></div>
     </div>
     <div class="panel">
+      <h3 style="margin-top:0">参数敏感性：只改一个数字，结果差多少</h3>
+      <p id="sSummary"></p>
+      <div class="daycards" id="sFamilies" style="grid-template-columns:repeat(auto-fit,minmax(330px,1fr))"></div>
+    </div>
+    <div class="panel">
       <h3 style="margin-top:0">每个策略是什么</h3>
       <div class="daycards" id="bCards"></div>
     </div>
@@ -692,6 +697,7 @@ function renderBoard() {
     ` ③ 最大回撤小于 20% 的是：${lowDD.join("、")}，换来的是明显更低的回报。<br><b>对你的意思：</b>NISA 里的核心部分，"不动"已经是很难打败的选项。真正要选的是能不能忍住 -34% 的下跌；忍不住的话，就加债券、黄金或日元资产降低波动，而不是去择时。`;
   $("bView").onclick = e => { const b = e.target.closest("button"); if (!b) return; bView = b.dataset.v; bSort = { key: null, dir: -1 }; renderBoard(); };
   scatter(S);
+  renderSensitivity();
   // 滚动
   const yrs = Object.keys(base.rolling);
   const rk = keys.slice().sort((a, b) => (S[b].rolling_wins ?? 99) - (S[a].rolling_wins ?? 99) || S[b].dca_xirr - S[a].dca_xirr);
@@ -715,6 +721,20 @@ function renderBoard() {
     if (!checked.has(k)) { const others = [...checked].filter(x => x !== "allcountry"); if (others.length >= MAX_PICK) { checked.delete(others[0]); delete slotOf[others[0]]; } checked.add(k); colorOf(k); }
     renderChecks(); $("start").value = "2009-07-01"; $("len").value = "all"; run(); showTab("replay"); window.scrollTo(0, 0); };
 }
+function renderSensitivity() {
+  const X = DATA.sens;
+  if (!X) { $("sSummary").textContent = "敏感性数据没有嵌入。"; return; }
+  const fams = Object.values(X.families);
+  const spreads = fams.map(f => f.spread);
+  $("sSummary").innerHTML = `择时类策略都有一个"参数"：用多少天的均线、比较几个月的涨幅……文献里通常写一个看起来最好的值。这里把每个参数在合理范围内换一遍：全期间年化的差距在 <b>${pct(Math.min(...spreads), 1).replace("+", "")}～${pct(Math.max(...spreads), 1).replace("+", "")}</b> 之间。` +
+    `再模拟一个认真做研究的人：<b>只看前半段（${X.start}～2017）挑出最好的参数，后半段照用</b>，结果在后半段排名为 ${fams.map(f => `${f.label} 第 ${f.its_rank_in_second}/${f.n}`).join("、")}。` +
+    `${fams.length} 个里，前半段的最优值到后半段仍排前 2 的有 ${fams.filter(f => f.its_rank_in_second <= 2).length} 个，其余掉到了中游。参数稍微一变结果就差几个百分点，而事先挑不出哪个会继续好。全球股一只同期：全期间 ${pct(X.base.full, 1)}，前半 ${pct(X.base.first, 1)}，后半 ${pct(X.base.second, 1)}。`;
+  $("sFamilies").innerHTML = fams.map(f => `<div class="dc"><div class="h"><span>${f.label}</span><span class="note">${f.unit}</span></div>
+    <div class="scroll"><table class="data" style="margin-top:6px"><thead><tr><th>N</th><th>全期间</th><th>前半</th><th>后半</th><th>最大回撤</th></tr></thead><tbody>` +
+    f.rows.map(r => `<tr${r.param === f.default ? ' style="background:var(--accent-soft)"' : ""}><td class="num">${r.param}${r.param === f.best_in_first ? " ★" : ""}</td><td class="num ${cls(r.cagr - X.base.full)}">${pct(r.cagr, 1)}</td><td class="num">${pct(r.first, 1)}</td><td class="num">${pct(r.second, 1)}</td><td class="num">${pct(r.max_dd, 0)}</td></tr>`).join("") +
+    `</tbody></table></div><div class="note" style="margin-top:4px">底色 = 排行榜里用的值；★ = 前半段最好的值。全期间绿色 = 赢过全球股一只。</div></div>`).join("");
+}
+
 function scatter(S) {
   const W = 900, H = 420, L = 60, R = 170, T = 16, B = 40;
   const keys = Object.keys(S);
