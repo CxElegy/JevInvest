@@ -95,8 +95,8 @@ reports/latest.md を読んで分析して
 
 - 回放実験: 実データで任意の期間・本金・積立・戦略（17 本から最大 5 本 + 自分の配分）を回し、毎日の持仓と約定を見る
 - 你来操盘: 日付と価格水準を隠した期間で自分で売買し、「何もしない」と比べる
-- 策略排行榜: 17 戦略の成績（NISA/課税、一括/積立、開始年ずらし、前半後半、パラメータ感度、再バランスの方法）。
-  `python tools/strategy_lab.py` `python tools/strategy_sensitivity.py` `python tools/rebalance_lab.py` で作り直す
+- 策略排行榜: 17 戦略の成績（NISA/課税、一括/積立、開始年ずらし、前半後半、パラメータ感度、再バランスの方法、債券の為替ヘッジ）。
+  `python tools/strategy_lab.py` `python tools/strategy_sensitivity.py` `python tools/rebalance_lab.py` `python tools/hedge_lab.py` で作り直す
 - 未来模拟: 実データの月次リターンを 12 か月ブロックで復元抽出した 2000 経路で、積立の将来の幅を見る
 - 实盘进度: ペーパートレード 19 口座（`python tools/papertrade.py run`、判断材料は `brief`）
 エンジン（`web/simengine.js`）は `src/sim.py` と同じ数字になることを `tests/test_sim_parity.py` で確かめている。
