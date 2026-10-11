@@ -323,6 +323,54 @@ def _write_derived(path: Path, h, lots) -> None:
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def cmd_check_trade(args) -> None:
+    """売買の前の点検。やめる理由を先に全部出す。発注はしない。"""
+    import yaml
+
+    from .analytics import analyze
+    from .compliance import load as load_compliance
+    from .marketdata import MarketData
+    from .pretrade import MARK, Intent, run_checks, verdict
+
+    h = _load(args.holdings)
+    cfg = yaml.safe_load(args.holdings.read_text(encoding="utf-8")) or {}
+    reg = load_compliance(args.compliance)
+
+    md = MarketData()
+    try:
+        a = analyze(h, md, with_risk=False)
+    finally:
+        md.close()
+
+    if args.amount is None and args.pct is None:
+        raise SystemExit("--amount（金額）か --pct（全体に対する %）のどちらかを指定してください")
+    amount = args.amount if args.amount is not None else a.total_value_base * args.pct / 100
+
+    held = [p for p in h.positions if p.symbol == args.symbol]
+    asset_class = args.asset_class or (held[0].asset_class if held else None)
+    if not asset_class:
+        raise SystemExit(f"{args.symbol} は台帳に無いので --asset-class を指定してください")
+    account = args.account or (held[0].account if held else None)
+    if not account:
+        raise SystemExit("--account を指定してください")
+
+    tx = []
+    if args.transactions.exists():
+        tx = (yaml.safe_load(args.transactions.read_text(encoding="utf-8")) or {}).get("transactions") or []
+
+    intent = Intent(args.side, args.symbol, float(amount), asset_class, account)
+    checks = run_checks(intent, a, h, cfg, reg, tx, ROOT / "config" / "trade_intents.yaml")
+
+    print(f"点検: {args.side} {args.symbol}（{asset_class}・{account}・"
+          + (f"全体の {args.pct:g}%" if args.pct is not None else "指定額") + "）")
+    print()
+    for c in checks:
+        print(f"  {MARK[c.level]:<8} {c.title}: {c.detail}")
+    print()
+    print(f"判定: {verdict(checks)}")
+    print("（このツールは発注しない。independence の判定もしない）")
+
+
 def cmd_import_csv(args) -> None:
     """証券会社の取引履歴 CSV を transactions.yaml の書式に変換する。
 
@@ -547,6 +595,15 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--write-derived", action="store_true",
                    help="導出した保有を config/holdings.derived.yaml に書き出す")
     p.set_defaults(func=cmd_transactions)
+
+    p = sub.add_parser("check-trade", help="売買の前に、やめる理由がないか点検する")
+    p.add_argument("side", choices=["buy", "sell"])
+    p.add_argument("symbol")
+    p.add_argument("--amount", type=float, help="金額（基準通貨）")
+    p.add_argument("--pct", type=float, help="全体の評価額に対する %（金額を出したくないとき）")
+    p.add_argument("--asset-class", help="資産クラス（台帳にある銘柄なら省略可）")
+    p.add_argument("--account", help="口座名（台帳にある銘柄なら省略可）")
+    p.set_defaults(func=cmd_check_trade)
 
     p = sub.add_parser("import-csv", help="証券会社の取引履歴 CSV を取り込む")
     p.add_argument("files", type=Path, nargs="+", help="CSV ファイル（複数可）")

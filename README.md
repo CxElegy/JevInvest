@@ -79,6 +79,8 @@ reports/latest.md を読んで分析して
 | `plan` | 毎月の積立を目標配分・NISA 枠・独立性のゲートに割り振る |
 | `compliance` | 独立性の確認状況を一覧し、次にやることを出す |
 | `transactions` | 取引履歴から保有（総平均法）・実現損益・XIRR を出す |
+| `check-trade` | 売買の前の点検（`--pct` で金額を出さずに使える） |
+| `import-csv` | 証券会社の取引履歴 CSV（SBI・楽天）を取り込む |
 | `dashboard` | 単一ファイルの HTML ダッシュボード（`reports/dashboard.html`） |
 
 ### Claude Code から操作する（PC が無くてもよい）
@@ -90,6 +92,8 @@ Claude Code（ブラウザ・タブレット・スマホのクラウドセッシ
 |---|---|
 | `/review` | 台帳を検証してレポートを作り、判断まで返す |
 | `/add-trade` | 「トヨタを 100 株 2800 円で買った」のような文から取引を記録し、台帳に反映する |
+| `/before-trade` | 売買の前に independence・配分・上限・NISA 枠・税・冷却期間（24 時間）を点検する |
+| `/independence-mail` | Independence への照会・事前承認申請のメール下書きを作る（送信しない） |
 | `/import-csv` | 証券会社（SBI・楽天）の取引履歴 CSV をまとめて取り込み、台帳に反映する |
 | `/plan` | 積立の割り振りと NISA 枠の消化を説明する |
 | `/compliance` | 独立性の確認状況を整理し、報告された結果だけを記録する |

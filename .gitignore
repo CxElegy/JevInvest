@@ -5,6 +5,7 @@ config/transactions.yaml
 config/holdings.derived.yaml
 config/transactions.imported.yaml
 config/import_map.yaml
+config/trade_intents.yaml
 .env
 
 # 生成物・キャッシュ
