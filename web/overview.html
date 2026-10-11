@@ -189,6 +189,8 @@ table.data td.num { font-family: var(--f-mono); }
       <tr><td><span class="pill new">新</span></td><td>危机特训</td><td><a href="https://claude.ai/artifact/4UHKcCEXmkn67ocnwvLCF6">模拟器「你来操盘」</a></td><td>在 2008、2011、2020、2022、2024 年的真实行情里一周一周操作，体验自己能不能拿得住。</td></tr>
       <tr><td><span class="pill new">新</span></td><td>恐慌卖出（行为错误）</td><td><a href="https://claude.ai/artifact/4UHKcCEXmkn67ocnwvLCF6">模拟器</a></td><td>跌 30% 就卖、回到高点再买：从 2008 年起只剩"不动"的一半左右。用数字看清最常见的错误。</td></tr>
       <tr><td><span class="pill new">新</span></td><td>策略排行榜（18 个）</td><td><a href="https://claude.ai/artifact/4UHKcCEXmkn67ocnwvLCF6">模拟器</a></td><td>60/40、永久组合、全天候、风险平价、动量、波动率目标、Sell in May 等，都用同一套规则和同一份真实数据比较，也能放到课税账户里比较。</td></tr>
+      <tr><td><span class="pill new">新</span></td><td>再平衡怎么做</td><td><a href="https://claude.ai/artifact/4UHKcCEXmkn67ocnwvLCF6">模拟器「策略排行榜」</a></td><td>同一个配置，只改调回目标的方法。定投时"平时不卖、每月的钱补低的那部分，偏离 5 个点才卖"在 16 种组合里全部不输给"每月卖回"，NISA 里也是（少交易 = 少成本），课税账户还能少交税。</td></tr>
+      <tr><td><span class="pill new">新</span></td><td>计划体检（命令行）</td><td><code>checkup</code></td><td>和模拟器的体检一样，但直接读你本地台账里的目标比例和每月金额，不用把比例告诉任何人。</td></tr>
       <tr><td><span class="pill new">新</span></td><td>未来模拟</td><td><a href="https://claude.ai/artifact/4UHKcCEXmkn67ocnwvLCF6">模拟器</a></td><td>用过去的真实月度回报随机拼出 2000 条未来路径：你的计划 20 年后的范围、亏本概率、途中最大回撤。</td></tr>
       <tr><td><span class="pill new">新</span></td><td>节税计算</td><td><code>/taxplan</code></td><td>算 iDeCo 能省多少税、ふるさと納税的上限。iDeCo 上限 12 月起变成 2.7 倍，有截止时间。</td></tr>
       <tr><td><span class="pill new">新</span></td><td>压力测试</td><td><code>stress</code></td><td>把 2008、2011、2020、2022、2024 年的真实危机套到你的配置上，并拆出汇率造成的部分。你 90% 是美元资产，日元升值是实实在在的风险。</td></tr>
@@ -436,6 +438,7 @@ table.data td.num { font-family: var(--f-mono); }
     <div><code>python tools/papertrade.py run</code><span>手动推进模拟盘</span></div>
     <div><code>python tools/papertrade.py backtest</code><span>重新跑回测</span></div>
     <div><code>python -m src.cli stress</code><span>历史危机套到你的持仓上</span></div>
+    <div><code>python -m src.cli checkup</code><span>目标配置体检（回撤、外币比例、NISA 几年用满）</span></div>
     <div><code>/taxplan</code><span>iDeCo 省税额和ふるさと納税上限（在本地输入收入）</span></div>
   </div>
   <p class="note blue">分析和决策辅助到此为止，不会实际下单。是否买卖，以 DESC 和 Independence &amp; Conflicts Network 的结论为准，由你自己决定。</p>

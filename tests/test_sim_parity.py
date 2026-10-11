@@ -91,3 +91,27 @@ def test_real_data_file_matches_python_if_present():
     for k, r in py.items():
         assert js[k]["nav"][-1][1] == pytest.approx(float(r.nav.iloc[-1]), rel=1e-9)
         assert len(js[k]["trades"]) == r.trades
+
+
+@pytest.mark.parametrize("monthly", [0, 200_000])
+def test_policy_parity(tmp_path, monthly):
+    """再バランスの方法（毎月・年 1 回・ずれ 5 ポイント・買い足すだけ）でも両エンジンが一致する。"""
+    data = _payload(seed=3)
+    f = tmp_path / "d.json"
+    f.write_text(json.dumps(data), encoding="utf-8")
+    start = data["dates"][300]
+    js = json.loads(subprocess.run(
+        ["node", str(ROOT / "tests" / "sim_parity_runner.js"), str(f), start, "5000000", str(monthly), "1", "policies"],
+        capture_output=True, text=True, check=True).stdout)
+    mix = {"SPY": 0.5, "1348.T": 0.1, "AGG": 0.3, "GLD": 0.1}
+    strategies = {k: (lambda h, d=None: dict(mix), k) for k in ("once", "monthly", "yearly", "band", "cashflow")}
+    py = backtest(_python_prices(data), pd.Timestamp(start), 5_000_000, monthly=monthly,
+                  strategies=strategies, taxable=True)
+    for k, r in py.items():
+        np.testing.assert_allclose([v for _, v in js[k]["nav"]], r.nav.values, rtol=0, atol=0.006)
+        assert len(js[k]["trades"]) == r.trades, k
+        assert js[k]["tax"] == pytest.approx(r.tax_paid, rel=1e-9, abs=1e-6)
+    sells = lambda k: sum(1 for t in js[k]["trades"] if t[2] == "sell")  # noqa: E731
+    if monthly:
+        assert sells("cashflow") == 0                    # 買い足すだけの方法は売らない
+        assert sells("monthly") > sells("band") >= 0

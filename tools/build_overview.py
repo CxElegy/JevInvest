@@ -71,8 +71,10 @@ def build_simulator(out: Path) -> None:
             v.pop("nav", None)          # ページでは使わない（容量を抑える）
     sens_path = ROOT / "web" / "strategy_sensitivity.json"
     sens = json.loads(sens_path.read_text(encoding="utf-8")) if sens_path.exists() else None
+    reb_path = ROOT / "web" / "rebalance_lab.json"
+    reb = json.loads(reb_path.read_text(encoding="utf-8")) if reb_path.exists() else None
     html = html.replace("/*__ENGINE__*/", engine).replace(
-        MARK, _blob({"sim": sim, "live": pt.get("live"), "lab": lab, "sens": sens, "fx": fx_effect(sim)}))
+        MARK, _blob({"sim": sim, "live": pt.get("live"), "lab": lab, "sens": sens, "reb": reb, "fx": fx_effect(sim)}))
     out.write_text(html, encoding="utf-8")
     print(f"→ {out}（{out.stat().st_size / 1024:.0f} KB）")
 

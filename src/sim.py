@@ -23,6 +23,8 @@ import pandas as pd
 FX_SYMBOL = "USDJPY=X"
 LOT: dict[str, int] = {}   # 東証 ETF の単元（1348.T は 1 口）
 TAX_RATE = 0.20315
+BUY_MARGIN = 1.005          # 買うだけの調整で、手数料・スプレッド・翌日の値動きに残す余裕
+DRIFT_BAND = 0.05           # freq="band": どれかが目標から 5 ポイント以上ずれたら売って戻す
 
 # 日本株は 1348.T（MAXIS トピックス上場投信）。1306.T は Yahoo の過去データに
 # 未調整の分割（2015-01 に -90% のまま戻らない）があり、バックテストが壊れるため使わない。
@@ -156,11 +158,16 @@ class Book:
     # ---- 判断 → 注文
 
     def decide(self, prices: Prices, day: pd.Timestamp, target: dict[str, float],
-               band: float = 0.005, reason: str = "") -> None:
-        """目標ウェイトに寄せる注文を作る。約定は次の営業日の終値。"""
+               band: float = 0.005, reason: str = "", buy_only: bool = False) -> None:
+        """目標ウェイトに寄せる注文を作る。約定は次の営業日の終値。
+
+        buy_only: 売らずに、足りない銘柄を手元の現金の範囲で買い足すだけ（積立で寄せる）。
+        現金が足りなければ、各銘柄の不足額に比例して減らす（記号順に先着で使い切らない）。
+        """
         nav = self.value(prices, day)
         self.pending = []
         orders = []
+        pxs: dict[str, float] = {}
         for s in sorted(set(target) | set(self.qty)):
             if s == "CASH":
                 continue
@@ -178,9 +185,19 @@ class Book:
             # 小さすぎる調整は売買コストのほうが大きいので見送る。全部売るときは除く
             if want != 0 and abs(diff) * px < band * nav:
                 continue
+            pxs[s] = px
             orders.append({"symbol": s, "side": "buy" if diff > 0 else "sell",
                            "qty": abs(diff), "decided": day.date().isoformat(),
                            "reason": reason})
+        if buy_only:
+            orders = [o for o in orders if o["side"] == "buy"]
+            need = sum(o["qty"] * pxs[o["symbol"]] for o in orders) * BUY_MARGIN
+            if need > self.cash:
+                f = max(self.cash, 0.0) / need
+                for o in orders:
+                    lot = lot_of(o["symbol"])
+                    o["qty"] = math.floor(o["qty"] * f / lot) * lot
+                orders = [o for o in orders if o["qty"] > 0]
         # 売りを先に置く（同じ日に約定するとき、売った代金で買えるように）
         self.pending = sorted(orders, key=lambda o: o["side"] != "sell")
         self.last_decision = day.date().isoformat()
@@ -549,9 +566,13 @@ def is_rebalance_day(day: pd.Timestamp, prev_day: pd.Timestamp | None) -> bool:
 
 def is_due(freq: str, day: pd.Timestamp, prev_day: pd.Timestamp | None, decided: bool,
            contributing: bool = False) -> bool:
-    """判断する日か。once は最初だけ（積立中は毎月）、monthly は月初、yearly は年初（積立中は毎月）。"""
+    """判断する日か。once は最初だけ（積立中は毎月）、monthly は月初、yearly は年初（積立中は毎月）。
+
+    cashflow は once と同じ日に判断するが、売らずに買い足すだけ。band は毎月見て、
+    ずれが DRIFT_BAND 未満なら買い足すだけ、超えたら売って戻す。
+    """
     new_month = is_rebalance_day(day, prev_day)
-    if freq == "once":
+    if freq in ("once", "cashflow"):
         return new_month if contributing else not decided
     if freq == "yearly":
         return new_month if contributing else (prev_day is None or day.year != prev_day.year)
@@ -599,11 +620,43 @@ class BacktestResult:
         }
 
 
+def drift(book: Book, prices: Prices, day: pd.Timestamp, target: dict[str, float]) -> float:
+    """目標ウェイトからの最大のずれ（現金は除く。価格の無い銘柄は見ない）。"""
+    nav = book.value(prices, day)
+    if nav <= 0:
+        return 0.0
+    worst = 0.0
+    for s in sorted(set(target) | set(book.qty)):
+        if s == "CASH":
+            continue
+        px = prices.jpy(s, day)
+        if px is None:
+            continue
+        worst = max(worst, abs(book.qty.get(s, 0.0) * px / nav - target.get(s, 0.0)))
+    return worst
+
+
+def buy_only_now(freq: str, book: Book, prices: Prices, day: pd.Timestamp,
+                 prev_day: pd.Timestamp | None, target: dict[str, float]) -> bool:
+    """この判断を「買い足すだけ」にするか。"""
+    if freq == "cashflow":
+        return True
+    if freq == "yearly":
+        # 年 1 回の戦略は、年の途中の積立月には買い増しだけ（売って戻すのは年初）
+        return prev_day is not None and day.year == prev_day.year
+    if freq == "band":
+        return drift(book, prices, day, target) < DRIFT_BAND
+    return False
+
+
 def backtest(prices: Prices, start: pd.Timestamp, capital: float,
              strategies: dict | None = None, costs: Costs = Costs(),
              end: pd.Timestamp | None = None,
-             monthly: float = 0.0, taxable: bool = False) -> dict[str, BacktestResult]:
+             monthly: float = 0.0, taxable: bool = False,
+             on_day=None) -> dict[str, BacktestResult]:
     """monthly > 0 なら、毎月最初の営業日にその額を現金で足してから判断する（積立）。
+
+    on_day(name, book, day) は毎日の処理の後に呼ぶ（ウェイトの推移を見る実験用）。
 
     積立のときは「買って持つだけ」の戦略も毎月判断する（新しい現金を目標どおりに買う）。
     """
@@ -623,10 +676,10 @@ def backtest(prices: Prices, start: pd.Timestamp, capital: float,
             if is_due(freq, day, prev, b.last_decision is not None, bool(monthly)):
                 target = call_strategy(fn, prices.upto(day), day, start)
                 if target is not None:          # None は「今のまま」（押し目待ちなど）
-                    b.decide(prices, day, target, reason=name)
-                    if freq == "yearly" and prev is not None and day.year == prev.year:
-                        # 年 1 回の戦略は、年の途中の積立月には買い増しだけ（売って戻すのは年初）
-                        b.pending = [o for o in b.pending if o["side"] == "buy"]
+                    b.decide(prices, day, target, reason=name,
+                             buy_only=buy_only_now(freq, b, prices, day, prev, target))
+            if on_day is not None:
+                on_day(name, b, day)
         prev = day
     out = {}
     for name, b in books.items():

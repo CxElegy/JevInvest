@@ -13,6 +13,7 @@
 
   const COSTS = { fee: 0.0010, slip: 0.0005, spread: 0.25 };
   const TAX_RATE = 0.20315;
+  const BUY_MARGIN = 1.005, DRIFT_BAND = 0.05;   // src/sim.py と同じ
   const isJpy = s => s.endsWith(".T");
   const lotOf = () => 1;
 
@@ -131,9 +132,11 @@
       out.CASH = this.cash / v;
       return out;
     }
-    decide(p, i, target, band = 0.005, reason = "") {
+    // buyOnly: 売らずに不足分を現金の範囲で買い足す（src/sim.py の buy_only と同じ）
+    decide(p, i, target, band = 0.005, reason = "", buyOnly = false) {
       const nav = this.value(p, i);
-      const orders = [];
+      let orders = [];
+      const pxs = {};
       const syms = [...new Set([...Object.keys(target), ...this.qty.keys()])].filter(s => s !== "CASH").sort();
       for (const s of syms) {
         const w = target[s] || 0;
@@ -145,7 +148,17 @@
         const diff = want - have;
         if (diff === 0) continue;
         if (want !== 0 && Math.abs(diff) * px < band * nav) continue;
+        pxs[s] = px;
         orders.push({ symbol: s, side: diff > 0 ? "buy" : "sell", qty: Math.abs(diff), decided: i, reason });
+      }
+      if (buyOnly) {
+        orders = orders.filter(o => o.side === "buy");
+        const need = orders.reduce((a, o) => a + o.qty * pxs[o.symbol], 0) * BUY_MARGIN;
+        if (need > this.cash) {
+          const f = Math.max(this.cash, 0) / need;
+          for (const o of orders) { const lot = lotOf(o.symbol); o.qty = Math.floor(o.qty * f / lot) * lot; }
+          orders = orders.filter(o => o.qty > 0);
+        }
       }
       // 売りを先に（安定ソート）
       this.pending = orders.filter(o => o.side === "sell").concat(orders.filter(o => o.side !== "sell"));
@@ -309,9 +322,29 @@
   // src/sim.py の is_due と同じ
   function isDue(freq, p, i, prev, decided, contributing) {
     const nm = newMonth(p, i, prev);
-    if (freq === "once") return contributing ? nm : !decided;
+    if (freq === "once" || freq === "cashflow") return contributing ? nm : !decided;
     if (freq === "yearly") return contributing ? nm : newYear(p, i, prev);
     return nm;
+  }
+
+  /** 目標からの最大のずれ（src/sim.py の drift と同じ） */
+  function drift(b, p, i, target) {
+    const nav = b.value(p, i);
+    if (nav <= 0) return 0;
+    let worst = 0;
+    const syms = [...new Set([...Object.keys(target), ...b.qty.keys()])].filter(s => s !== "CASH").sort();
+    for (const s of syms) {
+      const px = p.jpy(s, i);
+      if (px === null) continue;
+      worst = Math.max(worst, Math.abs((b.qty.get(s) || 0) * px / nav - (target[s] || 0)));
+    }
+    return worst;
+  }
+  function buyOnlyNow(freq, b, p, i, prev, target) {
+    if (freq === "cashflow") return true;
+    if (freq === "yearly") return prev !== null && p.dates[i].slice(0, 4) === p.dates[prev].slice(0, 4);
+    if (freq === "band") return drift(b, p, i, target) < DRIFT_BAND;
+    return false;
   }
 
   /** strategies: {name: {freq, fn(p, i) -> weights}}。monthly > 0 で毎月初に入金（積立）。 */
@@ -332,10 +365,7 @@
         if (isDue(st.freq, p, i, prev, b.lastDecision !== null, !!monthly)) {
           const target = st.needsStart ? st.fn(p, i, i0) : st.fn(p, i);
           if (target !== null) {                                    // null は「今のまま」
-            b.decide(p, i, target, 0.005, k);
-            // 年 1 回の戦略は、年の途中の積立月には買い増しだけ（src/sim.py と同じ）
-            if (st.freq === "yearly" && prev !== null && p.dates[i].slice(0, 4) === p.dates[prev].slice(0, 4))
-              b.pending = b.pending.filter(o => o.side === "buy");
+            b.decide(p, i, target, 0.005, k, buyOnlyNow(st.freq, b, p, i, prev, target));
           }
         }
       }
@@ -503,7 +533,7 @@
     return { filledAt, over, used, firstYearOver: Math.max(0, initial + monthly * 11 - nisa.annual) };
   }
 
-  const api = { Prices, Book, bootstrap, nisaFill, monthlyReturns, mulberry32, STRATEGIES, MORE_STRATEGIES, ALL_STRATEGIES, TREND_ASSETS, COSTS, backtest, stats, xirr,
+  const api = { Prices, Book, drift, bootstrap, nisaFill, monthlyReturns, mulberry32, STRATEGIES, MORE_STRATEGIES, ALL_STRATEGIES, TREND_ASSETS, COSTS, backtest, stats, xirr,
                 windowReturns, vals, ret, aboveSma, vol, isDue };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.SimEngine = api;

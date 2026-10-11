@@ -212,3 +212,27 @@ def test_export_flags_unadjusted_split_like_jumps():
                pd.Series([120.0] * 4, index=idx))
     bad = suspicious_moves(p)
     assert len(bad) == 1 and bad[0].startswith("1306.T 2015-01-02")
+
+
+def test_buy_only_scales_every_order_to_cash_instead_of_first_come():
+    """買い足すだけのとき、現金が足りなければ全銘柄を同じ比率で減らす（記号順の先着で AGG だけ満額にしない）。"""
+    n = 3
+    p = Prices({"VT": _px(n, [100.0] * n), "AGG": _px(n, [100.0] * n)}, _px(n, [1.0] * n))
+    b = Book("t", cash=10_000)
+    b.qty = {"VT": 10.0}
+    b.cash = 9_000
+    d0 = p.calendar()[0]
+    b.decide(p, d0, {"VT": 0.5, "AGG": 0.5}, buy_only=True)
+    q = {o["symbol"]: o["qty"] for o in b.pending}
+    assert all(o["side"] == "buy" for o in b.pending)
+    # 不足は VT 40 株・AGG 50 株 = 9,000 円 × 1.005 > 9,000 → どちらも約 0.995 倍に
+    assert q == {"VT": 39, "AGG": 49}
+
+
+def test_buy_only_never_sells_overweight():
+    n = 3
+    p = Prices({"VT": _px(n, [100.0] * n), "AGG": _px(n, [100.0] * n)}, _px(n, [1.0] * n))
+    b = Book("t", cash=0)
+    b.qty = {"VT": 90.0, "AGG": 10.0}
+    b.decide(p, p.calendar()[0], {"VT": 0.5, "AGG": 0.5}, buy_only=True)
+    assert b.pending == []
