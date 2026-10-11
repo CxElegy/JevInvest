@@ -371,6 +371,80 @@ def cmd_check_trade(args) -> None:
     print("（このツールは発注しない。independence の判定もしない）")
 
 
+def cmd_scoreboard(args) -> None:
+    """遊び枠（個別株）の成績表。同じ日に同じ額を基準に入れていたら、と比べる。"""
+    from datetime import date
+
+    import yaml
+
+    from .analytics import analyze
+    from .marketdata import MarketData
+    from .scoreboard import shadow
+    from .transactions import load as load_tx
+
+    h = _load(args.holdings)
+    cfg = yaml.safe_load(args.holdings.read_text(encoding="utf-8")) or {}
+    classes = set(args.classes or cfg.get("requires_stock_clearance") or [])
+    if not classes:
+        raise SystemExit("対象の資産クラスがありません（--classes か requires_stock_clearance を設定）")
+
+    led = load_tx(args.transactions, base_currency=h.base_currency)
+    symbols = {t.symbol for t in led.transactions if t.type == "buy" and t.asset_class in classes}
+    if not symbols:
+        print(f"{', '.join(sorted(classes))} の買付が取引履歴にありません: {args.transactions}")
+        return
+
+    first = min(t.date for t in led.transactions if t.symbol in symbols)
+    years = (date.today() - first).days / 365.25 + 0.1
+    md = MarketData()
+    try:
+        a = analyze(h, md, with_risk=False)
+        fx_sym = f"USD{h.base_currency}=X"
+        hist = md.get_history([args.benchmark, fx_sym], years=years)
+        errors = list(md.fetch_errors)
+    finally:
+        md.close()
+
+    unpriced = [v.position.symbol for v in a.valuations
+                if v.position.symbol in symbols and not v.priced]
+    # 取引履歴では保有が残っているのに台帳に無い銘柄は、評価額 0 として数えてしまう
+    ledger_syms = {p.symbol for p in h.positions}
+    not_in_ledger = sorted({l.symbol for l in led.open_lots if l.symbol in symbols} - ledger_syms)
+    if unpriced or not_in_ledger or args.benchmark not in hist or fx_sym not in hist:
+        print("⚠ 比較できません（黙って 0 円扱いにしない）:")
+        if unpriced:
+            print(f"   評価不能: {', '.join(unpriced)}")
+        if not_in_ledger:
+            print(f"   取引履歴では保有中なのに台帳に無い: {', '.join(not_in_ledger)}"
+                  "（transactions --write-derived で台帳に反映する）")
+        for e in dict.fromkeys(errors):
+            print(f"   - {e}")
+        raise SystemExit(1)
+
+    import pandas as pd
+
+    fx = hist[fx_sym]["close"]
+    bench = hist[args.benchmark]["adj_close"]
+    if not args.benchmark.endswith(".T"):
+        bench = (bench * fx.reindex(bench.index, method="ffill")).dropna()
+    current = sum(v.market_value_base for v in a.valuations
+                  if v.position.symbol in symbols and v.priced)
+    r = shadow(led.transactions, symbols, pd.Series(bench), current, args.benchmark)
+
+    print(f"遊び枠の成績表（対象: {', '.join(sorted(classes))} / 基準: {args.benchmark}）")
+    print(f"  銘柄: {', '.join(sorted(symbols))}　期間: {first} 〜 今日")
+    print()
+    print(f"  自分の選択: 今の評価額 + 受取配当 = {r.actual_value:,.0f}")
+    print(f"  同じ日に同じ額を {args.benchmark} に入れていたら = {r.shadow_value:,.0f}")
+    print(f"  差: {r.edge:+,.0f}" + ("（基準に勝っている）" if r.edge > 0 else "（基準に負けている）"))
+    print(f"  入れた額 {r.invested:,.0f} / 売却で受け取った額 {r.withdrawn:,.0f}")
+    for w in r.warnings:
+        print(f"  ⚠ {w}")
+    print()
+    print("  ※ 数年分の差でも運の影響が大きい。docs/PLAYBOOK.md の遊び枠のルール"
+          "（3 年続けて負けたら本体に合流）と合わせて読む")
+
+
 def cmd_import_csv(args) -> None:
     """証券会社の取引履歴 CSV を transactions.yaml の書式に変換する。
 
@@ -604,6 +678,11 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--asset-class", help="資産クラス（台帳にある銘柄なら省略可）")
     p.add_argument("--account", help="口座名（台帳にある銘柄なら省略可）")
     p.set_defaults(func=cmd_check_trade)
+
+    p = sub.add_parser("scoreboard", help="遊び枠（個別株）を、同じ日に同じ額を基準に入れた場合と比べる")
+    p.add_argument("--classes", nargs="+", help="対象の資産クラス（既定: requires_stock_clearance）")
+    p.add_argument("--benchmark", default="VT", help="比べる基準（既定 VT）")
+    p.set_defaults(func=cmd_scoreboard)
 
     p = sub.add_parser("import-csv", help="証券会社の取引履歴 CSV を取り込む")
     p.add_argument("files", type=Path, nargs="+", help="CSV ファイル（複数可）")
