@@ -114,3 +114,18 @@ def test_cli_end_to_end_cp932_and_output_loads(tmp_path, capsys):
     assert led.warnings == []
     lot = led.lots[("7203.T", "特定口座")]
     assert lot.quantity == 60
+
+
+def test_overlapping_exports_are_counted_once():
+    t = {"date": "2026-09-02", "type": "buy", "symbol": "7203.T", "account": "特定口座",
+         "quantity": 100.0, "price": 2800.0}
+    u = dict(t, date="2026-09-03")
+    # 1 つ目の出力に同じ約定が 2 件（本当に 2 回約定）、2 つ目の出力にも同じ約定が 1 件
+    merged = importers.merge_files([[dict(t), dict(t)], [dict(t), dict(u)]])
+    assert len(merged) == 3
+
+
+def test_buyback_request_is_not_a_buy():
+    assert importers.side_of("買取請求") is None
+    assert importers.side_of("単元未満株買取") is None
+    assert importers.side_of("株式現物売") == "sell"

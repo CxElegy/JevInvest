@@ -85,3 +85,20 @@ def test_taxable_sell_estimates_tax_and_cooling_off(tmp_path, market_data):
     later = run_checks(Intent("sell", "7203.T", mv, "jp_equity", "特定口座"),
                        a, h, cfg, reg, tx, intents, NOW + timedelta(hours=25))
     assert _by_title(later)["冷却期間"].level == OK
+
+
+def test_nisa_lifetime_limit_and_oversell(tmp_path, market_data):
+    h, a, cfg, reg = _setup(tmp_path, market_data)
+    cfg["contributions"]["nisa"].update(used_tsumitate_this_year=0, used_growth_this_year=0,
+                                        used_lifetime=18_000_000, used_growth_lifetime=12_000_000)
+    checks = run_checks(Intent("buy", "7203.T", 10_000, "jp_equity", "NISA"),
+                        a, h, cfg, reg, [], tmp_path / "i.yaml", NOW)
+    t = _by_title(checks)
+    assert t["NISA の年間枠"].level == CAUTION and "残り枠 0" in t["NISA の年間枠"].detail
+
+    mv = next(v.market_value_base for v in a.valuations if v.position.symbol == "7203.T")
+    checks = run_checks(Intent("sell", "7203.T", mv * 3, "jp_equity", "特定口座"),
+                        a, h, cfg, reg, [], tmp_path / "i.yaml", NOW)
+    t = _by_title(checks)
+    assert t["保有"].level == STOP
+    assert "→ 0.0%" in t["目標配分"].detail       # 売却後は 0% で止める（マイナスにしない）

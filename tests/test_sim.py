@@ -114,3 +114,34 @@ def test_monthly_contributions_are_invested_and_tracked():
     assert r.nav.iloc[-1] == pytest.approx(2_000_000)
     assert r.trades >= 5                       # 積立のたびに買い足す
     assert abs(r.money_weighted()) < 1e-6      # 価格が動かなければ年率 0
+
+
+def test_settled_waits_until_every_symbol_has_the_bar(monkeypatch):
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
+    import papertrade as P
+    from src.sim import UNIVERSE
+
+    idx = pd.bdate_range("2026-09-01", "2026-10-09")
+    series = {s: pd.Series(100.0, index=idx if s.endswith(".T") else idx[:-1]) for s in UNIVERSE}
+    p = Prices(series, pd.Series(150.0, index=idx))
+    monkeypatch.setattr(P, "final_cutoff", lambda now=None: pd.Timestamp("2026-12-31"))
+    s = P.settled(p)
+    assert s.series["1348.T"].index[-1] == idx[-2]     # 米国の足が無い日は処理しない
+    # 終値が確定していない日も切る
+    monkeypatch.setattr(P, "final_cutoff", lambda now=None: idx[-5])
+    assert P.settled(p).fx.index[-1] == idx[-5]
+
+
+def test_final_cutoff_after_us_close():
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
+    import papertrade as P
+
+    # 東京 07:07（UTC 22:07）なら、その UTC 日付の米国終値は確定
+    assert P.final_cutoff(pd.Timestamp("2026-10-13 22:07")) == pd.Timestamp("2026-10-13")
+    assert P.final_cutoff(pd.Timestamp("2026-10-13 20:00")) == pd.Timestamp("2026-10-12")

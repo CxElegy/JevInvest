@@ -364,7 +364,10 @@ def cmd_check_trade(args) -> None:
     amount = args.amount if args.amount is not None else a.total_value_base * args.pct / 100
 
     held = [p for p in h.positions if p.symbol == args.symbol]
-    asset_class = args.asset_class or (held[0].asset_class if held else None)
+    if held and args.asset_class and args.asset_class != held[0].asset_class:
+        raise SystemExit(f"{args.symbol} は台帳で {held[0].asset_class} です。"
+                         f"--asset-class {args.asset_class} とは食い違うので、台帳の分類を直してから点検してください")
+    asset_class = held[0].asset_class if held else args.asset_class
     if not asset_class:
         raise SystemExit(f"{args.symbol} は台帳に無いので --asset-class を指定してください")
     account = args.account or (held[0].account if held else None)
@@ -447,6 +450,11 @@ def cmd_scoreboard(args) -> None:
     current = sum(v.market_value_base for v in a.valuations
                   if v.position.symbol in symbols and v.priced)
     r = shadow(led.transactions, symbols, pd.Series(bench), current, args.benchmark)
+    if not r.comparable:
+        print("⚠ 比較できません（片側だけ数えると自分に有利に偏るため）:")
+        for w in r.warnings:
+            print(f"   - {w}")
+        raise SystemExit(1)
 
     print(f"遊び枠の成績表（対象: {', '.join(sorted(classes))} / 基準: {args.benchmark}）")
     print(f"  銘柄: {', '.join(sorted(symbols))}　期間: {first} 〜 今日")
@@ -537,10 +545,10 @@ def cmd_import_csv(args) -> None:
 
     金額は画面に出さない（件数と銘柄だけ）。Claude Code に金額を渡さずに済むように。
     """
-    from .importers import convert, decode, drop_existing, dump, load_map
+    from .importers import convert, decode, drop_existing, dump, load_map, merge_files
 
     mapping = load_map(args.map)
-    collected: list[dict] = []
+    per_file: list[list[dict]] = []
     failed = False
     for f in args.files:
         print(f"── {f.name} ──")
@@ -560,8 +568,12 @@ def cmd_import_csv(args) -> None:
             print(f"  ⚠ {w}")
         if res.preset is None:
             failed = True
-        collected.extend(res.transactions)
+        per_file.append(res.transactions)
 
+    collected = merge_files(per_file)
+    overlap = sum(len(r) for r in per_file) - len(collected)
+    if overlap:
+        print(f"\n複数のファイルに重なっていた {overlap} 件は 1 回だけ数えました")
     if not collected:
         print("\n取り込める取引がありませんでした。")
         raise SystemExit(1 if failed else 0)

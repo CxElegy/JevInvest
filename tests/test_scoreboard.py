@@ -42,4 +42,25 @@ def test_trade_before_benchmark_history_is_excluded_with_warning():
     bench = _bench([100, 100], start="2026-02-02")
     tx = [Transaction(date(2026, 1, 5), "buy", "X", quantity=1, price=100)]
     r = shadow(tx, {"X"}, bench, current_value=100)
-    assert r.flows == [] and r.warnings
+    assert r.flows == [] and r.warnings and not r.comparable
+
+
+def test_truncated_sell_counts_only_what_the_ledger_applied(tmp_path):
+    from src.transactions import load as load_tx
+
+    p = tmp_path / "tx.yaml"
+    p.write_text("transactions:\n"
+                 "  - {date: 2026-01-05, type: buy, symbol: X, quantity: 10, price: 100}\n"
+                 "  - {date: 2026-01-06, type: sell, symbol: X, quantity: 30, price: 100}\n",
+                 encoding="utf-8")
+    led = load_tx(p)
+    r = shadow(led.transactions, {"X"}, _bench([100, 100]), current_value=0)
+    assert r.withdrawn == pytest.approx(1000)      # 30 株ではなく、台帳に反映した 10 株
+    assert r.edge == pytest.approx(0)
+
+
+def test_trade_without_benchmark_price_makes_result_not_comparable():
+    bench = _bench([100, 100], start="2026-02-02")
+    tx = [Transaction(date(2026, 1, 5), "buy", "X", quantity=1, price=100)]
+    r = shadow(tx, {"X"}, bench, current_value=100)
+    assert not r.comparable and r.invested == 0

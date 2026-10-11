@@ -47,16 +47,25 @@ if hasattr(sys.stdout, "reconfigure"):
 
 # ------------------------------------------------------------------ データ
 
-def fetch_bars(years: float):
-    """実際の日足を取る。取れなかった銘柄は警告して止める（黙って欠けたまま進めない）。"""
+def fetch_bars(years: float, fresh: bool = False):
+    """実際の日足を取る。取れなかった銘柄は警告して止める（黙って欠けたまま進めない）。
+
+    fresh=True はキャッシュを使わない。ライブでは、取引時間中に取った途中の足が
+    キャッシュに残っていると、それを終値として約定させてしまうため。
+    """
+    import tempfile
+
     from src.marketdata import MarketData
 
-    md = MarketData()
+    tmp = tempfile.TemporaryDirectory() if fresh else None
+    md = MarketData(Path(tmp.name) / "fresh.sqlite") if tmp else MarketData()
     try:
         hist = md.get_history(UNIVERSE + [FX_SYMBOL], years=years)
         errors = list(md.fetch_errors)
     finally:
         md.close()
+        if tmp:
+            tmp.cleanup()
     missing = [s for s in UNIVERSE + [FX_SYMBOL] if s not in hist or hist[s].empty]
     if missing:
         raise SystemExit(
@@ -77,8 +86,9 @@ def fetch_dividends(symbols: list[str]) -> dict[str, pd.Series]:
         try:
             d = yf.Ticker(s).dividends
         except Exception as e:  # noqa: BLE001
-            print(f"  ⚠ {s}: 分配金の履歴を取得できません（{type(e).__name__}）。分配金は計上されません")
-            continue
+            # 分配金を落としたまま日付だけ進めると、後から取り戻せない。だから止める
+            raise SystemExit(f"{s}: 分配金の履歴を取得できません（{type(e).__name__}: {e}）。"
+                             "日付を進めずに止めます。時間をおいて再実行してください")
         if d is None or d.empty:
             continue
         idx = pd.to_datetime(d.index)
@@ -88,12 +98,31 @@ def fetch_dividends(symbols: list[str]) -> dict[str, pd.Series]:
     return out
 
 
+def final_cutoff(now: pd.Timestamp | None = None) -> pd.Timestamp:
+    """終値が確定したとみなせる最後の日。米国の引けは UTC 20:00〜21:00 なので、
+    その日の UTC 21:30 を過ぎていれば確定（東証は UTC 06:30 に引けている）。"""
+    now = now if now is not None else pd.Timestamp(datetime.now(timezone.utc)).tz_localize(None)
+    return (now - pd.Timedelta(hours=21, minutes=30)).normalize()
+
+
 def live_prices(years: float = 1.7) -> Prices:
-    hist = fetch_bars(years)
+    """確定した足だけを残した価格。全銘柄と為替の足が揃った日までに切る。"""
+    hist = fetch_bars(years, fresh=True)
     close = {s: hist[s]["close"] for s in UNIVERSE}
     adj = {s: hist[s]["adj_close"] for s in UNIVERSE}
-    return Prices(close, hist[FX_SYMBOL]["close"], dividends=fetch_dividends(UNIVERSE),
-                  signals=adj)
+    return Prices(close, hist[FX_SYMBOL]["close"], dividends=fetch_dividends(UNIVERSE), signals=adj)
+
+
+def settled(prices: Prices) -> Prices:
+    """確定済みで、全銘柄と為替の足が揃った日までに切る。
+
+    どれかの足が遅れている日を処理すると、その銘柄は前日の値で評価・判断され、
+    本当の終値が後から使われなくなる。だから揃うまで待つ（休場なら 1 日遅れるだけ）。
+    """
+    last = prices.common_last(UNIVERSE)
+    if last is None:
+        raise SystemExit("価格の足が揃っていない銘柄があります。時間をおいて再実行してください")
+    return prices.truncate(min(final_cutoff(), last))
 
 
 # ------------------------------------------------------------------ 状態
@@ -135,8 +164,10 @@ def claude_decisions() -> list[dict]:
 def cmd_init(args) -> None:
     if STATE.exists() and not args.force:
         raise SystemExit("paper/state.json が既にあります（やり直すなら --force）")
-    prices = live_prices()
+    prices = settled(live_prices())
     d0 = pd.Timestamp(args.decide_on)
+    if d0 > prices.fx.index[-1]:
+        raise SystemExit(f"{d0.date()} の終値はまだ確定していません（確定済みは {prices.fx.index[-1].date()} まで）")
     books = {n: Book(name=n, cash=args.capital) for n in [*STRATEGIES, "claude"]}
     for name, (fn, _) in STRATEGIES.items():
         books[name].decide(prices, d0, fn(prices.upto(d0)), reason=name)
@@ -174,14 +205,13 @@ def _apply_claude(st: dict, prices: Prices, upto: pd.Timestamp | None) -> None:
 
 def cmd_run(args) -> None:
     st = load_state()
-    prices = live_prices()
+    prices = settled(live_prices())
     costs = Costs(**st["costs"])
     books: dict[str, Book] = st["books"]
     last = pd.Timestamp(min(b.last_day for b in books.values()))
-    # 終値が確定した日だけを処理する。米国の引けは UTC 20:00〜21:00 なので、
-    # その日の UTC 21:30 を過ぎていれば確定とみなす（東証は UTC 06:30 に引けている）。
-    now = pd.Timestamp(datetime.now(timezone.utc)).tz_localize(None)
-    days = [d for d in prices.calendar() if last < d and d + pd.Timedelta(hours=21, minutes=30) <= now]
+    # live_prices が確定済みで全銘柄が揃った日までに切ってある。
+    # 東証だけ・米国だけの休場日は、片方の足が無いまま進む（約定は次の足に持ち越す）
+    days = [d for d in prices.calendar() if last < d]
     if not days:
         print(f"新しい営業日がありません（最後に処理した日 {last.date()}）")
     for day in days:

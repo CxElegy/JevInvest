@@ -88,3 +88,18 @@ def test_cleared_candidate_not_yet_held_opens_its_class(tmp_path):
         " preclearance: pending, asset_class: bond}\n", encoding="utf-8")
     reg = load_c(c, today=date(2026, 10, 11))
     assert cleared_by_class(reg, []) == {"developed_equity": ["FUND-ALLCOUNTRY"]}
+
+
+def test_cleared_by_class_ignores_symbol_case(tmp_path):
+    from datetime import date
+
+    from src.compliance import cleared_by_class, load as load_c
+    from src.holdings import Position
+
+    c = tmp_path / "c.yaml"
+    c.write_text("securities:\n  - {symbol: FUND-eMAXIS, desc_result: clear, desc_checked: 2026-10-01,"
+                 " preclearance: not_required, asset_class: developed_equity}\n", encoding="utf-8")
+    reg = load_c(c, today=date(2026, 10, 11))
+    pos = Position(symbol="FUND-eMAXIS", name="", asset_class="developed_equity", account="NISA",
+                   quantity=1, cost_basis_per_unit=1, currency="JPY")
+    assert cleared_by_class(reg, [pos]) == {"developed_equity": ["FUND-eMAXIS"]}

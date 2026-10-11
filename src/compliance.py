@@ -155,13 +155,16 @@ def cleared_by_class(reg: ComplianceRegistry, positions) -> dict[str, list[str]]
     どのクラスにも積立を回せない。
     """
     out: dict[str, list[str]] = {}
+    seen: set[str] = set()      # 記録の銘柄コードは大文字で持つので、比べるときも大文字で
     for p in positions:
-        if not p.is_cash and reg.can_buy(p.symbol):
+        if not p.is_cash and reg.can_buy(p.symbol) and p.symbol.upper() not in seen:
             out.setdefault(p.asset_class, []).append(p.symbol)
+            seen.add(p.symbol.upper())
     for sym, rec in reg.records.items():
         cls = str((rec or {}).get("asset_class") or "").strip()
-        if cls and reg.can_buy(sym) and sym not in out.get(cls, []):
+        if cls and reg.can_buy(sym) and sym.upper() not in seen:
             out.setdefault(cls, []).append(sym)
+            seen.add(sym.upper())
     return out
 
 

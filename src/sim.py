@@ -65,6 +65,18 @@ class Prices:
         self.signals = ({s: v.dropna().sort_index() for s, v in signals.items()}
                         if signals else self.series)
 
+    def truncate(self, last: pd.Timestamp) -> "Prices":
+        """last より後の価格を捨てた写し。確定していない足で判断・約定しないために使う。"""
+        cut = lambda d: {k: v.loc[:last] for k, v in d.items()}  # noqa: E731
+        return Prices(cut(self.series), self.fx.loc[:last], cut(self.dividends), cut(self.signals))
+
+    def common_last(self, symbols: list[str]) -> pd.Timestamp | None:
+        """全銘柄と為替の足が揃っている最後の日（どれかが遅れていれば、その手前まで）。"""
+        lasts = [self.series[s].index[-1] for s in symbols if s in self.series and len(self.series[s])]
+        if len(lasts) < len(symbols) or not len(self.fx):
+            return None
+        return min(min(lasts), self.fx.index[-1])
+
     def calendar(self) -> list[pd.Timestamp]:
         days: set[pd.Timestamp] = set()
         for s in self.series.values():
@@ -233,7 +245,9 @@ class Book:
             if divs is None or not q or day not in divs.index:
                 continue
             per = float(divs.loc[day])
-            fx = 1.0 if is_jpy(s) else (prices.fx_at(day) or 0.0)
+            fx = 1.0 if is_jpy(s) else prices.fx_at(day)
+            if fx is None:
+                raise ValueError(f"{self.name}: {day.date()} の為替が無く、{s} の分配金を円にできません")
             tax = 0.0 if is_jpy(s) else costs.us_withholding
             amount = q * per * fx * (1 - tax)
             self.cash += amount

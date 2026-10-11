@@ -29,6 +29,7 @@ class ShadowResult:
     actual_value: float = 0.0        # 個別株の今の評価額 + 受け取った配当
     flows: list[dict] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    comparable: bool = True          # False なら差を出さない（片側だけの比較になるため）
 
     @property
     def edge(self) -> float:
@@ -52,24 +53,30 @@ def shadow(transactions: list, symbols: set[str], bench_jpy: pd.Series,
     for t in transactions:
         if t.symbol not in symbols:
             continue
-        if t.type == "buy":
-            cash = t.quantity * t.price * t.fx_rate + t.fee
-            sign = 1
-            r.invested += cash
-        elif t.type == "sell":
-            cash = t.quantity * t.price * t.fx_rate - t.fee
-            sign = -1
-            r.withdrawn += cash
-        elif t.type == "dividend":
+        if t.type == "dividend":
             r.dividends += t.amount * t.fx_rate
             continue
-        else:
+        if t.type not in ("buy", "sell"):
             continue
+        # 台帳で切り詰め・飛ばした売却は、その数量だけ数える（無かった売却代金で勝たせない）
+        qty = t.effective_quantity if t.type == "sell" else t.quantity
+        if qty <= 0:
+            continue
+        fee = t.fee * (qty / t.quantity) if t.quantity else t.fee
         px = _price_on(bench_jpy, t.date)
         if px is None:
-            r.warnings.append(f"{t.date}: {benchmark} の価格がその日以前に無いため、この取引を比較から外しました")
+            # 片側だけ数えると比較が自分に有利に偏る。比較そのものを出さない
+            r.warnings.append(f"{t.date}: {benchmark} の価格がその日以前に無いため比較できません")
+            r.comparable = False
             continue
-        r.shadow_units += sign * cash / px
+        if t.type == "buy":
+            cash = qty * t.price * t.fx_rate + fee
+            r.invested += cash
+            r.shadow_units += cash / px
+        else:
+            cash = qty * t.price * t.fx_rate - fee
+            r.withdrawn += cash
+            r.shadow_units -= cash / px
         r.flows.append({"date": t.date.isoformat(), "symbol": t.symbol, "side": t.type,
                         "jpy": round(cash), "bench_px": round(px, 2)})
 

@@ -205,7 +205,7 @@ def detect(rows: list[list[str]]) -> tuple[Preset, int, dict[str, int]] | None:
 def side_of(text: str) -> str | None:
     """取引の向き。買付・売付以外（信用・入出庫・再投資など）は None。"""
     s = norm(text)
-    if any(k in s for k in ("信用", "返済", "現渡", "現引", "入庫", "出庫", "分割", "再投資")):
+    if any(k in s for k in ("信用", "返済", "現渡", "現引", "入庫", "出庫", "分割", "再投資", "買取")):
         return None
     if "買" in s:
         return "buy"
@@ -388,6 +388,23 @@ def tx_key(t: dict) -> tuple:
         str(t.get("date")), str(t.get("type")), str(t.get("symbol")), str(t.get("account")),
         round(float(t.get("quantity", 0) or 0), 6), round(float(t.get("price", 0) or 0), 6),
     )
+
+
+def merge_files(per_file: list[list[dict]]) -> list[dict]:
+    """複数の CSV を合わせる。期間が重なった出力に同じ約定が入っていても二重にしない。
+
+    同じ約定（日付・売買・銘柄・口座・数量・単価）の件数は、ファイル間で足さずに最大を取る
+    （1 つの出力の中で同じ約定が 2 件なら、本当に 2 回約定したとみなす）。
+    """
+    best: dict[tuple, list[dict]] = {}
+    for rows in per_file:
+        groups: dict[tuple, list[dict]] = {}
+        for t in rows:
+            groups.setdefault(tx_key(t), []).append(t)
+        for k, g in groups.items():
+            if len(g) > len(best.get(k, [])):
+                best[k] = g
+    return [t for g in best.values() for t in g]
 
 
 def drop_existing(new: list[dict], existing_path: Path) -> tuple[list[dict], int]:

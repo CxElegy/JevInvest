@@ -91,6 +91,16 @@ def check_allocation(intent: Intent, a, h) -> list[Check]:
     sign = 1 if intent.side == "buy" else -1
     cls = intent.asset_class
     cur = _class_pct(a, cls)
+    if intent.side == "sell":
+        held = sum(v.market_value_base for v in a.valuations
+                   if v.priced and v.position.symbol == intent.symbol
+                   and v.position.account == intent.account)
+        if intent.amount > held * 1.001:
+            out.append(Check(STOP, "保有",
+                             f"売却額が {intent.account} の {intent.symbol} の評価額を超えています"
+                             f"（保有の {intent.amount / held * 100:.0f}%）" if held else
+                             f"{intent.account} に {intent.symbol} の評価済みの保有がありません"))
+            intent = Intent(intent.side, intent.symbol, held, intent.asset_class, intent.account)
     # 買付は現金から、売却は現金へ。合計額は変わらない
     after = (cur * total / 100 + sign * intent.amount) / total * 100
     tgt = h.target_allocation.get(cls)
@@ -145,14 +155,22 @@ def check_tax(intent: Intent, a, h, cfg: dict) -> list[Check]:
     pnl = sum(v.pnl_base for v in held)
 
     if acct_type == "nisa" and intent.side == "buy":
-        nisa = ((cfg.get("contributions") or {}).get("nisa") or {})
+        from .plan import _nisa_inputs
+
+        n = _nisa_inputs(cfg)
         elig = (cfg.get("nisa_eligibility") or {}).get(intent.asset_class, "both")
-        growth_left = float(nisa.get("growth_annual", 2_400_000)) - float(nisa.get("used_growth_this_year", 0))
-        tsumi_left = float(nisa.get("tsumitate_annual", 1_200_000)) - float(nisa.get("used_tsumitate_this_year", 0))
+        # 年間枠の残りと、生涯枠（全体 1,800 万・成長 1,200 万）の残りの小さいほう。
+        # 台帳に書いていなければ制度上の上限を使う（書いていない = 無制限ではない）
+        g_annual = n["g_annual"] or 2_400_000
+        t_annual = n["t_annual"] or 1_200_000
+        life_left = max((n["lifetime"] or 18_000_000) - n["used_lifetime"], 0)
+        g_life = max((n["growth_max"] or 12_000_000) - n["used_growth_lifetime"], 0)
+        growth_left = max(min(g_annual - n["g_used"], g_life, life_left), 0)
+        tsumi_left = max(min(t_annual - n["t_used"], life_left), 0)
         if elig == "none":
             out.append(Check(STOP, "NISA", f"{intent.asset_class} は NISA の対象外（nisa_eligibility）"))
         else:
-            room = growth_left + (tsumi_left if elig == "both" else 0.0)
+            room = min(growth_left + (tsumi_left if elig == "both" else 0.0), life_left)
             level = OK if intent.amount <= room else CAUTION
             out.append(Check(level, "NISA の年間枠",
                              f"今年の残り枠 {room:,.0f}（成長 {growth_left:,.0f}"
