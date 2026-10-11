@@ -699,6 +699,46 @@ def cmd_checkup(args) -> None:
     print("  ※ 税・手数料は売買コストのみ反映。配分の判断材料で、銘柄を勧めるものではない")
 
 
+def cmd_nextbuy(args) -> None:
+    """今月の積立を、目標より少ないクラスに多く入れる振り分け。売らない。"""
+    import yaml
+
+    from .analytics import analyze
+    from .compliance import cleared_by_class
+    from .compliance import load as load_compliance
+    from .marketdata import MarketData
+    from .nextbuy import render, split
+
+    h = _load(args.holdings)
+    cfg = yaml.safe_load(args.holdings.read_text(encoding="utf-8")) or {}
+    if not h.target_allocation:
+        raise SystemExit("target_allocation が台帳にありません")
+    amount = args.amount if args.amount is not None else float((cfg.get("contributions") or {}).get("monthly") or 0)
+    if amount <= 0:
+        raise SystemExit("投入額が 0 です（contributions.monthly を書くか --amount を指定）")
+    reg = load_compliance(args.compliance)
+    md = MarketData()
+    try:
+        a = analyze(h, md, with_risk=False)
+    finally:
+        md.close()
+    unpriced = sorted({v.position.asset_class for v in a.valuations if not v.priced})
+    if unpriced:
+        for w in dict.fromkeys(md.fetch_errors):
+            print(f"  - {w}", file=sys.stderr)
+        raise SystemExit(f"評価不能の保有があるため振り分けを出しません（{', '.join(unpriced)}）。"
+                         "価格が取れない原因を確認するか price_override を入れてください")
+    current = {c: 0.0 for c in h.target_allocation}
+    for v in a.valuations:
+        current[v.position.asset_class] = current.get(v.position.asset_class, 0.0) + v.market_value_base
+    cash_classes = {"cash"} | {v.position.asset_class for v in a.valuations if v.position.is_cash}
+    try:
+        s = split(current, dict(h.target_allocation), amount, cleared_by_class(reg, h.positions), cash_classes)
+    except ValueError as e:
+        raise SystemExit(str(e)) from e
+    print(render(s, pct_only=args.pct_only))
+
+
 def cmd_taxplan(args) -> None:
     """iDeCo の節税額とふるさと納税の上限の目安。年収はファイルに書かない（標準出力だけ）。"""
     from .taxplan import Household, render
@@ -851,6 +891,11 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--out", type=Path, default=ROOT / "config" / "transactions.imported.yaml",
                    help="出力先（既定: config/transactions.imported.yaml）")
     p.set_defaults(func=cmd_import_csv)
+
+    p = sub.add_parser("nextbuy", help="今月の積立を、目標より少ないクラスに多く入れる振り分け（売らない）")
+    p.add_argument("--amount", type=float, default=None, help="投入額（省略時は contributions.monthly）")
+    p.add_argument("--pct-only", action="store_true", help="金額を出さず比率だけ")
+    p.set_defaults(func=cmd_nextbuy)
 
     p = sub.add_parser("checkup", help="目標配分を実データで点検する（下落・外貨・NISA 枠）")
     p.add_argument("--tolerance", type=float, default=0.4, help="耐えられる下落（0.4 = 40%%）")

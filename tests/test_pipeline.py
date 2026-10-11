@@ -248,3 +248,21 @@ def test_single_position_cap_can_exempt_core_index_and_bond_classes(tmp_path, ma
     assert "single_position_exempt_classes" in a.guard_config
     assert "持仓ダッシュボード" in to_html(a)        # リスト値があってもダッシュボードは作れる
     assert "single_position_exempt_classes" in to_markdown(a)
+
+
+def test_cli_nextbuy_splits_without_selling_and_refuses_when_unpriced(ledger_path, market_data, tmp_path,
+                                                                      monkeypatch, capsys):
+    monkeypatch.setattr("src.marketdata.DEFAULT_DB", tmp_path / "nb.sqlite")
+    common = ["--holdings", str(ledger_path), "--compliance", str(tmp_path / "none.yaml")]
+    # 価格が取れないと、振り分けを出さずに止まる（0 円扱いにしない）
+    monkeypatch.setattr("src.marketdata.MarketData._download", lambda self, symbols, start=None, period=None: {})
+    with pytest.raises(SystemExit, match="評価不能"):
+        cli.main([*common, "nextbuy", "--amount", "100000"])
+    monkeypatch.setattr("src.marketdata.MarketData._download",
+                        lambda self, symbols, start=None, period=None:
+                        {s: market_data.data[s].copy() for s in symbols if s in market_data.data})
+    cli.main([*common, "nextbuy", "--amount", "100000", "--pct-only"])
+    out = capsys.readouterr().out
+    assert "今月の積立の振り分け" in out
+    # compliance の記録が無いので、現金以外は全部留保（買えと言わない）
+    assert "購入可の銘柄なし" in out and "100,000" not in out

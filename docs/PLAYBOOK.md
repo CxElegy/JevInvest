@@ -125,7 +125,9 @@ Swensen の配分も米国の投資家向けで、そのまま日本円の生活
 （[Vanguard "Best Practices for Portfolio Rebalancing"](https://indexacapital.com/bundles/unaiadvisor/docs/papers/2010-Vanguard-Best-practices-for-portfolio-rebalancing.pdf?v=241)、
 [AAII の要約](https://aaii.com/journal/article/best-practices-for-portfolio-rebalancing)）。
 月次・四半期・年次でリスク調整後リターンに大差はなく、頻度を上げるとコストだけ増える。
-**積立がある間は、売らずに「毎月の投入先を偏らせる」ことで戻すのが基本**（`python -m src.cli plan` がこれをやる）。
+**積立がある間は、売らずに「毎月の投入先を偏らせる」ことで戻すのが基本**（`python -m src.cli nextbuy` が今月の振り分けを出す）。
+実データでの検証（docs/STRATEGIES.md「再バランスの方法」）でも、積立中は「普段は買い足すだけ・5 ポイント以上ずれたら売る」が
+毎月売って戻すより、16 通りすべてで手取りが多かった（NISA でも。差の大半は売買コスト）。
 
 ### 3-2. 遊び枠（Bogle の funny money）のルール案
 

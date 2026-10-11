@@ -12,7 +12,7 @@ description: 月末・四半期・年次の点検をまとめて回す。docs/PL
    - `python -m src.cli compliance`。期限切れ・再確認が必要なものがあれば最優先で伝える。
 3. 四半期の月（1・4・7・10 月）なら追加で:
    - `/review` の観点で、配分の乖離が ±5 ポイントを超えたクラスだけを挙げる。
-     戻し方は「売る」より「`python -m src.cli plan` で新規資金を偏らせる」を先に出す。
+     戻し方は「売る」より「`python -m src.cli nextbuy --pct-only` で新規資金を偏らせる」を先に出す。
    - `python -m src.cli stress` で、今の配分の最悪の場面を 1 行で伝える。
 4. 1 月なら年次レビュー: `python -m src.cli transactions`（XIRR）、`python -m src.cli scoreboard`（遊び枠 vs VT）、
    IPS（docs/PLAYBOOK.md 3-1）の読み直しを促す。遊び枠が 3 年続けて負けていたら、ルールどおり本体に合流する案を出す。
