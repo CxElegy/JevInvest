@@ -21,3 +21,4 @@ venv/
 web/seed.json
 seed.json
 vendor/
+.claude/worktrees/
