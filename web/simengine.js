@@ -485,7 +485,25 @@
              histMean: port.reduce((a, x) => a + x, 0) / n };
   }
 
-  const api = { Prices, Book, bootstrap, monthlyReturns, mulberry32, STRATEGIES, MORE_STRATEGIES, ALL_STRATEGIES, TREND_ASSETS, COSTS, backtest, stats, xirr,
+  /** bootstrap と同じ規則で、NISA の枠が何か月目に埋まるかと、枠に入らず課税口座へ行く投入額を数える。 */
+  function nisaFill(initial, monthly, years, nisa) {
+    let used = 0, yearUsed = 0, over = 0, filledAt = null;
+    const put = amt => {
+      const room = Math.max(0, Math.min(nisa.annual - yearUsed, nisa.lifetime - used));
+      const toN = Math.min(amt, room);
+      used += toN; yearUsed += toN; over += amt - toN;
+    };
+    put(initial);
+    if (used >= nisa.lifetime) filledAt = 0;
+    for (let t = 0; t < years * 12; t++) {
+      if ((t + 1) % 12 === 0) yearUsed = 0;
+      put(monthly);
+      if (filledAt === null && used >= nisa.lifetime) filledAt = t + 1;
+    }
+    return { filledAt, over, used, firstYearOver: Math.max(0, initial + monthly * 11 - nisa.annual) };
+  }
+
+  const api = { Prices, Book, bootstrap, nisaFill, monthlyReturns, mulberry32, STRATEGIES, MORE_STRATEGIES, ALL_STRATEGIES, TREND_ASSETS, COSTS, backtest, stats, xirr,
                 windowReturns, vals, ret, aboveSma, vol, isDue };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.SimEngine = api;

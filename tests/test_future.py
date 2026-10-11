@@ -107,3 +107,18 @@ console.log(JSON.stringify({{f:r.final.p50,a:r.afterTax.p50}}));"""], capture_ou
     expect = nv + tv - (tv - cost) * 0.20315
     assert r["a"] == pytest.approx(expect, rel=1e-9)
     assert r["f"] == pytest.approx(nv + tv, rel=1e-9)
+
+
+def test_nisa_fill_matches_annual_and_lifetime_caps():
+    out = subprocess.run(["node", "-e", f"""
+const E=require({json.dumps(str(ROOT / 'web' / 'simengine.js'))});
+const n=x=>JSON.stringify(x);
+console.log(n([E.nisaFill(1000000,200000,40,{{annual:3600000,lifetime:18000000}}),
+               E.nisaFill(10000000,300000,20,{{annual:3600000,lifetime:18000000}}),
+               E.nisaFill(0,0,40,{{annual:3600000,lifetime:18000000}})]));"""],
+                         capture_output=True, text=True, check=True).stdout
+    a, b, c = json.loads(out)
+    assert a["filledAt"] == 85 and a["over"] > 0           # 100 万 + 月 20 万 → 7 年 1 か月で埋まる
+    assert b["firstYearOver"] == 10_000_000 + 300_000 * 11 - 3_600_000
+    assert 4.5 < b["filledAt"] / 12 < 5.5                  # 初期の 1,000 万は年 360 万の枠に縛られる
+    assert c["filledAt"] is None and c["over"] == 0

@@ -880,7 +880,7 @@ function runFuture() {
   $("fTiles").innerHTML = [
     ["中位数（一半路径高于它）", man(f.p50), `是投入的 ${(f.p50 / r.paid).toFixed(2)} 倍`],
     ["最差 5% 的路径", man(f.p05), `是投入的 ${(f.p05 / r.paid).toFixed(2)} 倍`],
-    ["期末全部卖出后的税后中位数", man(r.afterTax.p50), `NISA 终身 1,800 万用满后的钱放课税账户，卖出时对收益交 20.315%，少了 ${man(f.p50 - r.afterTax.p50)}`],
+    ["期末全部卖出后的税后中位数", man(r.afterTax.p50), `超过 NISA 年度（360 万）或终身（1,800 万）上限的钱放课税账户，卖出时对收益交 20.315%，少了 ${man(f.p50 - r.afterTax.p50)}`],
     ["最好 5% 的路径", man(f.p95), `是投入的 ${(f.p95 / r.paid).toFixed(2)} 倍`],
     ["途中最大回撤（最差 5%）", pct(r.dd.p05, 0), "资产从最高点往下跌的幅度。这时你能不卖吗？"],
     ["途中最大回撤（中位）", pct(r.dd.p50, 0), "一半的路径会经历这么深的下跌"],
@@ -990,7 +990,7 @@ function runCheck() {
   const syms = Object.keys(w);
   let i0 = P.indexOf("2008-07-01");
   for (const s of syms.concat(["VT"])) { const ix = P.idx[s]; if (ix && ix.length) i0 = Math.max(i0, ix[0]); }
-  const from = P.dates[i0].slice(0, 7) + "-01";
+  const from = P.dates[i0];   // 所有品种都有价格的第一天（不往前取到月初，否则会有品种买不到）
   const mine = { freq: "monthly", fn: () => Object.assign({}, w) };
   const bt = E.backtest(P, from, 5000000, { strategies: { mine, base: E.ALL_STRATEGIES.allcountry } });
   const sm = E.stats(bt.mine, P), sb = E.stats(bt.base, P);
@@ -1006,16 +1006,19 @@ function runCheck() {
   const cs = E.stats(c, P);
   const cb = E.stats(E.backtest(P, "2008-07-01", 5000000, { endDate: "2009-06-30" }).allcountry, P);
   $("cCrisis").innerHTML = [["这期间的最大跌幅", pct(cs.maxDD, 0), `全球股一只 ${pct(cb.maxDD, 0)}`], ["500 万最低时", man(5000000 * (1 + cs.maxDD)), "按日元计"]].map(([k, v, x]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${x}</div></div>`).join("");
-  $("cCrisisNote").textContent = "2008-07～2009-06，每月调回比例，按日元计算（日元在这期间大幅升值，外币资产跌得更多）。总览页的压力测试从 2007-10 的高点算起、不调回比例，所以那边是约 -51%，比这里更深。" + (w["1348.T"] ? "日本股那时还没有数据，这部分用全球股代替。" : "");
+  $("cCrisisNote").textContent = "2008-07～2009-06，每月调回比例，按日元计算（日元在这期间大幅升值，外币资产跌得更多）。总览页的压力测试从 2007-10 的高点算起、不调回比例，用你的目标配置算是约 -51%。" + (w["1348.T"] ? "日本股那时还没有数据，这部分用全球股代替。" : "");
   const worst = Math.min(sm.maxDD, cs.maxDD);
   // 3) 未来
   const f = E.bootstrap(P, { weights: w, initial: init, monthly, years: 20, paths: 2000, seed: 20261011, haircut: 0.02, window: WSYMS, nisa: { annual: 3600000, lifetime: 18000000 } });
-  $("cFuture").innerHTML = [["20 年后中位数", man(f.final.p50), `投入 ${man(f.paid)}`], ["期末全部卖出后（税后）", man(f.afterTax.p50), `NISA 用满后的部分要交税，少 ${man(f.final.p50 - f.afterTax.p50)}`], ["最差 5%", man(f.final.p05), `是投入的 ${(f.final.p05 / f.paid).toFixed(2)} 倍`], ["途中回撤（最差 5%）", pct(f.dd.p05, 0), "资产从最高点往下跌的幅度"]].map(([k, v, x]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${x}</div></div>`).join("");
+  $("cFuture").innerHTML = [["20 年后中位数", man(f.final.p50), `投入 ${man(f.paid)}`], ["期末全部卖出后（税后）", man(f.afterTax.p50), `超过 NISA 年度/终身上限的部分要交税，少 ${man(f.final.p50 - f.afterTax.p50)}`], ["最差 5%", man(f.final.p05), `是投入的 ${(f.final.p05 / f.paid).toFixed(2)} 倍`], ["途中回撤（最差 5%）", pct(f.dd.p05, 0), "资产从最高点往下跌的幅度"]].map(([k, v, x]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${x}</div></div>`).join("");
   // 4) NISA
-  const yearIn = monthly * 12, room = 3600000, life = 18000000;
-  const yearsToFill = (life - Math.min(init, life)) / Math.max(1, Math.min(yearIn, room));
-  $("cNisa").innerHTML = `<p>每年投入 ${man(yearIn)}，NISA 每年上限 360 万（つみたて 120 万 + 成长 240 万）${yearIn > room ? `，<b class="neg">超过上限 ${man(yearIn - room)}，超出部分要放课税账户</b>` : "，在上限之内"}。` +
-    `生涯上限 1,800 万，按这个速度约 <b>${yearsToFill.toFixed(1)} 年</b>用满，之后的投入要放课税账户（卖出时交 20.315%）。` +
+  const yearIn = monthly * 12, room = 3600000;
+  const nf = E.nisaFill(init, monthly, 40, { annual: room, lifetime: 18000000 });   // 和未来模拟同一个规则
+  const nf20 = E.nisaFill(init, monthly, 20, { annual: room, lifetime: 18000000 });
+  const overCap = yearIn > room || nf.firstYearOver > 0;
+  $("cNisa").innerHTML = `<p>每年投入 ${man(yearIn)}${init ? `（第一年另有起步 ${man(init)}）` : ""}，NISA 每年上限 360 万（つみたて 120 万 + 成长 240 万）${overCap ? `，<b class="neg">有部分超过年度上限，超出部分要放课税账户</b>` : "，在上限之内"}。` +
+    (nf.filledAt === null ? `按这个速度，生涯上限 1,800 万在 40 年内用不满。` : `生涯上限 1,800 万，按这个速度约 <b>${(nf.filledAt / 12).toFixed(1)} 年</b>用满，之后的投入要放课税账户（卖出时交 20.315%）。`) +
+    (nf20.over > 0 ? `20 年里放进课税账户的投入合计约 ${man(nf20.over)}。` : "") +
     `${(w.AGG || 0) > 0 ? "债券基金目前不在つみたて枠的对象里，要用成长枠（以金融厅的名单为准）。" : ""}</p>`;
   // 结论
   const items = [];
@@ -1023,11 +1026,11 @@ function runCheck() {
   const warn = (t, d) => items.push(`<li><span class="neg">▲</span> <b>${t}</b>　${d}</li>`);
   if (-worst <= tol) ok("下跌在你能忍受的范围内", `历史上最多跌过 ${pct(worst, 0)}（你选的是 ${(tol * 100).toFixed(0)}%）。`);
   else warn("最坏时的跌幅超过你能忍受的", `历史上最多跌过 ${pct(worst, 0)}，你选的是 ${(tol * 100).toFixed(0)}%。可以：降低股票比例（到「未来模拟」的回撤表找合适的比例）、多留日元现金；或者先在「你来操盘」的危机特训里体验一次，再决定。`);
-  if (usd > 0.7) warn(`约 ${(usd * 100).toFixed(0)}% 是外币资产`, "日元升值时会缩水（2008～2011 年日元升值约 30%）。你的收入是日元，想稳一点可以把一部分换成日元现金或日元债券。");
+  if (usd > 0.7) warn(`约 ${(usd * 100).toFixed(0)}% 是外币资产`, "日元升值时会缩水（2008～2011 年 1 美元从约 106 日元变到 76 日元，外币资产按日元缩水约 30%）。你的收入是日元，想稳一点可以把一部分换成日元现金或日元债券。");
   else ok(`外币资产约 ${(usd * 100).toFixed(0)}%`, "日元和外币有一定平衡。");
-  if ((w.QQQ || 0) > 0.1) warn(`个股部分 ${((w.QQQ || 0) * 100).toFixed(0)}%`, "这里用纳指 100（100 家公司）代替；实际只买几只个股时会更集中、波动更大，而且每一只都要先过 DESC 和事前承认。Bogle 的建议是「游玩仓」不超过 5%。");
+  if ((w.QQQ || 0) > 0.05) warn(`个股部分 ${((w.QQQ || 0) * 100).toFixed(0)}%`, "这里用纳指 100（100 家公司）代替；实际只买几只个股时会更集中、波动更大，而且每一只都要先过 DESC 和事前承认。Bogle 的建议是「游玩仓」不超过 5%。");
   if (cg(sm) < cg(sb) - 0.005) items.push(`<li><span class="note">●</span> <b>历史年化比全球股一只低 ${pct(cg(sb) - cg(sm), 1).replace("+", "")}</b>　换来的是更小的回撤（${pct(sm.maxDD, 0)} 对 ${pct(sb.maxDD, 0)}）。这是正常的交换，不是缺点。</li>`);
-  if (yearIn > room) warn("每月投入超过 NISA 年度上限", "超出部分只能放课税账户。");
+  if (overCap) warn("投入超过 NISA 年度上限", "超出部分只能放课税账户（起步的一大笔钱也受每年 360 万的限制）。");
   items.push(`<li><span class="note">●</span> <b>independence</b>　不管比例怎么定，每个具体的基金都要先在 DESC 确认并取得事前承认；没有确认的就不要买。</li>`);
   $("cVerdict").innerHTML = `<ul style="list-style:none;padding:0;margin:0;display:grid;gap:8px;font-size:14.5px">${items.join("")}</ul>`;
 }
