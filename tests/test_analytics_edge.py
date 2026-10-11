@@ -86,6 +86,26 @@ def test_risk_weights_sum_accounts_and_count_yen_cash(market_data):
     assert a.risk["カバー率%"] == pytest.approx(100.0)
 
 
+def test_anonymized_dashboard_does_not_embed_absolute_amounts(market_data):
+    import json
+    import re
+
+    from src.dashboard import to_html
+    from src.plan import build
+
+    a = analyze(_multi_account_with_cash(), market_data, with_risk=False)
+    cfg = {"contributions": {"monthly": 123457}, "target_allocation": {"eq": 100},
+           "nisa_eligibility": {"eq": "both"}}
+    plan = build(cfg, cleared_symbols_by_class={"eq": ["VT"]})
+    html = to_html(a, plan=plan, anonymize=True)
+    data = json.loads(re.search(r"const D = (\{.*?\});\n", html, re.S).group(1))
+    assert data["total"] == 0 and data["cost"] == 0 and data["pnl"] == 0
+    assert data["plan"]["monthly"] == 0 and "123,457" not in html and "123457" not in html
+    vt = next(d for d in data["conc"] if d["label"] == "VT")
+    assert vt["value"] == pytest.approx(vt["pct"])                # 比率だけ残す
+    assert str(int(a.total_value_base)) not in html
+
+
 def test_report_marks_classes_without_buyable_symbol_in_rebalance(market_data):
     from src.compliance import ComplianceRegistry
 
