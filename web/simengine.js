@@ -475,11 +475,14 @@
     const values = Array.from({ length: T + 1 }, () => new Float64Array(N));
     const paidAt = k => opts.initial + opts.monthly * k;
     const finals = new Float64Array(N), dds = new Float64Array(N), afterTax = new Float64Array(N);
+    // 経路ごとの「初期 1 円が何円になったか」と「毎月 1 円ずつ入れたら何円になったか」。
+    // 税前の最終額は initial × gI + monthly × gM なので、目標から逆算に使える（goalSolve）
+    const gI = new Float64Array(N), gM = new Float64Array(N);
     // NISA の枠（opts.nisa = {annual, lifetime}）: 投入は枠に収まる分だけ NISA へ、残りは課税口座へ。
     // 両方とも同じ配分・同じリターンで動かし、最後に課税口座の含み益に 20.315% を掛ける（売却は最後だけ）
     const nisa = opts.nisa || null;
     for (let j = 0; j < N; j++) {
-      let v = opts.initial, peakRatio = 1, worst = 0, t = 0;
+      let v = opts.initial, peakRatio = 1, worst = 0, t = 0, gi = 1, gm = 0;
       let nv = 0, tv = 0, tcost = 0, used = 0, yearUsed = 0;
       const put = amt => {
         if (!nisa) return;
@@ -496,6 +499,7 @@
         for (let b = 0; b < B && t < T; b++, t++) {
           const g = 1 + port[(start + b) % n] - hc;
           v = v * g + opts.monthly;
+          gi *= g; gm = gm * g + 1;
           if (nisa) { nv *= g; tv *= g; if ((t + 1) % 12 === 0) yearUsed = 0; put(opts.monthly); }
           values[t + 1][j] = v;
           const ratio = v / paidAt(t + 1);           // 入れた額に対する倍率で下落を測る（積立で見かけが膨らむのを除く）
@@ -503,7 +507,7 @@
           worst = Math.min(worst, ratio / peakRatio - 1);
         }
       }
-      finals[j] = v; dds[j] = worst;
+      finals[j] = v; dds[j] = worst; gI[j] = gi; gM[j] = gm;
       afterTax[j] = nisa ? nv + tv - Math.max(tv - tcost, 0) * TAX_RATE : v;
     }
     const q = (arr, f) => { const a = Array.from(arr).sort((x, y) => x - y); return a[Math.min(a.length - 1, Math.max(0, Math.floor(f * (a.length - 1))))]; };
@@ -514,7 +518,22 @@
              final: { p05: q(finals, 0.05), p25: q(finals, 0.25), p50: q(finals, 0.5), p75: q(finals, 0.75), p95: q(finals, 0.95) },
              dd: { p50: q(dds, 0.5), p05: q(dds, 0.05) },
              afterTax: nisa ? { p05: q(afterTax, 0.05), p50: q(afterTax, 0.5), p95: q(afterTax, 0.95) } : null,
-             histMean: port.reduce((a, x) => a + x, 0) / n };
+             histMean: port.reduce((a, x) => a + x, 0) / n, paths: { gI, gM } };
+  }
+
+  /** 目標額（税前）に届く確率と、確率 conf で届くのに要る毎月の額。bootstrap の paths を使う。 */
+  function goalSolve(paths, initial, monthly, target, confs = [0.5, 0.8, 0.9]) {
+    const { gI, gM } = paths, N = gI.length;
+    let hit = 0;
+    const need = new Float64Array(N);
+    for (let j = 0; j < N; j++) {
+      if (initial * gI[j] + monthly * gM[j] >= target) hit++;
+      need[j] = Math.max(0, (target - initial * gI[j]) / gM[j]);   // この経路で届くのに要る毎月の額
+    }
+    const sorted = Array.from(need).sort((a, b) => a - b);
+    const req = {};
+    for (const c of confs) req[c] = sorted[Math.min(N - 1, Math.ceil(c * N) - 1)];
+    return { p: hit / N, required: req };
   }
 
   /** bootstrap と同じ規則で、NISA の枠が何か月目に埋まるかと、枠に入らず課税口座へ行く投入額を数える。 */
@@ -535,7 +554,7 @@
     return { filledAt, over, used, firstYearOver: Math.max(0, initial + monthly * 11 - nisa.annual) };
   }
 
-  const api = { Prices, Book, drift, bootstrap, nisaFill, monthlyReturns, mulberry32, STRATEGIES, MORE_STRATEGIES, ALL_STRATEGIES, TREND_ASSETS, COSTS, backtest, stats, xirr,
+  const api = { Prices, Book, drift, bootstrap, goalSolve, nisaFill, monthlyReturns, mulberry32, STRATEGIES, MORE_STRATEGIES, ALL_STRATEGIES, TREND_ASSETS, COSTS, backtest, stats, xirr,
                 windowReturns, vals, ret, aboveSma, vol, isDue };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.SimEngine = api;

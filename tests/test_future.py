@@ -122,3 +122,18 @@ console.log(n([E.nisaFill(1000000,200000,40,{{annual:3600000,lifetime:18000000}}
     assert b["firstYearOver"] == 10_000_000 + 300_000 * 11 - 3_600_000
     assert 4.5 < b["filledAt"] / 12 < 5.5                  # 初期の 1,000 万は年 360 万の枠に縛られる
     assert c["filledAt"] is None and c["over"] == 0
+
+
+def test_paths_reconstruct_final_and_goal_solver(tmp_path):
+    f = _data(tmp_path, monthly_growth=0.005)
+    r = _run(f, initial=1_000_000, monthly=50_000, years=10, target=8_000_000)
+    assert r["reconMedian"] == pytest.approx(r["final"]["p50"], rel=1e-9)
+    # 一定の成長なので全経路が同じ: 届く確率は 0 か 1、要る月額はどの確信度でも同じ
+    g = r["goal"]
+    req = g["required"]
+    assert req["0.5"] == pytest.approx(req["0.9"])
+    # 閉じた式: 1,000,000 × 1.005^120 + m × ((1.005^120 − 1) / 0.005) = 8,000,000
+    gi = 1.005 ** 120
+    m = (8_000_000 - 1_000_000 * gi) / ((gi - 1) / 0.005)
+    assert req["0.8"] == pytest.approx(m, rel=1e-6)
+    assert g["p"] == (0.0 if 50_000 < m else 1.0)

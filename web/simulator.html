@@ -380,6 +380,14 @@ svg.chart { display: block; width: 100%; height: auto; }
           <div class="luck" id="fNote"></div>
           <div class="tiles" id="fTiles"></div>
         </div>
+        <div class="panel">
+          <h3 style="margin-top:0">反过来算：想要多少，每月该投多少</h3>
+          <label class="note" for="fGoal" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">目标：<span id="fGoalYears"></span>年后有
+            <input id="fGoal" type="number" step="500" min="0" value="10000" style="width:9em;font:14px var(--f-mono);padding:4px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg)"> 万円（税前）</label>
+          <div class="luck" id="fGoalAnswer"></div>
+          <div class="scroll"><table class="data" id="fGoalTable"></table></div>
+          <p class="note">用的是上面同一组 2000 条路径和同一个配置、起步金额、保守折扣，只把"每月投入"换掉重算。"把握 80%"＝2000 条路径里有 1600 条以上能达到。税前金额：超出 NISA 上限的部分，最后卖出时还要对收益交 20.315%。这是"如果未来像过去那样波动"的估算，不是保证。</p>
+        </div>
         <div class="panel"><h3 style="margin-top:0">2000 条可能的路径（日元）</h3><div id="fFan"></div>
           <div class="legend"><span><span class="sw" style="background:var(--accent)"></span>中位数</span><span><span class="sw" style="background:var(--accent);opacity:.35;height:10px"></span>中间一半（25%～75%）</span><span><span class="sw" style="background:var(--accent);opacity:.15;height:10px"></span>90% 的路径（5%～95%）</span><span><span class="sw" style="background:var(--muted)"></span>投入合计</span></div></div>
         <div class="panel">
@@ -1051,6 +1059,7 @@ function initFuture() {
   $("fPresets").addEventListener("click", e => { const b = e.target.closest("button"); if (b) fSetWeights(F_PRESETS[b.dataset.k]); });
   for (const id of ["fInit", "fMonthly", "fYears", "fCut"]) $(id).addEventListener("change", runFuture);
   $("ddBudget").addEventListener("change", renderBudget);
+  $("fGoal").addEventListener("input", renderGoal);
 }
 function runFuture() {
   initFuture();
@@ -1074,6 +1083,8 @@ function runFuture() {
     ["最后亏本的概率", (r.pLoss * 100).toFixed(1) + "%", "期末低于投入合计。抽样的历史偏乐观，0% 不代表不会亏"],
   ].map(([k, v, x]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${x}</div></div>`).join("");
   fan(r, opts);
+  fLast = { r, opts };
+  renderGoal();
   renderBudget();
   // 比较
   const rows = Object.entries(F_PRESETS).map(([name, pw]) => {
@@ -1082,6 +1093,25 @@ function runFuture() {
     return `<tr><td>${name}</td><td class="num">${man(x.final.p05)}</td><td class="num">${man(x.final.p50)}</td><td class="num">${man(x.afterTax.p50)}</td><td class="num">${man(x.final.p95)}</td><td class="num">${(x.pLoss * 100).toFixed(1)}%</td><td class="num">${pct(x.dd.p05, 0)}</td></tr>`;
   }).join("");
   $("fCompare").innerHTML = `<thead><tr><th>配置</th><th>最差 5%</th><th>中位数</th><th>中位数（税后）</th><th>最好 5%</th><th>亏本概率</th><th>回撤（最差 5%）</th></tr></thead><tbody>${rows}</tbody>`;
+}
+// 目标反推: 経路ごとの増え方（paths.gI, gM）から、目標に届く確率と要る毎月の額を出す
+let fLast = null;
+function renderGoal() {
+  if (!fLast) return;
+  const { r, opts } = fLast, target = Math.max(0, Number($("fGoal").value) || 0) * 1e4;
+  $("fGoalYears").textContent = `${opts.years} `;
+  if (!target) { $("fGoalAnswer").textContent = "输入目标金额。"; $("fGoalTable").innerHTML = ""; return; }
+  const g = E.goalSolve(r.paths, opts.initial, opts.monthly, target, [0.5, 0.8, 0.9]);
+  const req = g.required, now = opts.monthly;
+  const verdict = g.p >= 0.8 ? "已经比较稳" : g.p >= 0.5 ? "一半多一点的把握" : "多数路径到不了";
+  $("fGoalAnswer").innerHTML = `按现在每月 <b>${man(now)}</b>：2000 条路径里 <b>${(g.p * 100).toFixed(0)}%</b> 能在 ${opts.years} 年后达到 ${man(target)}（${verdict}）。` +
+    `想有 80% 的把握，每月需要约 <b>${man(req[0.8])}</b>${req[0.8] > now ? `，比现在多 ${man(req[0.8] - now)}` : `，现在的金额已经够了`}。` +
+    `<br>对比一下：把每月多投 1 万円，和把手续费从 1.5% 降到 0.1%，哪个更容易做到？前者靠收入和支出，后者只要选对基金——两个都比"挑更会涨的东西"确定得多。`;
+  const rows = [[0.5, "一半的把握（中位数）"], [0.8, "80% 的把握"], [0.9, "90% 的把握"]].map(([c, l]) => {
+    const m = req[c], total = opts.initial + m * 12 * opts.years;
+    return `<tr><td>${l}</td><td class="num">${man(m)}</td><td class="num">${man(total)}</td><td class="num">${(target / total).toFixed(2)} 倍</td></tr>`;
+  }).join("");
+  $("fGoalTable").innerHTML = `<thead><tr><th>想要的把握</th><th>每月需要</th><th>投入合计</th><th>目标 / 投入</th></tr></thead><tbody>${rows}</tbody>`;
 }
 // 回撤预算：股票比例 0..100% × 另一半（美国债券 / 日元现金）
 let ddGrid = null, ddKey = "";
