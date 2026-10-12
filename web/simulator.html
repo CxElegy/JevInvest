@@ -137,6 +137,7 @@ svg.chart { display: block; width: 100%; height: auto; }
 
   <div class="tabs" role="tablist">
     <button role="tab" id="tab-check" aria-controls="t-check" aria-selected="true">我的计划体检</button>
+    <button role="tab" id="tab-how" aria-controls="t-how" aria-selected="false">怎么投更划算</button>
     <button role="tab" id="tab-replay" aria-controls="t-replay" aria-selected="false">回放实验</button>
     <button role="tab" id="tab-game" aria-controls="t-game" aria-selected="false">你来操盘</button>
     <button role="tab" id="tab-board" aria-controls="t-board" aria-selected="false">策略排行榜</button>
@@ -169,6 +170,57 @@ svg.chart { display: block; width: 100%; height: auto; }
   </section>
 
   <!-- 回放实验 -->
+  <!-- 怎么投更划算 -->
+  <section role="tabpanel" id="t-how" aria-labelledby="tab-how" hidden>
+    <div class="panel">
+      <h2 style="margin-top:0">同样的钱、同样的配置，怎么操作能多留一点</h2>
+      <p>下面每一项都用真实数据算过。按"证据有多硬"排序：<b>① 手续费和税</b>（几乎确定）→ <b>② 什么时候投、怎么调回比例</b>（历史上大多数时候有效）→ <b>③ 债券用什么</b>（取决于你更在乎回报还是托底）。都不需要预测行情。</p>
+      <div class="chips" id="howNav"></div>
+    </div>
+    <div class="panel" id="sec-fee">
+      <h3 style="margin-top:0">① 手续费（信託報酬）：每年只差一点，20 年差多少</h3>
+      <div class="desk">
+        <div class="ctl">
+          <label for="feeInit">起步（日元）<input id="feeInit" type="number" step="100000" min="0" value="1000000"></label>
+          <label for="feeMonthly">每月投入（日元）<input id="feeMonthly" type="number" step="10000" min="0" value="200000"></label>
+          <label for="feeYears">年数<select id="feeYears"><option value="10">10 年</option><option value="20" selected>20 年</option><option value="30">30 年</option></select></label>
+          <label for="feeRet">扣费前的年回报（假设）<select id="feeRet"><option value="0.03">3%</option><option value="0.05" selected>5%</option><option value="0.07">7%</option></select></label>
+          <label for="feeA">A 的年费率（%）<input id="feeA" type="number" step="0.01" min="0" value="0.085"></label>
+          <label for="feeB">B 的年费率（%）<input id="feeB" type="number" step="0.01" min="0" value="1.5"></label>
+          <div class="chips" id="feePresets"></div>
+        </div>
+        <div style="min-width:0">
+          <div class="tiles" id="feeTiles"></div>
+          <div class="scroll"><table class="data" id="feeTable" style="margin-top:8px"></table></div>
+          <p class="note" id="feeNote"></p>
+        </div>
+      </div>
+    </div>
+    <div class="panel" id="sec-reb">
+      <h3 style="margin-top:0">② 再平衡：卖回去，还是只用新钱补</h3>
+      <p id="rbSummary"></p>
+      <div class="chips" id="rbMix" style="margin:8px 0"></div>
+      <div class="chips" id="rbOpt" style="margin:8px 0"></div>
+      <div class="scroll"><table class="data" id="rbTable"></table></div>
+      <p class="note">同一个配置，只改"偏离目标比例以后怎么调回去"。"期末到手"：最后一天全部卖出后的金额（课税账户扣掉 20.315% 的税；"免税"假设全部在 NISA 里、不考虑每年 360 万和终身 1,800 万的上限）。"偏离"：每月月末，比例最偏的那一项离目标差几个百分点（平均 / 最大）。"股+金"：股票和黄金（债券、短债以外）在总资产里的比例（期末 / 最高），这一项变高说明风险在悄悄变大。交易成本（手续费 0.1%、滑点、换汇差）都算进去了。</p>
+    </div>
+    <div class="panel" id="sec-hedge">
+      <h3 style="margin-top:0">③ 债券那部分：美元债、对冲汇率的美元债，还是日元现金</h3>
+      <p id="hgSummary"></p>
+      <div class="tiles" id="hgTiles"></div>
+      <div class="chips" id="hgMix" style="margin:8px 0"></div>
+      <div class="scroll"><table class="data" id="hgTable"></table></div>
+      <p class="note" id="hgNote"></p>
+    </div>
+    <div class="panel" id="sec-front">
+      <h3 style="margin-top:0">② NISA 每年 360 万：年初一次买满，还是每月 30 万</h3>
+      <p id="flSummary"></p>
+      <div class="chips" id="flMix" style="margin:8px 0"></div>
+      <div id="flChart"></div>
+      <p class="note" id="flNote"></p>
+    </div>
+  </section>
+
   <section role="tabpanel" id="t-replay" aria-labelledby="tab-replay" hidden>
     <div class="desk">
       <div>
@@ -304,29 +356,6 @@ svg.chart { display: block; width: 100%; height: auto; }
       <div class="daycards" id="sFamilies" style="grid-template-columns:repeat(auto-fit,minmax(330px,1fr))"></div>
     </div>
     <div class="panel">
-      <h3 style="margin-top:0">再平衡：卖回去，还是只用新钱补</h3>
-      <p id="rbSummary"></p>
-      <div class="chips" id="rbMix" style="margin:8px 0"></div>
-      <div class="chips" id="rbOpt" style="margin:8px 0"></div>
-      <div class="scroll"><table class="data" id="rbTable"></table></div>
-      <p class="note">同一个配置，只改"偏离目标比例以后怎么调回去"。"期末到手"：最后一天全部卖出后的金额（课税账户扣掉 20.315% 的税；"免税"假设全部在 NISA 里、不考虑每年 360 万和终身 1,800 万的上限）。"偏离"：每月月末，比例最偏的那一项离目标差几个百分点（平均 / 最大）。"股+金"：股票和黄金（债券、短债以外）在总资产里的比例（期末 / 最高），这一项变高说明风险在悄悄变大。交易成本（手续费 0.1%、滑点、换汇差）都算进去了。</p>
-    </div>
-    <div class="panel">
-      <h3 style="margin-top:0">债券那部分：美元债、对冲汇率的美元债，还是日元现金</h3>
-      <p id="hgSummary"></p>
-      <div class="tiles" id="hgTiles"></div>
-      <div class="chips" id="hgMix" style="margin:8px 0"></div>
-      <div class="scroll"><table class="data" id="hgTable"></table></div>
-      <p class="note" id="hgNote"></p>
-    </div>
-    <div class="panel">
-      <h3 style="margin-top:0">NISA 每年 360 万：年初一次买满，还是每月 30 万</h3>
-      <p id="flSummary"></p>
-      <div class="chips" id="flMix" style="margin:8px 0"></div>
-      <div id="flChart"></div>
-      <p class="note" id="flNote"></p>
-    </div>
-    <div class="panel">
       <h3 style="margin-top:0">每个策略是什么</h3>
       <div class="daycards" id="bCards"></div>
     </div>
@@ -421,12 +450,13 @@ $("src").textContent = `数据：Yahoo Finance 真实日线（含分红再投资
   Object.entries(NAMES).map(([s, n]) => `${s} ${n}`).join(" · ");
 
 // ---------------------------------------------------------------- 页签
-const tabs = ["check", "replay", "game", "board", "future", "live"];
+const tabs = ["check", "how", "replay", "game", "board", "future", "live"];
 function showTab(t) {
   for (const x of tabs) { $("tab-" + x).setAttribute("aria-selected", x === t); $("t-" + x).hidden = x !== t; }
   store.set("jev-sim-tab", t);
   if (t === "live") renderLive();
   if (t === "board") renderBoard();
+  if (t === "how") renderHow();
   if (t === "future") runFuture();
   if (t === "check") runCheck();
 }
@@ -806,7 +836,6 @@ function renderBoard() {
   $("bView").onclick = e => { const b = e.target.closest("button"); if (!b) return; bView = b.dataset.v; bSort = { key: null, dir: -1 }; renderBoard(); };
   scatter(S);
   renderSensitivity();
-  initRebalance(); renderRebalance(); renderHedge(); renderFrontload();
   // 滚动
   const yrs = Object.keys(base.rolling);
   const rk = keys.slice().sort((a, b) => (S[b].rolling_wins ?? 99) - (S[a].rolling_wins ?? 99) || S[b].dca_xirr - S[a].dca_xirr);
@@ -863,6 +892,51 @@ function renderRebalance() {
   $("rbTable").innerHTML = `<thead><tr><th>方法</th><th>期末到手</th><th>年化（XIRR）</th><th>最大回撤</th><th>偏离 平均/最大</th><th>股+金 期末/最高</th><th>交易次数</th>${rbSel.taxable ? "<th>途中交的税</th>" : ""}</tr></thead><tbody>` +
     X.policies.map(k => { const x = r.by[k]; return `<tr${x.final === best ? ' style="background:var(--accent-soft)"' : ""}><td>${RB_LABEL[k]}</td><td class="num">${man(x.final)}</td><td class="num">${pct(x.xirr, 1)}</td><td class="num">${pct(x.max_dd, 0)}</td><td class="num">${(x.drift_avg * 100).toFixed(1)} / ${(x.drift_max * 100).toFixed(0)} 点</td><td class="num">${(x.risky_end * 100).toFixed(0)}% / ${(x.risky_max * 100).toFixed(0)}%</td><td class="num">${x.trades}</td>${rbSel.taxable ? `<td class="num">${man(x.tax_during)}</td>` : ""}</tr>`; }).join("") +
     `</tbody><caption class="note" style="caption-side:bottom;text-align:left">投入合计 ${man(r.by.monthly.paid)}，${r.start} ～ ${X.generated_to}。底色 = 期末到手最多。目标里股+金占 ${(rbRisky(X.mixes[r.mix]) * 100).toFixed(0)}%。</caption>`;
+}
+// ---------------------------------------------------------------- 怎么投更划算
+const FEE_PRESETS = [
+  ["オルカン（eMAXIS Slim 全世界）实质 0.085%", 0.085], ["SBI・V・全世界 实质 0.124%", 0.1238], ["先进国债券 实质 0.159%", 0.159],
+  ["ACWI（美国上市 ETF）0.32%", 0.32], ["典型主动基金 1.5%（假设）", 1.5], ["毎月分配型 2.0%（假设）", 2.0]];
+let howInit = false;
+function renderHow() {
+  if (!howInit) {
+    howInit = true;
+    $("howNav").innerHTML = [["sec-fee", "① 手续费"], ["sec-reb", "② 再平衡"], ["sec-front", "② 年初买满"], ["sec-hedge", "③ 债券对冲"]]
+      .map(([id, l]) => `<button class="chip" data-go="${id}">${l}</button>`).join("");
+    $("howNav").onclick = e => { const b = e.target.closest("[data-go]"); if (b) $(b.dataset.go).scrollIntoView({ behavior: "smooth" }); };
+    $("feePresets").innerHTML = FEE_PRESETS.map(([l, v], i) => `<button class="chip" data-i="${i}">${l}</button>`).join("");
+    let next = "B";
+    $("feePresets").onclick = e => { const b = e.target.closest("[data-i]"); if (!b) return;
+      $(next === "A" ? "feeA" : "feeB").value = FEE_PRESETS[b.dataset.i][1]; next = next === "A" ? "B" : "A"; renderFees(); };
+    for (const id of ["feeInit", "feeMonthly", "feeYears", "feeRet", "feeA", "feeB"]) $(id).addEventListener("input", renderFees);
+    initRebalance();
+  }
+  renderFees(); renderRebalance(); renderFrontload(); renderHedge();
+}
+/** 起步 + 每月投入，按月复利。fee 是年费率（小数），从回报里按月扣。 */
+function feePath(init, monthly, years, r, fee) {
+  const g = Math.pow(1 + r, 1 / 12) * Math.pow(1 - fee, 1 / 12);
+  const out = [init];
+  let v = init;
+  for (let m = 1; m <= years * 12; m++) { v = v * g + monthly; if (m % 12 === 0) out.push(v); }
+  return out;
+}
+function renderFees() {
+  const init = Math.max(0, Number($("feeInit").value) || 0), mon = Math.max(0, Number($("feeMonthly").value) || 0);
+  const yrs = Number($("feeYears").value), r = Number($("feeRet").value);
+  const fa = Math.max(0, Number($("feeA").value) || 0) / 100, fb = Math.max(0, Number($("feeB").value) || 0) / 100;
+  const A = feePath(init, mon, yrs, r, fa), B = feePath(init, mon, yrs, r, fb);
+  const paid = init + mon * 12 * yrs, d = A[yrs] - B[yrs];
+  $("feeTiles").innerHTML = [["投入合计", man(paid)], [`A（${(fa * 100).toFixed(3).replace(/0+$/, "").replace(/\.$/, "")}%）${yrs} 年后`, man(A[yrs])],
+    [`B（${(fb * 100).toFixed(3).replace(/0+$/, "").replace(/\.$/, "")}%）${yrs} 年后`, man(B[yrs])], [d >= 0 ? "A 比 B 多" : "B 比 A 多", man(Math.abs(d))]]
+    .map(([k, v]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("");
+  const marks = [5, 10, 20, 30].filter(y => y <= yrs);
+  $("feeTable").innerHTML = `<thead><tr><th>年数</th><th>A</th><th>B</th><th>差</th><th>差 / 投入合计</th></tr></thead><tbody>` +
+    marks.map(y => { const p = init + mon * 12 * y; return `<tr><td>${y} 年</td><td class="num">${man(A[y])}</td><td class="num">${man(B[y])}</td><td class="num">${man(A[y] - B[y])}</td><td class="num">${((A[y] - B[y]) / p * 100).toFixed(1)}%</td></tr>`; }).join("") + "</tbody>";
+  $("feeNote").innerHTML = `回报是假设的（不是预测），费率每年从回报里扣、不随市场好坏变化——所以<b>这个差几乎是确定的</b>，这是它排第一的原因。` +
+    `点上面的按钮，交替填进 A 和 B。实质费率来自 docs/FUNDS.md（运用报告书的费用明细，${"2025–2026 年"}的数字）。` +
+    `在 NISA 里持有美国上市 ETF（如 VT）还有一项看不见的成本：分红被美国扣的 10% 拿不回来，分红率 2% 时约等于每年再多 0.2%。` +
+    `这里列出的基金名只为比较费用，不是推荐；买任何一只之前都要先过 independence 确认。`;
 }
 let flMix = "target";
 function renderFrontload() {
