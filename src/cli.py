@@ -606,7 +606,7 @@ def cmd_plan(args) -> None:
     import yaml
 
     from .compliance import load as load_compliance
-    from .plan import annual_projection, build
+    from .plan import annual_projection, build, initial_deployment
 
     cfg = yaml.safe_load(args.holdings.read_text(encoding="utf-8"))
     h = _load(args.holdings)
@@ -659,6 +659,25 @@ def cmd_plan(args) -> None:
     print(proj.map(lambda v: f"{v:,.0f}").to_markdown())
     for n in proj.attrs.get("notes", []):
         print(f"  ※ {n}")
+
+    dep = initial_deployment(cfg, plan, years=max(args.years, 8))
+    if dep.attrs["initial"] - dep.attrs["keep_cash"] > 0:
+        print()
+        print("── 手元の現金を NISA の成長投資枠に入れていく場合（毎月の積立が先に枠を使う） ──")
+        print(f"  手元の現金 {dep.attrs['initial']:,.0f} 円のうち、残す現金 {dep.attrs['keep_cash']:,.0f} 円を除いた分")
+        print()
+        print(dep.map(lambda v: f"{v:,.0f}").to_markdown())
+        for n in dep.attrs.get("notes", []):
+            print(f"  ※ {n}")
+        if dep["初期資金→成長枠"].iloc[0] > 0 and plan.months_left < 12:
+            print("  ※ 今年の成長枠の残りは翌年に繰り越せない。年末に入れるなら、その年の枠として扱われる最終日を証券会社で確認する")
+        waiting = dep["枠待ちの現金（年末）"]
+        if waiting.iloc[0] > 0:
+            years_waiting = int((waiting > 0).sum())
+            print("  ※ つみたて投資枠は積立契約での購入が条件なので、まとめて入れる先は成長投資枠だけとした")
+            print(f"  ※ 枠待ちの現金が {years_waiting} 年以上残る。実データでは、枠を待つより課税口座で先に投資し、"
+                  "毎年の空きに合わせて売って NISA へ移すほうが多くの開始時期で上だった（docs/STRATEGIES.md の wait_lab）。"
+                  "急落直後に売りたくなるなら、数か月に分けて入れる")
 
 
 def cmd_checkup(args) -> None:

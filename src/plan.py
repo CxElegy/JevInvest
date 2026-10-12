@@ -345,6 +345,89 @@ def _allocate(
     return plans, warnings, t_budget
 
 
+def _initial_cash(cfg: dict, base: str) -> tuple[float, list[str]]:
+    """台帳の CASH- の行の合計（基準通貨）。換算できない外貨現金は除き、その旨を返す。"""
+    notes: list[str] = []
+    initial_cash = 0.0
+    for p in (cfg.get("positions") or []):
+        sym = str(p.get("symbol", ""))
+        if not sym.startswith("CASH-"):
+            continue
+        native = float(p.get("quantity", 0)) * float(p.get("cost_basis_per_unit", 1.0))
+        ccy = str(p.get("currency") or base).upper()
+        if ccy == base:
+            initial_cash += native
+        elif p.get("cost_fx_rate") is not None:
+            # 時価の為替は持っていないので、取得時の為替で換算する
+            initial_cash += native * float(p["cost_fx_rate"])
+            notes.append(f"{sym} は取得時の為替（cost_fx_rate）で {base} に換算して累計投入に含めた")
+        else:
+            notes.append(f"{sym} は {ccy} 建てで換算レートが無いため、累計投入に含めていない")
+    return initial_cash, notes
+
+
+def initial_deployment(cfg: dict, plan: ContributionPlan, years: int = 8,
+                       keep_cash: float | None = None) -> pd.DataFrame:
+    """手元の現金（初期資金）を、毎月の積立が使った後の成長投資枠の空きに年ごとに入れる場合の目安。
+
+    つみたて投資枠は積立契約での購入が条件なので、まとめて入れる先は成長投資枠だけとする。
+    毎月の積立の割り当ては annual_projection と同じ（今年は残り月数、来年からは満額の年）。
+    keep_cash: 投資に回さず残す現金（生活防衛資金）。None なら contributions.keep_cash、
+    それも無ければ目標配分の現金の比率 × 初期資金。
+    購入可の銘柄が無ければ（plan.invested == 0）、表は「承認が取れたら」の目安になる（attrs["notes"]）。
+    """
+    n = _nisa_inputs(cfg)
+    base = str(cfg.get("base_currency") or "JPY").upper()
+    initial, notes = _initial_cash(cfg, base)
+    contrib = cfg.get("contributions") or {}
+    target = cfg.get("target_allocation") or {}
+    tsum = sum(float(v) for v in target.values()) or 100.0
+    if keep_cash is None:
+        if contrib.get("keep_cash") is not None:
+            keep_cash = float(contrib["keep_cash"])
+            notes.append("残す現金は contributions.keep_cash")
+        else:
+            keep_cash = initial * float(target.get("cash", 0) or 0) / tsum
+            notes.append("残す現金は目標配分の現金の比率 × 初期資金（生活防衛資金を決めたら contributions.keep_cash に書く）")
+    deploy = max(initial - keep_cash, 0.0)
+    if plan.invested <= 0:
+        notes.append("購入可と記録された銘柄が無いので、今は何も入れられない。下の表は承認が取れた場合の目安")
+
+    lifetime, growth_max = n["lifetime"], n["growth_max"]
+    cum_t = max(n["used_lifetime"] - n["used_growth_lifetime"], 0.0)
+    cum_g = n["used_growth_lifetime"]
+    rows = []
+    for y in range(1, years + 1):
+        p = plan if y == 1 else (plan.full_year or plan)
+        m = plan.months_left if y == 1 else 12
+        t, g = p.tsumitate_total * m, p.growth_total * m
+        # 毎月の積立が先に枠を使う（生涯上限で頭打ち。annual_projection と同じ順）
+        if growth_max > 0:
+            g = min(g, max(growth_max - cum_g, 0.0))
+        if lifetime > 0:
+            over = max(t + g - max(lifetime - cum_t - cum_g, 0.0), 0.0)
+            cut_g = min(g, over)
+            g -= cut_g
+            t -= over - cut_g
+        cum_t += t
+        cum_g += g
+        g_annual_room = n["g_annual"] - (n["g_used"] if y == 1 else 0.0) - g
+        room = max(min(g_annual_room,
+                       (growth_max - cum_g) if growth_max > 0 else g_annual_room,
+                       (lifetime - cum_t - cum_g) if lifetime > 0 else g_annual_room), 0.0)
+        put = min(deploy, room)
+        deploy -= put
+        cum_g += put
+        label = f"{y}年目" + (f"（今年の残り {m} か月）" if y == 1 and m < 12 else "")
+        rows.append({"年": label, "成長枠の空き（積立の後）": room, "初期資金→成長枠": put,
+                     "枠待ちの現金（年末）": deploy, "生涯枠残（年末）": max(lifetime - cum_t - cum_g, 0.0)})
+    df = pd.DataFrame(rows).set_index("年")
+    df.attrs["notes"] = notes
+    df.attrs["initial"] = initial
+    df.attrs["keep_cash"] = keep_cash
+    return df
+
+
 def annual_projection(cfg: dict, plan: ContributionPlan, years: int = 5) -> pd.DataFrame:
     """投入額の累計と NISA 生涯枠の消化を年ごとに出す。
 
@@ -364,21 +447,8 @@ def annual_projection(cfg: dict, plan: ContributionPlan, years: int = 5) -> pd.D
     base = str(cfg.get("base_currency") or "JPY").upper()
     notes: list[str] = []
 
-    initial_cash = 0.0
-    for p in (cfg.get("positions") or []):
-        sym = str(p.get("symbol", ""))
-        if not sym.startswith("CASH-"):
-            continue
-        native = float(p.get("quantity", 0)) * float(p.get("cost_basis_per_unit", 1.0))
-        ccy = str(p.get("currency") or base).upper()
-        if ccy == base:
-            initial_cash += native
-        elif p.get("cost_fx_rate") is not None:
-            # 時価の為替は持っていないので、取得時の為替で換算する
-            initial_cash += native * float(p["cost_fx_rate"])
-            notes.append(f"{sym} は取得時の為替（cost_fx_rate）で {base} に換算して累計投入に含めた")
-        else:
-            notes.append(f"{sym} は {ccy} 建てで換算レートが無いため、累計投入に含めていない")
+    initial_cash, cash_notes = _initial_cash(cfg, base)
+    notes.extend(cash_notes)
 
     rows = []
     cum_t = max(n["used_lifetime"] - n["used_growth_lifetime"], 0.0)

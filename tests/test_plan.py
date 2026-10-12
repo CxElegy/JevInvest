@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from src.plan import annual_projection, build
+from src.plan import annual_projection, build, initial_deployment
 
 ROOT = Path(__file__).resolve().parents[1]
 CLEARED = {"developed_equity": ["VT"], "us_equity": ["X"], "jp_equity": ["Y"], "bond": ["B"]}
@@ -103,3 +103,40 @@ def test_cleared_by_class_ignores_symbol_case(tmp_path):
     pos = Position(symbol="FUND-eMAXIS", name="", asset_class="developed_equity", account="NISA",
                    quantity=1, cost_basis_per_unit=1, currency="JPY")
     assert cleared_by_class(reg, [pos]) == {"developed_equity": ["FUND-eMAXIS"]}
+
+
+
+def _with_cash(cfg, amount):
+    cfg["positions"] = [p for p in cfg.get("positions") or [] if not str(p.get("symbol", "")).startswith("CASH-")]
+    cfg["positions"].append({"symbol": "CASH-JPY", "asset_class": "cash", "account": "特定口座",
+                             "quantity": amount, "cost_basis_per_unit": 1, "currency": "JPY"})
+    return cfg
+
+
+def test_initial_cash_fills_growth_room_left_after_monthly():
+    # 月 20 万は今年 10〜12 月の 3 か月、来年から毎年 240 万（つみたて 120 万 + 成長 120 万）を使う
+    cfg = _with_cash(_cfg(), 6_000_000)
+    plan = build(cfg, cleared_symbols_by_class=CLEARED, today=date(2026, 10, 5))
+    dep = initial_deployment(cfg, plan, years=4, keep_cash=1_000_000)
+    put = dep["初期資金→成長枠"].tolist()
+    assert put[0] == pytest.approx(2_400_000 - plan.growth_total * 3)   # 今年の成長枠の残り
+    assert put[1] == pytest.approx(1_200_000)                            # 来年以降は成長枠 240 万 − 積立 120 万
+    assert sum(put) == pytest.approx(5_000_000)                          # 残す 100 万を除いて全部入る
+    assert dep["枠待ちの現金（年末）"].iloc[-1] == pytest.approx(0)
+
+
+def test_initial_cash_stops_at_lifetime_and_keeps_emergency_fund():
+    cfg = _with_cash(_cfg(used_lifetime=17_000_000, used_growth_lifetime=11_500_000), 3_000_000)
+    cfg["contributions"]["keep_cash"] = 2_000_000
+    plan = build(cfg, cleared_symbols_by_class=CLEARED, today=date(2026, 10, 5))
+    dep = initial_deployment(cfg, plan, years=3)
+    assert dep.attrs["keep_cash"] == 2_000_000
+    assert dep["初期資金→成長枠"].sum() <= 500_000 + 1e-6           # 成長枠の生涯上限 1,200 万の残り
+    assert (dep["生涯枠残（年末）"] >= 0).all()
+
+
+def test_initial_deployment_warns_when_nothing_is_cleared():
+    cfg = _with_cash(_cfg(), 2_000_000)
+    plan = build(cfg, cleared_symbols_by_class={}, today=date(2026, 10, 5))
+    dep = initial_deployment(cfg, plan, years=2)
+    assert any("購入可と記録された銘柄が無い" in n for n in dep.attrs["notes"])
