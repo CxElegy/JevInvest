@@ -266,3 +266,26 @@ def test_cli_nextbuy_splits_without_selling_and_refuses_when_unpriced(ledger_pat
     assert "今月の積立の振り分け" in out
     # compliance の記録が無いので、現金以外は全部留保（買えと言わない）
     assert "購入可の銘柄なし" in out and "100,000" not in out
+
+
+def test_cli_harvest_reads_realized_from_transactions(ledger_path, market_data, tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr("src.marketdata.DEFAULT_DB", tmp_path / "hv.sqlite")
+    monkeypatch.setattr("src.marketdata.MarketData._download",
+                        lambda self, symbols, start=None, period=None:
+                        {s: market_data.data[s].copy() for s in symbols if s in market_data.data})
+    tx = tmp_path / "tx.yaml"
+    tx.write_text("""
+transactions:
+  - {date: 2026-02-02, type: buy, symbol: 9984.T, account: 特定口座, quantity: 100, price: 5000}
+  - {date: 2026-05-01, type: sell, symbol: 9984.T, account: 特定口座, quantity: 100, price: 6000}
+  - {date: 2026-03-02, type: buy, symbol: 8306.T, account: NISA, quantity: 100, price: 1000}
+  - {date: 2026-06-01, type: sell, symbol: 8306.T, account: NISA, quantity: 100, price: 2000}
+""", encoding="utf-8")
+    common = ["--holdings", str(ledger_path), "--compliance", str(tmp_path / "none.yaml")]
+    cli.main([*common, "harvest", "--transactions", str(tx), "--year", "2026"])
+    out = capsys.readouterr().out
+    assert "今年の実現損益: +100,000 円" in out          # NISA の売却益は数えない
+    assert "NISA の保有 2 件は対象外" in out
+    cli.main([*common, "harvest", "--realized", "-50000", "--pct-only", "--transactions", str(tmp_path / "no.yaml")])
+    out = capsys.readouterr().out
+    assert "今年の実現損益: 損" in out and " 円" not in out.split("※")[0]

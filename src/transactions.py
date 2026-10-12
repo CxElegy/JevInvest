@@ -100,6 +100,8 @@ class Ledger:
     transactions: list[Transaction] = field(default_factory=list)
     lots: dict[tuple[str, str], Lot] = field(default_factory=dict)
     realized_total: float = 0.0
+    # 年 → 口座 → 実現損益（基準通貨）。年は約定日の年（税は受渡日の年なので、年末の数日はずれうる）
+    realized_by_year: dict[int, dict[str, float]] = field(default_factory=dict)
     dividends_total: float = 0.0
     fees_total: float = 0.0
     warnings: list[str] = field(default_factory=list)
@@ -222,7 +224,10 @@ def load(path: str | Path, base_currency: str = "JPY") -> Ledger:
             cost_gross = lot.cost_base_gross * frac
             cost_fee = lot.fees_base * frac
             proceeds = qty * t.price * t.fx_rate
-            led.realized_total += proceeds - cost_gross - cost_fee - t.fee
+            gain = proceeds - cost_gross - cost_fee - t.fee
+            led.realized_total += gain
+            by_acct = led.realized_by_year.setdefault(t.date.year, {})
+            by_acct[t.account] = by_acct.get(t.account, 0.0) + gain
             led.fees_total += t.fee
             lot.quantity -= qty
             lot.cost_native *= (1 - frac)

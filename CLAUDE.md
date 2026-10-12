@@ -9,12 +9,13 @@
 - `python -m src.cli taxplan --salary N` iDeCo の節税額・ふるさと納税の上限（概算）。年収は本人の手元で入れてもらう
 - `python -m src.cli check-trade buy SYMBOL --pct 3` 売買前の点検（やめる理由を先に出す）
 - `python -m src.cli nextbuy` 今月の積立の振り分け（売らずに目標へ寄せる。`--pct-only` で比率だけ）
+- `python -m src.cli harvest --realized N` 年末の損出し・益出しの点検（課税口座。損出しの多くは繰り延べ）
 - `python -m src.cli checkup` 目標配分の健康診断（下落・外貨・NISA 枠。シミュレーターの「我的计划体检」と同じ）
 - `python -m src.cli stress` 過去の急落・円高を今の配分に当てはめる（値動きと為替に分けて出す）
 - `python tools/papertrade.py run` ペーパートレード（仮想 500 万円・実データ）を進める。結果は `paper/REPORT.md`
 - `python -m src.cli import-csv FILE.csv` 証券会社の取引履歴 CSV を取り込む（SBI・楽天。金額は画面に出さない）
 - 出力した `reports/latest.md` を読んで、集中度・相関・目標配分・為替・税制の観点で判断する
-- スラッシュコマンド: `/review` `/add-trade` `/import-csv` `/before-trade` `/independence-mail` `/monthly-check` `/plan` `/compliance` `/taxplan` `/influencers` `/influencers-watch`（定期実行用）
+- スラッシュコマンド: `/review` `/add-trade` `/import-csv` `/before-trade` `/harvest` `/independence-mail` `/monthly-check` `/plan` `/compliance` `/taxplan` `/influencers` `/influencers-watch`（定期実行用）
 - 金額を Claude に渡したくないとき: `web/ledger.html`（ブラウザ内だけに保存）で本人が入力し、
   比率だけの要約を貼ってもらう。金額を聞き出さない。
 

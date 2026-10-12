@@ -699,6 +699,43 @@ def cmd_checkup(args) -> None:
     print("  ※ 税・手数料は売買コストのみ反映。配分の判断材料で、銘柄を勧めるものではない")
 
 
+def cmd_harvest(args) -> None:
+    """年末の損出し・益出しの点検。売買の指示はしない。"""
+    from datetime import date as _date
+
+    from .analytics import analyze
+    from .compliance import load as load_compliance
+    from .harvest import render, review
+    from .marketdata import MarketData
+
+    h = _load(args.holdings)
+    year = args.year or _date.today().year
+    types = {a.name: a.type for a in h.accounts}
+    if args.realized is not None:
+        realized, source = float(args.realized), "--realized で指定"
+    elif args.transactions.exists():
+        from .transactions import load as load_tx
+
+        led = load_tx(args.transactions, h.base_currency)
+        by = led.realized_by_year.get(year, {})
+        realized = sum(v for a, v in by.items() if types.get(a) == "taxable")
+        source = f"{args.transactions.name} の課税口座の売却から（約定日の年で数えた概算）"
+        for w in led.warnings:
+            print(f"  ⚠ {w}", file=sys.stderr)
+    else:
+        realized, source = None, f"{args.transactions.name} が無く、--realized も無い"
+    reg = load_compliance(args.compliance)
+    md = MarketData()
+    try:
+        a = analyze(h, md, with_risk=False)
+    finally:
+        md.close()
+    for w in dict.fromkeys(md.fetch_errors):
+        print(f"  ⚠ 価格の取得: {w}", file=sys.stderr)
+    r = review(a.valuations, types, realized, source, year, reg.can_buy, cost_pct=args.cost_pct)
+    print(render(r, pct_only=args.pct_only))
+
+
 def cmd_nextbuy(args) -> None:
     """今月の積立を、目標より少ないクラスに多く入れる振り分け。売らない。"""
     import yaml
@@ -891,6 +928,16 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--out", type=Path, default=ROOT / "config" / "transactions.imported.yaml",
                    help="出力先（既定: config/transactions.imported.yaml）")
     p.set_defaults(func=cmd_import_csv)
+
+    p = sub.add_parser("harvest", help="年末の損出し・益出しの点検（課税口座のみ。売買の指示はしない）")
+    p.add_argument("--realized", type=float, default=None,
+                   help="今年の課税口座の実現損益（証券会社の画面の数字）。省略時は transactions.yaml から数える")
+    p.add_argument("--transactions", type=Path, default=DEFAULT_TRANSACTIONS)
+    p.add_argument("--year", type=int, default=None, help="対象の年（省略時は今年）")
+    p.add_argument("--cost-pct", type=float, default=None,
+                   help="往復の売買コスト（評価額に対する割合、0.01 = 1%%）。省略時は日本株 0.2%%・米国株 1%%")
+    p.add_argument("--pct-only", action="store_true", help="金額を出さず比率だけ")
+    p.set_defaults(func=cmd_harvest)
 
     p = sub.add_parser("nextbuy", help="今月の積立を、目標より少ないクラスに多く入れる振り分け（売らない）")
     p.add_argument("--amount", type=float, default=None, help="投入額（省略時は contributions.monthly）")
