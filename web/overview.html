@@ -133,6 +133,15 @@ table.data td.num { font-family: var(--f-mono); }
 .note.blue { border-left-color: var(--accent); }
 .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
 .two > * { min-width: 0; }
+.dec { display: grid; gap: 10px; margin-top: 14px; }
+.dec .card h4 { margin: 0 0 4px; font-size: 15px; }
+.dec .why { color: var(--muted); font-size: 14px; margin: 0 0 8px; }
+.dec .opts { display: flex; flex-wrap: wrap; gap: 6px; }
+.dec button { font: 13px var(--f-body); padding: 5px 11px; border: 1px solid var(--line); border-radius: 99px; background: var(--bg); color: var(--fg); cursor: pointer; }
+.dec button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+.dec button:disabled { opacity: .55; cursor: default; }
+.dec .tag { font-size: 12px; color: var(--accent); margin-left: 6px; }
+.dec .saved { font-size: 12px; color: var(--muted); margin-top: 6px; min-height: 1em; }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; }
 .card h4 { margin: 0 0 6px; font-size: 15px; }
 .card ul { margin: 6px 0 0; padding-left: 18px; font-size: 14px; }
@@ -171,6 +180,11 @@ table.data td.num { font-family: var(--f-mono); }
     <li><div class="rank">2</div><div><b>查公司有没有企业型 DC，决定 iDeCo 要不要加额</b><span>从 2026 年 12 月那期起，没有企业年金的上班族 iDeCo 上限从每月 2.3 万涨到 6.2 万日元（厚劳省资料）。这是全部内容里节税效果最大的一项，而且有截止日。在本地运行 <code>/taxplan</code> 可以算出你能省多少（下面第 01 节有示例）。</span></div></li>
     <li><div class="rank">3</div><div><b>打开 <a href="https://claude.ai/artifact/4UHKcCEXmkn67ocnwvLCF6">500 万模拟器</a> 玩一下</b><span>打开就是「我的计划体检」：用你的目标配置（只填比例）一页看完历史回测、2008 年最坏的情况、20 年的范围、能不能忍受下跌、NISA 额度用到几年。"回放实验"默认是"一个月前开始"，打开就能看到一个月的完整过程：每天的估值、持仓、每一笔成交。"策略排行榜"比较 18 个策略，"未来模拟"看你的计划 20 年后的分布范围，"你来操盘"可以自己操作、和"不动"比。实盘 19 个账户从 10/13 早上起每天 7:07 自动更新，更新后会推送通知给你。</span></div></li>
   </ol>
+
+  <h2><span class="no">★</span>待你决定（点一下就行）</h2>
+  <p class="prose">下面每一条都是我根据真实数据提的建议，<b>还没有定</b>。点你的选择就会保存在这个页面里（只有你和你分享的人能看到），我下次读到后记进计划。不会因此自动买卖任何东西；涉及买卖的，都要先过 independence 确认。</p>
+  <div class="dec" id="dec"></div>
+  <p class="note" id="decState"></p>
 
   <h2><span class="no">01</span>节税：这是最确定能赚到的钱</h2>
   <p class="prose">CLAUDE.md 里定的优先级，第一位就是税制和手续费。选股赚多少不确定，节税省下的钱是确定的。下表用几个<b>示例年收入</b>算 2026 年的数（不是你的收入；社会保险费按年收入 15% 估算，只有本人、没有家属）。你自己的数，请在本地运行 <code>python -m src.cli taxplan --salary 你的年收入</code>，收入只显示在屏幕上，不会保存，也不用告诉我。</p>
@@ -681,4 +695,68 @@ function stress() {
 }
 
 meta(); tax(); live(); backtest(); stress();
+
+// ---------------------------------------------------------------- 待你决定（db に保存）
+const SIM = "https://claude.ai/artifact/4UHKcCEXmkn67ocnwvLCF6";
+const DECISIONS = [
+  { key: "keep_cash", title: "生活防卫资金：留几个月的生活费不投资", tag: "先定这个",
+    why: "急用钱时不用在大跌里卖。定了之后，plan 命令会从起步现金里先留出这一块（金额只在你本地填）。",
+    opts: ["3 个月", "6 个月", "12 个月", "再想想"] },
+  { key: "rebalance", title: "调回目标比例：平时只用新钱补低的，偏离 5 个百分点才卖", tag: "16/16 不输",
+    why: "16 种组合里都不输给每月卖回；课税账户还少交税。命令 nextbuy 每月算这个月该买哪部分。", link: "#sec-reb",
+    opts: ["同意", "不同意", "再想想"] },
+  { key: "wait", title: "放不进 NISA 的现金：先在课税账户投，每年额度空出来再转进 NISA", tag: "等 3 年的钱 95% 更好",
+    why: "干等的话，闲着的钱少的是整段收益；NISA 只免掉收益的 20%。最差一次是刚投就遇金融危机，少 32%。", link: "#sec-wait",
+    opts: ["同意", "分几个月慢慢投进去", "宁可等额度", "再想想"] },
+  { key: "frontload", title: "年初手上有钱时，NISA 成长投资枠在年初一次买满", tag: "16 年里 11 年更好",
+    why: "平均多约 5%（360 万的约 19 万）。代价是年中大跌时会眼看着比分批少很多。", link: "#sec-front",
+    opts: ["同意", "还是每月分批", "再想想"] },
+  { key: "bond", title: "债券那 15% 用什么", tag: "回报 vs 托底",
+    why: "不对冲的美元债长期回报高，但股票大跌的月份平均也跌 1.9%；对冲或日元资产才真正托底。你外币已约 87%。", link: "#sec-hedge",
+    opts: ["不对冲的美元债", "对冲汇率的债券", "日元资产（个人向け国債等）", "再想想"] },
+  { key: "harvest", title: "每年 11 月底用 /harvest 检查课税账户（损出し・益出し）", tag: "税",
+    why: "只看课税账户；多数情况只是把税往后推，所以会和来回手续费比，划不来就不做。没有课税账户的个股就不需要。",
+    opts: ["同意", "不需要", "再想想"] },
+];
+let decDb = null, decData = {}, decBusy = {};
+function renderDecisions() {
+  const host = document.getElementById("dec");
+  host.innerHTML = DECISIONS.map(d => {
+    const cur = decData[d.key];
+    const link = d.link ? ` <a href="${SIM}" target="_blank" rel="noopener">看数据（模拟器「怎么投更划算」）</a>` : "";
+    return `<div class="card"><h4>${esc(d.title)}<span class="tag">${esc(d.tag)}</span></h4><p class="why">${esc(d.why)}${link}</p>` +
+      `<div class="opts">${d.opts.map(o => `<button type="button" data-k="${d.key}" data-o="${esc(o)}" aria-pressed="${cur && cur.choice === o}"${decDb && !decBusy[d.key] ? "" : " disabled"}>${esc(o)}</button>`).join("")}</div>` +
+      `<div class="saved">${cur ? `已选：${esc(cur.choice)}（${esc(String(cur.at || "").slice(0, 10))}）` : ""}</div></div>`;
+  }).join("");
+}
+document.getElementById("dec").addEventListener("click", async e => {
+  const b = e.target.closest("button[data-k]");
+  if (!b || !decDb || decBusy[b.dataset.k]) return;
+  const key = b.dataset.k, choice = b.dataset.o;
+  if (decData[key] && decData[key].choice === choice) return;           // 変わっていなければ書かない
+  decBusy[key] = true; renderDecisions();
+  try {
+    await decDb.doc("decisions/" + key).set({ choice, at: new Date().toISOString() });
+    document.getElementById("decState").textContent = "已保存。";
+  } catch (err) {
+    document.getElementById("decState").textContent = `没保存成功（${err && err.code ? err.code : "错误"}）。直接回复我也可以。`;
+  } finally { decBusy[key] = false; renderDecisions(); }
+});
+renderDecisions();
+document.getElementById("decState").textContent = "正在连接保存功能…";
+(async () => {
+  const c = window.claude;
+  decDb = c && typeof c.use === "function" ? await c.use("db") : null;
+  if (!decDb) {
+    document.getElementById("decState").textContent = "这里保存不了选择（需要在 claude.ai 里打开这个页面）。直接回复我你的选择也可以。";
+    renderDecisions();
+    return;
+  }
+  document.getElementById("decState").textContent = "点一下就保存；可以随时改。";
+  decDb.collection("decisions").onSnapshot(snap => {
+    decData = {};
+    for (const d of snap.docs) if (d.exists) decData[d.id] = d.data();
+    renderDecisions();
+  }, err => { document.getElementById("decState").textContent = `读取保存的选择失败（${err && err.code}）。`; });
+})();
 </script>
