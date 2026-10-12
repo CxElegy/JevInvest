@@ -732,7 +732,8 @@ def cmd_harvest(args) -> None:
         md.close()
     for w in dict.fromkeys(md.fetch_errors):
         print(f"  ⚠ 価格の取得: {w}", file=sys.stderr)
-    r = review(a.valuations, types, realized, source, year, reg.can_buy, cost_pct=args.cost_pct)
+    r = review(a.valuations, types, realized, source, year, reg.can_buy, cost_pct=args.cost_pct,
+               dividends=args.dividends, carryover=args.carryover)
     print(render(r, pct_only=args.pct_only))
 
 
@@ -932,10 +933,14 @@ def main(argv: list[str] | None = None) -> None:
     p = sub.add_parser("harvest", help="年末の損出し・益出しの点検（課税口座のみ。売買の指示はしない）")
     p.add_argument("--realized", type=float, default=None,
                    help="今年の課税口座の実現損益（証券会社の画面の数字）。省略時は transactions.yaml から数える")
+    p.add_argument("--dividends", type=float, default=0.0,
+                   help="今年、課税口座（源泉徴収あり・株式数比例配分方式）で受け取った配当等。損と通算できる")
+    p.add_argument("--carryover", type=float, default=0.0, help="確定申告で繰り越している過去の損")
     p.add_argument("--transactions", type=Path, default=DEFAULT_TRANSACTIONS)
     p.add_argument("--year", type=int, default=None, help="対象の年（省略時は今年）")
     p.add_argument("--cost-pct", type=float, default=None,
-                   help="往復の売買コスト（評価額に対する割合、0.01 = 1%%）。省略時は日本株 0.2%%・米国株 1%%")
+                   help="往復の売買コスト（評価額に対する割合、0.01 = 1%%）。省略時は日本株 0.2%%、"
+                        "米国株は 0.495%% × 2（1 回 22 ドル上限）、投信 0.1%%")
     p.add_argument("--pct-only", action="store_true", help="金額を出さず比率だけ")
     p.set_defaults(func=cmd_harvest)
 

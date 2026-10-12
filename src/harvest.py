@@ -22,9 +22,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 TAX_RATE = 0.20315
-# 往復（売って買い戻す）のコストの目安（評価額に対する割合）。--cost-pct で上書きできる
-ROUND_TRIP_COST = {"JPY": 0.002, "USD": 0.010}      # 日本株: スプレッド程度、米国株: 手数料 0.495% × 2
-FUND_ROUND_TRIP = 0.001                             # 投信: 多くはノーロード。信託財産留保額があれば足す
+# 往復（売って買い戻す）のコストの目安。--cost-pct で上書きできる
+JPY_ROUND_TRIP = 0.002          # 日本株・ETF: 手数料 0 円のコース（SBI・楽天）でも売り買いのスプレッドはかかる
+US_FEE, US_FEE_CAP_USD = 0.00495, 22.0   # 米国株: 約定代金の 0.495%（上限 22 ドル）を売りと買いで 2 回。外貨のまま買い戻す前提
+FUND_ROUND_TRIP = 0.001         # 投信: 多くはノーロード。信託財産留保額があれば足す
 DEFER_YEARS, DEFER_RETURN = 10, 0.05                # 繰り延べの価値の目安: 10 年後に売る、年 5% で運用
 
 
@@ -35,6 +36,9 @@ class Candidate:
     kind: str                  # "loss"（損出し） / "gain"（益出し）
     pnl: float                 # 含み損益（基準通貨、税務上の円換算）
     value: float               # 評価額
+    currency: str = "JPY"
+    fx_rate: float = 1.0       # 評価に使った為替（米国株の手数料の上限の換算用）
+    is_fund: bool = False
     used: float = 0.0          # 今年の実現損益と相殺に使える額
     cost: float = 0.0          # 往復の売買コスト（概算）
     rebuy_ok: bool = False     # 購入可と記録されているか（買い戻しの可否）
@@ -50,16 +54,26 @@ class Review:
     year: int
     realized: float | None                 # 今年の実現損益（課税口座の合計）。不明なら None
     realized_source: str
+    dividends: float = 0.0                 # 課税口座で受け取った今年の配当等（株式数比例配分方式。損と通算できる）
+    carryover: float = 0.0                 # 前年以前から繰り越している損（確定申告で繰り越している場合）
     candidates: list[Candidate] = field(default_factory=list)
     unknown: list[str] = field(default_factory=list)      # 税務上の損益が出せない保有
     skipped_nisa: int = 0
     notes: list[str] = field(default_factory=list)
 
     @property
-    def mode(self) -> str | None:
-        if self.realized is None or self.realized == 0:
+    def base(self) -> float | None:
+        """今年の課税の土台: 実現損益 + 配当等 − 繰越損失。正なら税がかかる額、負なら使い切れていない損。"""
+        if self.realized is None:
             return None
-        return "loss" if self.realized > 0 else "gain"
+        return self.realized + self.dividends - self.carryover
+
+    @property
+    def mode(self) -> str | None:
+        b = self.base
+        if b is None or b == 0:
+            return None
+        return "loss" if b > 0 else "gain"
 
     @property
     def tax_effect(self) -> float:
@@ -75,10 +89,26 @@ def defer_value(tax: float, years: int = DEFER_YEARS, r: float = DEFER_RETURN) -
     return tax * ((1 + r) ** years - 1) * (1 - TAX_RATE)
 
 
+def round_trip_cost(c: Candidate, cost_pct: float | None = None) -> float:
+    if cost_pct is not None:
+        return c.value * cost_pct
+    if c.is_fund:
+        return c.value * FUND_ROUND_TRIP
+    if c.currency == "JPY":
+        return c.value * JPY_ROUND_TRIP
+    usd = c.value / c.fx_rate if c.fx_rate else c.value
+    return 2 * min(usd * US_FEE, US_FEE_CAP_USD) * (c.fx_rate or 1.0)
+
+
 def review(valuations, account_types: dict[str, str], realized: float | None, realized_source: str,
-           year: int, can_buy, cost_pct: float | None = None, min_pnl: float = 1.0) -> Review:
-    """valuations: analytics.PositionValuation のリスト。account_types: 口座名 → taxable / nisa など。"""
-    out = Review(year, realized, realized_source)
+           year: int, can_buy, cost_pct: float | None = None, min_pnl: float = 1.0,
+           dividends: float = 0.0, carryover: float = 0.0) -> Review:
+    """valuations: analytics.PositionValuation のリスト。account_types: 口座名 → taxable / nisa など。
+
+    dividends: 課税口座（源泉徴収あり・株式数比例配分方式）で今年受け取った配当等。損と通算できるので、
+    損出しで減らせる額が増え、益出しで非課税にできる額が減る。carryover: 繰り越している過去の損。
+    """
+    out = Review(year, realized, realized_source, dividends=max(dividends, 0.0), carryover=max(carryover, 0.0))
     taxable = []
     for v in valuations:
         p = v.position
@@ -104,7 +134,7 @@ def review(valuations, account_types: dict[str, str], realized: float | None, re
         want = None
     else:
         want = "loss" if out.mode == "loss" else "gain"
-    room = abs(realized) if realized else 0.0
+    room = abs(out.base) if out.base else 0.0
     rows = []
     for v in taxable:
         p = v.position
@@ -115,10 +145,10 @@ def review(valuations, account_types: dict[str, str], realized: float | None, re
             continue
         if want is None and kind != "loss":
             continue          # 今年の実現損益が分からないときは、含み損だけを並べる
-        rate = cost_pct if cost_pct is not None else (
-            FUND_ROUND_TRIP if p.is_fund else ROUND_TRIP_COST.get(p.currency, ROUND_TRIP_COST["USD"]))
-        rows.append(Candidate(p.symbol, p.account, kind, v.pnl_base, v.market_value_base,
-                              cost=v.market_value_base * rate, rebuy_ok=bool(can_buy(p.symbol))))
+        c = Candidate(p.symbol, p.account, kind, v.pnl_base, v.market_value_base, currency=p.currency,
+                      fx_rate=v.fx_rate, is_fund=p.is_fund, rebuy_ok=bool(can_buy(p.symbol)))
+        c.cost = round_trip_cost(c, cost_pct)
+        rows.append(c)
     # 大きい順に、今年の実現損益を埋めるまで使う
     rows.sort(key=lambda c: -abs(c.pnl))
     for c in rows:
@@ -127,13 +157,21 @@ def review(valuations, account_types: dict[str, str], realized: float | None, re
         c.used = min(abs(c.pnl), room)
         room -= c.used
         if c.used == 0:
-            c.note = "今年の分はもう埋まっている" + ("（超えた損は確定申告で 3 年繰り越せる）" if c.kind == "loss" else "")
+            c.note = "今年の分はもう埋まっている" + ("（超えた損は、毎年続けて確定申告すれば 3 年繰り越せる）" if c.kind == "loss" else "")
         elif c.used < abs(c.pnl):
             c.note = "一部だけで足りる（全部売ると超えた分は" + ("繰越控除が要る）" if c.kind == "loss" else "課税される）")
         if not c.rebuy_ok:
             c.note = (c.note + "。" if c.note else "") + "買い戻しは不可（購入可と記録されていない）"
     out.candidates = rows
 
+    if out.dividends:
+        out.notes.append("配当等は、源泉徴収ありの特定口座で株式数比例配分方式で受け取った分だけが自動で損と通算される"
+                         "（それ以外は確定申告）。米国株の配当で米国に引かれた 10% は戻らない")
+    if out.carryover:
+        out.notes.append("繰越損失を使うには、今年も確定申告が要る")
+    if any(c.is_fund for c in rows):
+        out.notes.append("投資信託の税務上の取得価額は個別元本（元本払戻金＝特別分配金を受け取ると下がる）。"
+                         "台帳の取得単価と違うことがあるので、証券会社の画面の個別元本で確かめる")
     if out.mode == "loss":
         out.notes.append("損出しは税の繰り延べ: 買い戻すと取得単価が下がり、将来売るときに同じ額の税を払う。"
                          f"{DEFER_YEARS} 年後に売る・年 {DEFER_RETURN:.0%} で運用すると仮定した得は、"
@@ -155,6 +193,11 @@ def render(r: Review, pct_only: bool = False) -> str:
         L.append(f"今年の実現損益: {'益' if r.realized > 0 else '損' if r.realized < 0 else '0'}（{r.realized_source}）")
     else:
         L.append(f"今年の実現損益: {r.realized:+,.0f} 円（{r.realized_source}）")
+    if r.realized is not None and (r.dividends or r.carryover):
+        if pct_only:
+            L.append("  配当等・繰越損失を足し引きした今年の土台: " + ("課税あり" if (r.base or 0) > 0 else "損が残る" if (r.base or 0) < 0 else "0"))
+        else:
+            L.append(f"  + 課税口座の配当等 {r.dividends:,.0f} 円 − 繰越損失 {r.carryover:,.0f} 円 = 今年の土台 {r.base:+,.0f} 円")
     title = {"loss": "含み損（損出しの候補）", "gain": "含み益（益出しの候補）", None: "含み損"}[r.mode]
     if not r.candidates:
         L.append("")
@@ -199,8 +242,11 @@ def render(r: Review, pct_only: bool = False) -> str:
     for n in r.notes:
         L.append(f"※ {n}")
     L.append("※ 税は受渡日の年で決まる。年内に受け渡される最終の売買日は証券会社の案内で確認する")
-    L.append("※ 同じ日に同じ銘柄を売買すると、証券会社によっては約定の順に関係なく「買いが先」とみなして取得単価を"
-             "平均するため、損が一部しか確定しない。買い戻しは翌営業日以降が確実（その間の値動きのリスクはある）")
-    L.append("※ 別の証券会社の特定口座どうし・源泉徴収なしの口座と通算するには確定申告が要る")
+    L.append("※ 特定口座では、同じ日に同じ銘柄（株式・ETF）を売買すると、約定の順に関係なく「買いが先」とみなして"
+             "取得単価を平均するため、損益が一部しか確定しない（益出しも同じ）。投資信託は扱いが異なる。"
+             "買い戻しは翌営業日以降が確実（その間の値動きのリスクはある）")
+    L.append("※ 別の証券会社の特定口座どうし・源泉徴収なしの口座と通算する、損を繰り越すには確定申告が要る。"
+             "申告した所得は国保・後期高齢者医療・介護の保険料や、扶養・配偶者控除の判定に入ることがある"
+             "（住民税も所得税と同じ扱いになる）。会社の健康保険に本人として入っていれば影響は小さい")
     L.append("※ 売る・買い戻すの前に /before-trade で点検する。買い戻しは購入なので independence の確認が先")
     return "\n".join(L)
