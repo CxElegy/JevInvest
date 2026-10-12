@@ -204,6 +204,14 @@ svg.chart { display: block; width: 100%; height: auto; }
       <div class="scroll"><table class="data" id="rbTable"></table></div>
       <p class="note">同一个配置，只改"偏离目标比例以后怎么调回去"。"期末到手"：最后一天全部卖出后的金额（课税账户扣掉 20.315% 的税；"免税"假设全部在 NISA 里、不考虑每年 360 万和终身 1,800 万的上限）。"偏离"：每月月末，比例最偏的那一项离目标差几个百分点（平均 / 最大）。"股+金"：股票和黄金（债券、短债以外）在总资产里的比例（期末 / 最高），这一项变高说明风险在悄悄变大。交易成本（手续费 0.1%、滑点、换汇差）都算进去了。</p>
     </div>
+    <div class="panel" id="sec-wait">
+      <h3 style="margin-top:0">② 放不进 NISA 的现金：等明年的额度，还是先在课税账户投</h3>
+      <p id="wtSummary"></p>
+      <div class="chips" id="wtOpt" style="margin:8px 0"></div>
+      <div class="scroll"><table class="data" id="wtTable"></table></div>
+      <div id="wtChart"></div>
+      <p class="note" id="wtNote"></p>
+    </div>
     <div class="panel" id="sec-hedge">
       <h3 style="margin-top:0">③ 债券那部分：美元债、对冲汇率的美元债，还是日元现金</h3>
       <p id="hgSummary"></p>
@@ -909,7 +917,7 @@ let howInit = false;
 function renderHow() {
   if (!howInit) {
     howInit = true;
-    $("howNav").innerHTML = [["sec-fee", "① 手续费"], ["sec-reb", "② 再平衡"], ["sec-front", "② 年初买满"], ["sec-hedge", "③ 债券对冲"]]
+    $("howNav").innerHTML = [["sec-fee", "① 手续费"], ["sec-reb", "② 再平衡"], ["sec-front", "② 年初买满"], ["sec-wait", "② 现金等额度？"], ["sec-hedge", "③ 债券对冲"]]
       .map(([id, l]) => `<button class="chip" data-go="${id}">${l}</button>`).join("");
     $("howNav").onclick = e => { const b = e.target.closest("[data-go]"); if (b) $(b.dataset.go).scrollIntoView({ behavior: "smooth" }); };
     $("feePresets").innerHTML = FEE_PRESETS.map(([l, v], i) => `<button class="chip" data-i="${i}">${l}</button>`).join("");
@@ -919,7 +927,7 @@ function renderHow() {
     for (const id of ["feeInit", "feeMonthly", "feeYears", "feeRet", "feeA", "feeB"]) $(id).addEventListener("input", renderFees);
     initRebalance();
   }
-  renderFees(); renderRebalance(); renderFrontload(); renderHedge();
+  renderFees(); renderRebalance(); renderFrontload(); renderWait(); renderHedge();
 }
 /** 起步 + 每月投入，按月复利。fee 是年费率（小数），从回报里按月扣。 */
 function feePath(init, monthly, years, r, fee) {
@@ -945,6 +953,38 @@ function renderFees() {
     `点上面的按钮，交替填进 A 和 B。实质费率来自 docs/FUNDS.md（运用报告书的费用明细，${"2025–2026 年"}的数字）。` +
     `在 NISA 里持有美国上市 ETF（如 VT）还有一项看不见的成本：分红被美国扣的 10% 拿不回来，分红率 2% 时约等于每年再多 0.2%。` +
     `这里列出的基金名只为比较费用，不是推荐；买任何一只之前都要先过 independence 确认。`;
+}
+let wtSel = { mix: "target", k: "2" };
+function renderWait() {
+  const X = DATA.wait;
+  if (!X) { $("wtSummary").textContent = "等额度的数据没有嵌入。"; return; }
+  const st = rows => ({ n: rows.length, move: rows.filter(x => x.move > x.wait).length, stay: rows.filter(x => x.stay > x.wait).length,
+    avg: k => rows.reduce((a, x) => a + x[k], 0) / rows.length, worst: rows.reduce((a, x) => x.move / x.wait < a.move / a.wait ? x : a) });
+  const v = ["1", "2", "3"].map(k => st(X.results.vt[k]));
+  $("wtSummary").innerHTML = `你现在大部分是现金，而 NISA 每年最多 360 万；按你的计划每月定投 20 万，就占掉 240 万，剩下只有 120 万能放进存量现金；终身 1,800 万用满以后（按这个速度大约 7 年多）就再也没有额度可转。放不进去的钱有两个选择：` +
+    `<b>等</b>（放现金，等以后的额度）；或者<b>先投课税账户，额度一空出来就卖掉、交税，转进 NISA</b>（下面叫"先投再转"）。` +
+    `<br><b>数据说的话：</b>全球股一只、每段看 ${X.H} 年，"先投再转"赢过"等"的比例：等 1 年 ${v[0].move}/${v[0].n}，等 2 年 ${v[1].move}/${v[1].n}，等 3 年 <b>${v[2].move}/${v[2].n}</b>。` +
+    `每 100 万平均 ${X.H} 年后：等 3 年 ${man(v[2].avg("wait") * 1e6)}，先投再转 ${man(v[2].avg("move") * 1e6)}。要等得越久，干等越吃亏——NISA 免掉的只是收益的 20%，而闲着的钱少的是整段收益。` +
+    `最差的一次是 ${v[0].worst.start} 开始（刚投进去就碰上金融危机），先投再转少了 ${pct(v[0].worst.move / v[0].worst.wait - 1, 0).replace("-", "")}。` +
+    `<br><b>对你的意思：</b>额度要等 2 年以上的钱，历史上先投进去（课税账户），每年 NISA 有空余时再一点点转过去，大多数时候更好。一直放在课税账户不转（"一直课税"）不如转。` +
+    `前提是能承受投进去后马上大跌；受不了的话，分几个月投进去也行。<b>这段历史日元利率几乎是 0</b>，现在定期存款和个人向け国債有 1–2% 的利息，"等"的代价比表里小一些，但只要股票的预期回报明显高于存款利息，结论方向不变。买什么都要先过 independence 确认。`;
+  const opt = (key, val, label) => `<button class="chip${wtSel[key] === val ? " on" : ""}" data-k="${key}" data-v="${val}">${label}</button>`;
+  $("wtOpt").innerHTML = Object.entries(X.mixes).map(([k, l]) => opt("mix", k, l)).join("") + " " + ["1", "2", "3"].map(k => opt("k", k, `要等 ${k} 年`)).join("");
+  $("wtOpt").onclick = e => { const b = e.target.closest("[data-k]"); if (b) { wtSel[b.dataset.k] = b.dataset.v; renderWait(); } };
+  const rows = X.results[wtSel.mix][wtSel.k], t = st(rows);
+  const line = (l, key, wins) => `<tr><td>${l}</td><td class="num">${man(t.avg(key) * 1e6)}</td><td class="num">${man(Math.min(...rows.map(x => x[key])) * 1e6)}</td><td class="num">${man(Math.max(...rows.map(x => x[key])) * 1e6)}</td><td class="num">${wins}</td></tr>`;
+  $("wtTable").innerHTML = `<thead><tr><th>做法（每 100 万，${X.H} 年后、税后）</th><th>平均</th><th>最少</th><th>最多</th><th>赢过"等"</th></tr></thead><tbody>` +
+    line(`等 ${wtSel.k} 年（现金）再进 NISA`, "wait", "—") + line(`先投课税账户，${wtSel.k} 年后转进 NISA`, "move", `${t.move} / ${t.n}`) + line("一直放课税账户，最后卖出交税", "stay", `${t.stay} / ${t.n}`) + "</tbody>";
+  const W = 900, H = 220, L = 50, R = 10, T = 12, B = 30, n = rows.length;
+  const d = rows.map(x => x.move / x.wait - 1), mx = Math.max(0.05, ...d.map(Math.abs));
+  const Y = v => T + (mx - v) / (2 * mx) * (H - T - B), bw = (W - L - R) / n;
+  let g = "";
+  for (const v0 of [-mx, 0, mx]) g += `<line class="grid" x1="${L}" x2="${W - R}" y1="${Y(v0)}" y2="${Y(v0)}"/><text x="${L - 6}" y="${Y(v0) + 4}" text-anchor="end">${(v0 * 100).toFixed(0)}%</text>`;
+  rows.forEach((x, i) => { const y0 = Y(0), y1 = Y(d[i]);
+    g += `<rect x="${L + i * bw}" y="${Math.min(y0, y1)}" width="${Math.max(1, bw - 0.5)}" height="${Math.max(1, Math.abs(y1 - y0))}" fill="${d[i] >= 0 ? "var(--good)" : "var(--stop)"}"><title>${x.start} 开始：先投再转比等 ${pct(d[i], 1)}</title></rect>`;
+    if (x.start.endsWith("-01-02") || x.start.endsWith("-01-03") || x.start.endsWith("-01-04") || x.start.endsWith("-01-05") || i === 0) g += `<text x="${L + i * bw}" y="${H - B + 16}">${x.start.slice(0, 4)}</text>`; });
+  $("wtChart").innerHTML = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="每个开始月份，先投再转比等多出的比例">${g}</svg>`;
+  $("wtNote").innerHTML = `每根细柱 = 一个开始月份：先投再转比"等"多（绿）或少（红）多少。开始月份每次往后挪 1 个月，相邻的柱子大部分时间重叠，所以 ${t.n} 根柱子其实只相当于几段独立的行情。日元计；"等"的现金按日银政策利率计息（这段时间几乎是 0）；税只算卖出收益的 20.315%（亏了不交，不和别的相抵）；不含交易成本。数据到 ${X.generated_to}。`;
 }
 let flMix = "target";
 function renderFrontload() {
