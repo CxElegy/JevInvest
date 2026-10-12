@@ -30,7 +30,7 @@ from tools.strategy_lab import load_prices  # noqa: E402
 OUT = ROOT / "web" / "rebalance_lab.json"
 POLICIES = ["monthly", "yearly", "band", "cashflow"]
 MIXES = {
-    "target": ("目标配分（近似）", {"VT": 0.55, "QQQ": 0.20, "1348.T": 0.05, "AGG": 0.15}),
+    "target": ("目标配置（近似）", {"VT": 0.55, "QQQ": 0.20, "1348.T": 0.05, "AGG": 0.15}),
     "s60": ("股 6 债 4", {"VT": 0.6, "AGG": 0.4}),
     "s80": ("股 8 债 2", {"VT": 0.8, "AGG": 0.2}),
     "permanent": ("永久组合", {"SPY": 0.25, "TLT": 0.25, "GLD": 0.25, "BIL": 0.25}),

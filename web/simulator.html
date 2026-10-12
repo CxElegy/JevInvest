@@ -43,6 +43,11 @@ code, .mono { font-family: var(--f-mono); font-size: .92em; }
 .tabs button:hover:not([aria-selected="true"]) { color: var(--fg); background: var(--sunk); }
 section[role="tabpanel"] { padding-top: 20px; }
 .desk { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 20px; align-items: start; }
+.lead { margin: 6px 0 8px; }
+details.more { margin: 0 0 8px; } details.more summary { cursor: pointer; color: var(--accent); font-size: 14px; }
+.presets { display: grid; gap: 6px; font-size: 13px; }
+.presets div { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.presets span { flex: 1 1 140px; color: var(--muted); }
 @media (max-width: 860px) { .desk { grid-template-columns: minmax(0, 1fr); } }
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
 .panel + .panel { margin-top: 14px; }
@@ -104,7 +109,7 @@ svg.chart { display: block; width: 100%; height: auto; }
   .scroll { position: relative; }
   .scroll::before { content: "← 左右滑动查看 →"; display: block; font-size: 11.5px; color: var(--muted); margin-bottom: 4px; }
   .chart text { font-size: 24px; }
-  .desk > div:first-child { order: 2; } .desk > div:last-child { order: 1; }
+  .desk > div:first-child { order: 2; } .desk > div:last-child { order: 1; } .desk.keep > div:first-child { order: 1; } .desk.keep > div:last-child { order: 2; }
 }
 .reveal { border: 2px solid var(--accent); border-radius: 10px; padding: 16px; background: var(--accent-soft); margin-bottom: 14px; }
 .reveal h2 { margin-bottom: 6px; }
@@ -131,6 +136,14 @@ svg.chart { display: block; width: 100%; height: auto; }
         <dt>风险平价</dt><dd>按"波动越小放越多"分配，让每种资产对总波动的贡献差不多。</dd>
         <dt>课税账户</dt><dd>NISA 以外的普通账户（特定口座）。卖出有赚要交 20.315% 的税。</dd>
         <dt>ρ（排名相关）</dt><dd>两次排名有多像。1 = 完全一样，0 = 毫无关系。</dd>
+        <dt>信託報酬 / 实质费率</dt><dd>基金每年从你的资产里自动扣的管理费，看不到扣款。"实质"是把基金内部的买卖费用等也算进去的总费率，比信託報酬略高。</dd>
+        <dt>オルカン</dt><dd>"全世界股票"指数基金的俗称（All Country），如 eMAXIS Slim 全世界株式。</dd>
+        <dt>毎月分配型</dt><dd>每月发分红的基金。分红常常来自本金，费率通常也高。</dd>
+        <dt>つみたて投資枠 / 成長投資枠</dt><dd>新NISA 的两个额度：每年 120 万（只能定期定额买指定的指数基金）和每年 240 万（可以一次买，股票也行）。合计终身 1,800 万。</dd>
+        <dt>個人向け国債</dt><dd>日本政府发行给个人的国债，日元计、本金基本有保证，"变动 10 年"的利息每半年跟着市场利率调整。</dd>
+        <dt>对冲汇率</dt><dd>把美元兑日元的汇率锁住，汇率涨跌影响很小；代价是每年要付美日利差（美国利率高时成本高）。</dd>
+        <dt>托底</dt><dd>股票大跌时，这部分资产不跟着跌（或少跌），让总资产跌得少一点。</dd>
+        <dt>百分点</dt><dd>比例之间的差。目标 55%、现在 60%，就是偏离 5 个百分点（不是 5%）。</dd>
       </dl>
     </details>
   </header>
@@ -174,20 +187,20 @@ svg.chart { display: block; width: 100%; height: auto; }
   <section role="tabpanel" id="t-how" aria-labelledby="tab-how" hidden>
     <div class="panel">
       <h2 style="margin-top:0">同样的钱、同样的配置，怎么操作能多留一点</h2>
-      <p>下面每一项都用真实数据算过。按"证据有多硬"排序：<b>① 手续费和税</b>（几乎确定）→ <b>② 什么时候投、怎么调回比例</b>（历史上大多数时候有效）→ <b>③ 债券用什么</b>（取决于你更在乎回报还是托底）。都不需要预测行情。</p>
+      <p>手续费那一项用的是假设的回报（因为它算的是"确定会少掉的部分"），其余几项都用 2008 年以来的真实数据。按"证据有多硬"排序：<b>① 手续费和税</b>（几乎确定）→ <b>② 什么时候投、怎么调回比例</b>（历史上大多数时候有效）→ <b>③ 债券用什么</b>（取决于你更在乎回报还是托底）。都不需要预测行情。</p>
       <div class="chips" id="howNav"></div>
     </div>
     <div class="panel" id="sec-fee">
       <h3 style="margin-top:0">① 手续费（信託報酬）：每年只差一点，20 年差多少</h3>
-      <div class="desk">
+      <div class="desk keep">
         <div class="ctl">
           <label for="feeInit">起步（日元）<input id="feeInit" type="number" step="100000" min="0" value="1000000"></label>
           <label for="feeMonthly">每月投入（日元）<input id="feeMonthly" type="number" step="10000" min="0" value="200000"></label>
           <label for="feeYears">年数<select id="feeYears"><option value="10">10 年</option><option value="20" selected>20 年</option><option value="30">30 年</option></select></label>
           <label for="feeRet">扣费前的年回报（假设）<select id="feeRet"><option value="0.03">3%</option><option value="0.05" selected>5%</option><option value="0.07">7%</option></select></label>
-          <label for="feeA">A 的年费率（%）<input id="feeA" type="number" step="0.01" min="0" value="0.085"></label>
-          <label for="feeB">B 的年费率（%）<input id="feeB" type="number" step="0.01" min="0" value="1.5"></label>
-          <div class="chips" id="feePresets"></div>
+          <label for="feeA">A 的年费率（%）<input id="feeA" type="number" step="0.01" min="0" max="10" value="0.085"></label>
+          <label for="feeB">B 的年费率（%）<input id="feeB" type="number" step="0.01" min="0" max="10" value="1.5"></label>
+          <div class="presets" id="feePresets"></div>
         </div>
         <div style="min-width:0">
           <div class="tiles" id="feeTiles"></div>
@@ -198,15 +211,25 @@ svg.chart { display: block; width: 100%; height: auto; }
     </div>
     <div class="panel" id="sec-reb">
       <h3 style="margin-top:0">② 再平衡：卖回去，还是只用新钱补</h3>
-      <p id="rbSummary"></p>
+      <p class="lead"><b>结论：平时不卖，每月的新钱买低于目标的那部分；某一项偏离目标超过 5 个百分点（比如目标 55%，涨到 60% 以上）才卖回。</b></p>
+      <details class="more"><summary>数据细节和对你的意思（点开）</summary><p id="rbSummary"></p></details>
       <div class="chips" id="rbMix" style="margin:8px 0"></div>
       <div class="chips" id="rbOpt" style="margin:8px 0"></div>
       <div class="scroll"><table class="data" id="rbTable"></table></div>
       <p class="note">同一个配置，只改"偏离目标比例以后怎么调回去"。"期末到手"：最后一天全部卖出后的金额（课税账户扣掉 20.315% 的税；"免税"假设全部在 NISA 里、不考虑每年 360 万和终身 1,800 万的上限）。"偏离"：每月月末，比例最偏的那一项离目标差几个百分点（平均 / 最大）。"股+金"：股票和黄金（债券、短债以外）在总资产里的比例（期末 / 最高），这一项变高说明风险在悄悄变大。交易成本（手续费 0.1%、滑点、换汇差）都算进去了。</p>
     </div>
+    <div class="panel" id="sec-front">
+      <h3 style="margin-top:0">② NISA 每年 360 万：年初一次买满，还是每月 30 万</h3>
+      <p class="lead"><b>结论：年初手上有这笔钱的话，成长投资枠年初一次买满，历史上 16 年里 11 年更好（平均多约 5%）；代价是年中大跌时会眼看着比分批少很多。</b></p>
+      <details class="more"><summary>数据细节和对你的意思（点开）</summary><p id="flSummary"></p></details>
+      <div class="chips" id="flMix" style="margin:8px 0"></div>
+      <div id="flChart"></div>
+      <p class="note" id="flNote"></p>
+    </div>
     <div class="panel" id="sec-wait">
       <h3 style="margin-top:0">② 放不进 NISA 的现金：等明年的额度，还是先在课税账户投</h3>
-      <p id="wtSummary"></p>
+      <p class="lead"><b>结论：要等两三年才放得进 NISA 的现金，先在课税账户投、每年额度空出来再卖掉转进去，历史上大多数时候比干等好；最差一次少 32%（刚投就遇金融危机）。</b></p>
+      <details class="more"><summary>数据细节和对你的意思（点开）</summary><p id="wtSummary"></p></details>
       <div class="chips" id="wtOpt" style="margin:8px 0"></div>
       <div class="scroll"><table class="data" id="wtTable"></table></div>
       <div id="wtChart"></div>
@@ -214,18 +237,12 @@ svg.chart { display: block; width: 100%; height: auto; }
     </div>
     <div class="panel" id="sec-hedge">
       <h3 style="margin-top:0">③ 债券那部分：美元债、对冲汇率的美元债，还是日元现金</h3>
-      <p id="hgSummary"></p>
+      <p class="lead"><b>结论：不对冲的美元债长期回报高，但股票大跌的月份它平均也跌；想让债券真正托底，用对冲汇率的债券或日元资产。你的外币已约 87%。</b></p>
+      <details class="more"><summary>数据细节和对你的意思（点开）</summary><p id="hgSummary"></p></details>
       <div class="tiles" id="hgTiles"></div>
       <div class="chips" id="hgMix" style="margin:8px 0"></div>
       <div class="scroll"><table class="data" id="hgTable"></table></div>
       <p class="note" id="hgNote"></p>
-    </div>
-    <div class="panel" id="sec-front">
-      <h3 style="margin-top:0">② NISA 每年 360 万：年初一次买满，还是每月 30 万</h3>
-      <p id="flSummary"></p>
-      <div class="chips" id="flMix" style="margin:8px 0"></div>
-      <div id="flChart"></div>
-      <p class="note" id="flNote"></p>
     </div>
   </section>
 
@@ -379,7 +396,7 @@ svg.chart { display: block; width: 100%; height: auto; }
           <label for="fInit">起步（日元）<input id="fInit" type="number" step="100000" min="0" value="1000000"></label>
           <label for="fMonthly">每月投入（日元）<input id="fMonthly" type="number" step="10000" min="0" value="200000"></label>
           <label for="fYears">年数<select id="fYears"><option value="10">10 年</option><option value="20" selected>20 年</option><option value="30">30 年</option></select></label>
-          <label for="fCut">保守折扣（每年从所有资产的回报里扣掉）<select id="fCut"><option value="0">0%（照搬过去）</option><option value="0.01">1%</option><option value="0.02" selected>2%</option><option value="0.03">3%</option><option value="0.04">4%</option></select></label>
+          <label for="fCut">保守折扣（每年从所有资产的回报里扣掉）<select id="fCut"><option value="0">0%（照搬过去，非常乐观）</option><option value="0.02">2%</option><option value="0.04">4%</option><option value="0.06" selected>6%（默认）</option><option value="0.08">8%（更保守）</option></select></label>
         </div>
       </div>
       <div style="min-width:0">
@@ -390,11 +407,12 @@ svg.chart { display: block; width: 100%; height: auto; }
         </div>
         <div class="panel">
           <h3 style="margin-top:0">反过来算：想要多少，每月该投多少</h3>
-          <label class="note" for="fGoal" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">目标：<span id="fGoalYears"></span>年后有
-            <input id="fGoal" type="number" step="500" min="0" value="10000" style="width:9em;font:14px var(--f-mono);padding:4px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg)"> 万円（税前）</label>
+          <div class="note" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">目标：
+            <select id="fGoalYears" aria-label="年数" style="font:14px var(--f-mono);padding:4px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg)"><option value="10">10 年</option><option value="20">20 年</option><option value="30">30 年</option></select>后有
+            <input id="fGoal" type="number" step="500" min="0" value="10000" aria-label="目标金额（万円）" style="width:9em;font:14px var(--f-mono);padding:4px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg)"> 万円（税前）</div>
           <div class="luck" id="fGoalAnswer"></div>
           <div class="scroll"><table class="data" id="fGoalTable"></table></div>
-          <p class="note">用的是上面同一组 2000 条路径和同一个配置、起步金额、保守折扣，只把"每月投入"换掉重算。"把握 80%"＝2000 条路径里有 1600 条以上能达到。税前金额：超出 NISA 上限的部分，最后卖出时还要对收益交 20.315%。这是"如果未来像过去那样波动"的估算，不是保证。</p>
+          <p class="note">用的是上面同一组 2000 条模拟路径和同一个配置、起步金额、保守折扣，只把"每月投入"换掉重算。"80% 的路径达到"＝2000 条里有 1600 条以上达到，<b>不是</b>真实世界的概率：模拟路径来自一段特别好的历史，即使扣了保守折扣也可能偏乐观。金额是税前、未按物价调整的"将来的日元"。</p>
         </div>
         <div class="panel"><h3 style="margin-top:0">2000 条可能的路径（日元）</h3><div id="fFan"></div>
           <div class="legend"><span><span class="sw" style="background:var(--accent)"></span>中位数</span><span><span class="sw" style="background:var(--accent);opacity:.35;height:10px"></span>中间一半（25%～75%）</span><span><span class="sw" style="background:var(--accent);opacity:.15;height:10px"></span>90% 的路径（5%～95%）</span><span><span class="sw" style="background:var(--muted)"></span>投入合计</span></div></div>
@@ -875,7 +893,7 @@ function renderBoard() {
     if (!checked.has(k)) { const others = [...checked].filter(x => x !== "allcountry"); if (others.length >= MAX_PICK) { checked.delete(others[0]); delete slotOf[others[0]]; } checked.add(k); colorOf(k); }
     renderChecks(); $("start").value = "2009-07-01"; $("len").value = "all"; run(); showTab("replay"); window.scrollTo(0, 0); };
 }
-const RB_LABEL = { monthly: "每月卖回目标", yearly: "每年卖回一次", band: "偏离 5 个点才卖", cashflow: "从不卖，只用新钱补低的" };
+const RB_LABEL = { monthly: "每月卖回目标", yearly: "每年卖回一次", band: "偏离 5 个百分点才卖", cashflow: "从不卖，只用新钱补低的" };
 const rbRisky = m => Object.entries(m.weights).filter(([s]) => !["AGG", "TLT", "BIL"].includes(s)).reduce((a, [, w]) => a + w, 0);
 let rbSel = { mix: "target", scenario: "dca", start: null, taxable: true };
 function renderRebalance() {
@@ -894,20 +912,21 @@ function renderRebalance() {
   const lumpRisk = lump.map(r => r.by.cashflow.risky_max - rbRisky(X.mixes[r.mix]));
   const riskUp = avg(dca.map(r => r.by.band.risky_max - r.by.monthly.risky_max));
   const minGain = Math.min(...dca.map(r => r.by.band.final / r.by.monthly.final - 1));
-  $("rbSummary").innerHTML = `<b>数据说的话：</b>① 一边定投一边投资时（${dca.length} 种组合：${Object.keys(X.mixes).length} 个配置 × ${starts.length} 个起点 × 免税/课税；免税和课税是同一段行情，所以实际是 ${dca.length / 2} 段行情），"偏离 5 个点才卖"或"从不卖，只用新钱补低的"有 <b>${noSellWins} / ${dca.length}</b> 次比"每月卖回"到手更多。` +
-    ` ② 比"每月卖回"期末多出的比例（平均）：偏离 5 个点才卖——课税 ${pct(gain("band", true), 1)}、免税 ${pct(gain("band", false), 1)}（${bandWins} / ${dca.length} 次不输，最少的一次只多 ${pct(minGain, 2)}）；只用新钱补——课税 ${pct(gain("cashflow", true), 1)}、免税 ${pct(gain("cashflow", false), 1)}。免税时也多，说明差别不只是税：一是少交易（每次买卖都有成本），二是<b>股票的比例平均更高一点</b>（股+金的最高比例比"每月卖回"平均高 ${(riskUp * 100).toFixed(1)} 个点）——在 2009 年以后这段长期上涨里，多拿股票自然多赚，这一部分是多承担风险换来的。课税账户再多出来的一截是税。` +
+  $("rbSummary").innerHTML = `<b>数据说的话：</b>① 一边定投一边投资时（${dca.length} 种组合：${Object.keys(X.mixes).length} 个配置 × ${starts.length} 个起点 × 免税/课税；免税和课税是同一段行情，所以实际是 ${dca.length / 2} 段行情），"偏离 5 个百分点才卖"或"从不卖，只用新钱补低的"有 <b>${noSellWins} / ${dca.length}</b> 次比"每月卖回"到手更多。` +
+    ` ② 比"每月卖回"期末多出的比例（平均）：偏离 5 个百分点才卖——课税 ${pct(gain("band", true), 1)}、免税 ${pct(gain("band", false), 1)}（${bandWins} / ${dca.length} 次不输，最少的一次只多 ${pct(minGain, 2)}）；只用新钱补——课税 ${pct(gain("cashflow", true), 1)}、免税 ${pct(gain("cashflow", false), 1)}。免税时也多，说明差别不只是税：一是少交易（每次买卖都有成本），二是<b>股票的比例平均更高一点</b>（股+金的最高比例比"每月卖回"平均高 ${(riskUp * 100).toFixed(1)} 个点）——在 2009 年以后这段长期上涨里，多拿股票自然多赚，这一部分是多承担风险换来的。课税账户再多出来的一截是税。` +
     ` ③ 代价是比例会偏（每月末量）：只用新钱补平均偏 ${(avg(cfDrift) * 100).toFixed(1)} 个点，最多偏 ${(Math.max(...cfMax) * 100).toFixed(0)} 个点，定投金额相对总资产越小，越补不回来。` +
     ` ④ <b>不再投钱、一次性放着的话</b>（下面选"一次性 500 万"），"从不卖"就是放任不管，股票（含黄金）的比例最多比目标高 ${(Math.max(...lumpRisk) * 100).toFixed(0)} 个点——多出来的回报是多承担风险换来的，碰上 2008 年那样的下跌就会多跌。两个起点都在 2008 年暴跌之后，这一点要打折看。` +
-    `<br><b>对你的意思：</b>你在 NISA 里每月定投，在这段数据里没输过的做法是"偏离 5 个点才卖"：<b>平时不卖，每月的钱优先买低于目标的那部分</b>；只有某一项偏离超过 5 个点（比如股票大涨后），才卖回目标。NISA 里卖出不交税，但卖掉的额度要到第二年才恢复，而且年度 360 万的额度不会退回，所以 NISA 里少卖还有额度上的好处。本地运行 <code>python -m src.cli nextbuy</code> 会按你的实际持仓算出这个月的钱该分给哪部分。`;
-  $("rbMix").innerHTML = Object.entries(X.mixes).map(([k, m]) => `<button class="chip${k === rbSel.mix ? " on" : ""}" data-mix="${k}">${m.label}</button>`).join("");
+    `<br><b>对你的意思：</b>你在 NISA 里每月定投，在这段数据里没输过的做法是"偏离 5 个百分点才卖"：<b>平时不卖，每月的钱优先买低于目标的那部分</b>；只有某一项偏离超过 5 个百分点（比如股票大涨后），才卖回目标。NISA 里卖出不交税，但卖掉的额度要到第二年才恢复，而且年度 360 万的额度不会退回，所以 NISA 里少卖还有额度上的好处。本地运行 <code>python -m src.cli nextbuy</code> 会按你的实际持仓算出这个月的钱该分给哪部分。`;
+  $("rbMix").innerHTML = `<span class="note">配置：</span>` + Object.entries(X.mixes).map(([k, m]) => `<button class="chip${k === rbSel.mix ? " on" : ""}" data-mix="${k}">${m.label}</button>`).join("");
   const opt = (key, val, label) => `<button class="chip${rbSel[key] === val ? " on" : ""}" data-k="${key}" data-v="${val}">${label}</button>`;
-  $("rbOpt").innerHTML = Object.entries(X.scenarios).map(([k, l]) => opt("scenario", k, l)).join("") + " " +
-    starts.map(s0 => opt("start", s0, s0.slice(0, 4) + " 年起")).join("") + " " + opt("taxable", true, "课税账户") + opt("taxable", false, "免税（假设全在 NISA）");
+  $("rbOpt").innerHTML = `<span class="note">投入方式：</span>` + Object.entries(X.scenarios).map(([k, l]) => opt("scenario", k, l)).join("") +
+    ` <span class="note">开始年份：</span>` + starts.map(s0 => opt("start", s0, s0.slice(0, 4) + " 年起")).join("") +
+    ` <span class="note">账户：</span>` + opt("taxable", true, "课税账户") + opt("taxable", false, "免税（假设全在 NISA）");
   const r = X.results.find(x => x.mix === rbSel.mix && x.scenario === rbSel.scenario && x.start === rbSel.start && x.taxable === rbSel.taxable);
   const best = Math.max(...X.policies.map(k => r.by[k].final));
   $("rbTable").innerHTML = `<thead><tr><th>方法</th><th>期末到手</th><th>年化（XIRR）</th><th>最大回撤</th><th>偏离 平均/最大</th><th>股+金 期末/最高</th><th>交易次数</th>${rbSel.taxable ? "<th>途中交的税</th>" : ""}</tr></thead><tbody>` +
-    X.policies.map(k => { const x = r.by[k]; return `<tr${x.final === best ? ' style="background:var(--accent-soft)"' : ""}><td>${RB_LABEL[k]}</td><td class="num">${man(x.final)}</td><td class="num">${pct(x.xirr, 1)}</td><td class="num">${pct(x.max_dd, 0)}</td><td class="num">${(x.drift_avg * 100).toFixed(1)} / ${(x.drift_max * 100).toFixed(0)} 点</td><td class="num">${(x.risky_end * 100).toFixed(0)}% / ${(x.risky_max * 100).toFixed(0)}%</td><td class="num">${x.trades}</td>${rbSel.taxable ? `<td class="num">${man(x.tax_during)}</td>` : ""}</tr>`; }).join("") +
-    `</tbody><caption class="note" style="caption-side:bottom;text-align:left">投入合计 ${man(r.by.monthly.paid)}，${r.start} ～ ${X.generated_to}。底色 = 期末到手最多。目标里股+金占 ${(rbRisky(X.mixes[r.mix]) * 100).toFixed(0)}%。</caption>`;
+    X.policies.map(k => { const x = r.by[k]; return `<tr${x.final === best ? ' style="background:var(--accent-soft)"' : ""}><td>${RB_LABEL[k]}${k === "band" ? ' <span class="pill" style="font-size:11px;color:var(--accent)">推荐</span>' : ""}</td><td class="num">${man(x.final)}</td><td class="num">${pct(x.xirr, 1)}</td><td class="num">${pct(x.max_dd, 0)}</td><td class="num">${(x.drift_avg * 100).toFixed(1)} / ${(x.drift_max * 100).toFixed(0)} 点</td><td class="num">${(x.risky_end * 100).toFixed(0)}% / ${(x.risky_max * 100).toFixed(0)}%</td><td class="num">${x.trades}</td>${rbSel.taxable ? `<td class="num">${man(x.tax_during)}</td>` : ""}</tr>`; }).join("") +
+    `</tbody><caption class="note" style="caption-side:bottom;text-align:left">${r.by.band.final === r.by.cashflow.final ? "这段时间偏离从没超过 5 个百分点，所以\"偏离 5 个百分点才卖\"和\"从不卖\"结果一样。" : ""}投入合计 ${man(r.by.monthly.paid)}，${r.start} ～ ${X.generated_to}。底色 = 期末到手最多。目标里股+金占 ${(rbRisky(X.mixes[r.mix]) * 100).toFixed(0)}%。</caption>`;
 }
 // ---------------------------------------------------------------- 怎么投更划算
 const FEE_PRESETS = [
@@ -920,10 +939,10 @@ function renderHow() {
     $("howNav").innerHTML = [["sec-fee", "① 手续费"], ["sec-reb", "② 再平衡"], ["sec-front", "② 年初买满"], ["sec-wait", "② 现金等额度？"], ["sec-hedge", "③ 债券对冲"]]
       .map(([id, l]) => `<button class="chip" data-go="${id}">${l}</button>`).join("");
     $("howNav").onclick = e => { const b = e.target.closest("[data-go]"); if (b) $(b.dataset.go).scrollIntoView({ behavior: "smooth" }); };
-    $("feePresets").innerHTML = FEE_PRESETS.map(([l, v], i) => `<button class="chip" data-i="${i}">${l}</button>`).join("");
-    let next = "B";
-    $("feePresets").onclick = e => { const b = e.target.closest("[data-i]"); if (!b) return;
-      $(next === "A" ? "feeA" : "feeB").value = FEE_PRESETS[b.dataset.i][1]; next = next === "A" ? "B" : "A"; renderFees(); };
+    $("feePresets").innerHTML = `<div class="note">常见的费率，点"设为 A"或"设为 B"填进去：</div>` +
+      FEE_PRESETS.map(([l, v], i) => `<div><span>${l}</span><button class="chip" data-i="${i}" data-to="feeA">设为 A</button><button class="chip" data-i="${i}" data-to="feeB">设为 B</button></div>`).join("");
+    $("feePresets").onclick = e => { const b = e.target.closest("[data-to]"); if (!b) return;
+      $(b.dataset.to).value = FEE_PRESETS[b.dataset.i][1]; renderFees(); };
     for (const id of ["feeInit", "feeMonthly", "feeYears", "feeRet", "feeA", "feeB"]) $(id).addEventListener("input", renderFees);
     initRebalance();
   }
@@ -940,7 +959,8 @@ function feePath(init, monthly, years, r, fee) {
 function renderFees() {
   const init = Math.max(0, Number($("feeInit").value) || 0), mon = Math.max(0, Number($("feeMonthly").value) || 0);
   const yrs = Number($("feeYears").value), r = Number($("feeRet").value);
-  const fa = Math.max(0, Number($("feeA").value) || 0) / 100, fb = Math.max(0, Number($("feeB").value) || 0) / 100;
+  const clampFee = id => Math.min(10, Math.max(0, Number($(id).value) || 0)) / 100;   // 0〜10%（それ以外は入力ミスとみなす）
+  const fa = clampFee("feeA"), fb = clampFee("feeB");
   const A = feePath(init, mon, yrs, r, fa), B = feePath(init, mon, yrs, r, fb);
   const paid = init + mon * 12 * yrs, d = A[yrs] - B[yrs];
   $("feeTiles").innerHTML = [["投入合计", man(paid)], [`A（${(fa * 100).toFixed(3).replace(/0+$/, "").replace(/\.$/, "")}%）${yrs} 年后`, man(A[yrs])],
@@ -948,9 +968,9 @@ function renderFees() {
     .map(([k, v]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("");
   const marks = [5, 10, 20, 30].filter(y => y <= yrs);
   $("feeTable").innerHTML = `<thead><tr><th>年数</th><th>A</th><th>B</th><th>差</th><th>差 / 投入合计</th></tr></thead><tbody>` +
-    marks.map(y => { const p = init + mon * 12 * y; return `<tr><td>${y} 年</td><td class="num">${man(A[y])}</td><td class="num">${man(B[y])}</td><td class="num">${man(A[y] - B[y])}</td><td class="num">${((A[y] - B[y]) / p * 100).toFixed(1)}%</td></tr>`; }).join("") + "</tbody>";
+    marks.map(y => { const p = init + mon * 12 * y; return `<tr><td>${y} 年</td><td class="num">${man(A[y])}</td><td class="num">${man(B[y])}</td><td class="num">${man(A[y] - B[y])}</td><td class="num">${p > 0 ? ((A[y] - B[y]) / p * 100).toFixed(1) + "%" : "—"}</td></tr>`; }).join("") + "</tbody>";
   $("feeNote").innerHTML = `回报是假设的（不是预测），费率每年从回报里扣、不随市场好坏变化——所以<b>这个差几乎是确定的</b>，这是它排第一的原因。` +
-    `点上面的按钮，交替填进 A 和 B。实质费率来自 docs/FUNDS.md（运用报告书的费用明细，${"2025–2026 年"}的数字）。` +
+    `费率只接受 0–10%。实质费率来自 docs/FUNDS.md（运用报告书的费用明细，${"2025–2026 年"}的数字）。` +
     `在 NISA 里持有美国上市 ETF（如 VT）还有一项看不见的成本：分红被美国扣的 10% 拿不回来，分红率 2% 时约等于每年再多 0.2%。` +
     `这里列出的基金名只为比较费用，不是推荐；买任何一只之前都要先过 independence 确认。`;
 }
@@ -1002,14 +1022,16 @@ function renderFrontload() {
   $("flMix").innerHTML = Object.entries(X.mixes).map(([k, l]) => `<button class="chip${k === flMix ? " on" : ""}" data-m="${k}">${l}</button>`).join("");
   $("flMix").onclick = e => { const b = e.target.closest("[data-m]"); if (b) { flMix = b.dataset.m; renderFrontload(); } };
   const W = 900, H = 260, L = 50, R = 10, T = 14, B = 34, n = rows.length;
-  const mx = Math.max(0.05, ...rows.map(r => Math.abs(r.diff)));
+  const mx = Math.ceil(Math.max(0.05, ...rows.map(r => Math.abs(r.diff))) * 20) / 20;   // 5% 刻みに切り上げ
   const Y = d => T + (mx - d) / (2 * mx) * (H - T - B), bw = (W - L - R) / n;
   let g = "";
   for (const d of [-mx, -mx / 2, 0, mx / 2, mx]) g += `<line class="grid" x1="${L}" x2="${W - R}" y1="${Y(d)}" y2="${Y(d)}"/><text x="${L - 6}" y="${Y(d) + 4}" text-anchor="end">${(d * 100).toFixed(0)}%</text>`;
   rows.forEach((r, i) => { const x = L + i * bw + bw * 0.15, y0 = Y(0), y1 = Y(r.diff);
-    g += `<rect x="${x}" y="${Math.min(y0, y1)}" width="${bw * 0.7}" height="${Math.max(1, Math.abs(y1 - y0))}" fill="${r.diff >= 0 ? "var(--good)" : "var(--stop)"}"><title>${r.year} 年：年初一次买满 ${man(r.lump)}，每月 ${man(r.monthly)}（${pct(r.diff, 1)}）；年中最多落后 ${man(-r.worst_gap)}</title></rect>`;
+    g += `<rect x="${x}" y="${Math.min(y0, y1)}" width="${bw * 0.7}" height="${Math.max(1, Math.abs(y1 - y0))}" fill="${r.diff >= 0 ? "var(--good)" : "var(--stop)"}"><title>${r.year} 年：年初一次买满 ${man(r.lump)}，每月 ${man(r.monthly)}（${pct(r.diff, 1)}）；年中最多落后 ${man(Math.max(0, -r.worst_gap))}</title></rect>`;
     g += `<text x="${x + bw * 0.35}" y="${H - B + 16}" text-anchor="middle">${n > 12 && window.innerWidth < 700 ? String(r.year).slice(2) : r.year}</text>`; });
-  $("flChart").innerHTML = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="每年年初一次买满比每月买多出的比例">${g}</svg>`;
+  $("flChart").innerHTML = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="每年年初一次买满比每月买多出的比例">${g}</svg>` +
+    `<details class="more"><summary>每年的数字（点开）</summary><div class="scroll"><table class="data"><thead><tr><th>年</th><th>年初一次买满</th><th>每月 30 万</th><th>差</th><th>年中最多落后</th></tr></thead><tbody>` +
+    rows.map(r => `<tr><td>${r.year}</td><td class="num">${man(r.lump)}</td><td class="num">${man(r.monthly)}</td><td class="num ${cls(r.diff)}">${pct(r.diff, 1)}</td><td class="num">${man(Math.max(0, -r.worst_gap))}</td></tr>`).join("") + "</tbody></table></div></details>";
   $("flNote").innerHTML = `每根柱子 = 那一年"年初一次买满 360 万"比"每月初买 30 万"在年末多（绿）或少（红）的比例。12 月买完以后两边持有的东西一样，这个差距之后不会再变。日元计，不含交易成本和税（NISA）。数据到 ${X.generated_to}。`;
 }
 let hgMix = "target";
@@ -1100,6 +1122,7 @@ function initFuture() {
   for (const id of ["fInit", "fMonthly", "fYears", "fCut"]) $(id).addEventListener("change", runFuture);
   $("ddBudget").addEventListener("change", renderBudget);
   $("fGoal").addEventListener("input", renderGoal);
+  $("fGoalYears").addEventListener("change", () => { $("fYears").value = $("fGoalYears").value; runFuture(); });
 }
 function runFuture() {
   initFuture();
@@ -1107,11 +1130,16 @@ function runFuture() {
   const opts = { weights: w, initial: Math.max(0, Number($("fInit").value) || 0), monthly: Math.max(0, Number($("fMonthly").value) || 0),
                  years: Number($("fYears").value), paths: 2000, block: 12, seed: 20261011, haircut: Number($("fCut").value),
                  window: WSYMS, nisa: { annual: 3600000, lifetime: 18000000 } };   // 所有配置用同一段历史（所有品种都有数据的月份），比较才公平
-  if (!Object.keys(w).length) { $("fNote").textContent = "全是现金，没有可模拟的。"; return; }
+  const stop = msg => { $("fNote").textContent = msg; $("fTiles").innerHTML = ""; $("fFan").innerHTML = ""; $("fGoalAnswer").textContent = msg; $("fGoalTable").innerHTML = ""; fLast = null; };
+  if (!Object.keys(w).length) { stop("全是现金，没有可模拟的。"); return; }
+  if (!opts.initial && !opts.monthly) { stop("起步和每月投入都是 0，没有可模拟的。"); return; }
   const r = E.bootstrap(P, opts);
   const yrs = opts.years;
+  // 一次性 1 日元在中位数的路径上变成多少 → 年化（"扣完以后大概按每年多少算"）
+  const medCagr = Math.pow(Array.from(r.paths.gI).sort((a, b) => a - b)[Math.floor(r.paths.gI.length / 2)], 1 / yrs) - 1;
+  fMedCagr = medCagr;
   $("fTitle").textContent = `${yrs} 年后：中位数约 ${man(r.final.p50)}（投入合计 ${man(r.paid)}）`;
-  $("fNote").innerHTML = `<b>怎么算的：</b>把 ${r.from} ～ ${r.to} 共 ${r.months} 个月的真实月度回报（日元计，含分红，扣除这个配置的现金部分），按 12 个月一段随机抽取（首尾相接，每个月被抽到的机会相同）、拼接成 2000 条未来路径。假设每月调回比例、每月的钱在月末投入。这段历史是美股牛市加日元贬值${DATA.fx ? `（日元每年贬值约 ${(DATA.fx.fx_cagr * 100).toFixed(1)}%）` : ""}，照搬会偏乐观，所以默认每年扣 2%，大致相当于去掉日元贬值的那一部分。另外，日本股的数据从 2009 年才有，为了让所有配置用同一段历史，<b>2008 年金融危机最惨的几个月不在里面</b>，回撤数字因此偏小；那种极端情况请看总览页的压力测试（目标配置约 -51%）。这是"如果未来像过去那样波动"的范围，不是预测。新NISA 每年 360 万、终身 1,800 万，超出的部分放课税账户；"税后"一栏是最后全部卖出时对课税账户的收益交 20.315% 之后的金额（NISA 里的部分免税）。`;
+  $("fNote").innerHTML = `<b>怎么算的：</b>把 ${r.from} ～ ${r.to} 共 ${r.months} 个月的真实月度回报（日元计，含分红，扣除这个配置的现金部分），按 12 个月一段随机抽取（首尾相接，每个月被抽到的机会相同）、拼接成 2000 条未来路径。假设每月调回比例、每月的钱在月末投入。这段历史是美股牛市加日元贬值${DATA.fx ? `（日元每年贬值约 ${(DATA.fx.fx_cagr * 100).toFixed(1)}%）` : ""}，这个配置在这段时间平均每年约 ${pct(Math.pow(1 + r.histMean, 12) - 1, 0)}，照搬会非常乐观。所以要扣掉一部分（默认 6%，现在选的是每年扣 ${(opts.haircut * 100).toFixed(0)}%）：扣完后一次性投入的中位数约每年 <b>${pct(medCagr, 1)}</b>（长期常见的假设大约是年 5–7%）。想更保守就选 8%。另外，日本股的数据从 2009 年才有，为了让所有配置用同一段历史，<b>2008 年金融危机最惨的几个月不在里面</b>，回撤数字因此偏小；那种极端情况请看总览页的压力测试（目标配置约 -51%）。这是"如果未来像过去那样波动"的范围，不是预测。新NISA 每年 360 万、终身 1,800 万，超出的部分放课税账户；"税后"一栏是最后全部卖出时对课税账户的收益交 20.315% 之后的金额（NISA 里的部分免税）。`;
   const f = r.final;
   $("fTiles").innerHTML = [
     ["中位数（一半路径高于它）", man(f.p50), `是投入的 ${(f.p50 / r.paid).toFixed(2)} 倍`],
@@ -1122,9 +1150,9 @@ function runFuture() {
     ["途中最大回撤（中位）", pct(r.dd.p50, 0), "一半的路径会经历这么深的下跌"],
     ["最后亏本的概率", (r.pLoss * 100).toFixed(1) + "%", "期末低于投入合计。抽样的历史偏乐观，0% 不代表不会亏"],
   ].map(([k, v, x]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${x}</div></div>`).join("");
-  fan(r, opts);
   fLast = { r, opts };
   renderGoal();
+  fan(r, opts);
   renderBudget();
   // 比较
   const rows = Object.entries(F_PRESETS).map(([name, pw]) => {
@@ -1135,23 +1163,28 @@ function runFuture() {
   $("fCompare").innerHTML = `<thead><tr><th>配置</th><th>最差 5%</th><th>中位数</th><th>中位数（税后）</th><th>最好 5%</th><th>亏本概率</th><th>回撤（最差 5%）</th></tr></thead><tbody>${rows}</tbody>`;
 }
 // 目标反推: 経路ごとの増え方（paths.gI, gM）から、目標に届く確率と要る毎月の額を出す
-let fLast = null;
+let fLast = null, fMedCagr = null;
 function renderGoal() {
   if (!fLast) return;
   const { r, opts } = fLast, target = Math.max(0, Number($("fGoal").value) || 0) * 1e4;
-  $("fGoalYears").textContent = `${opts.years} `;
+  $("fGoalYears").value = String(opts.years);
   if (!target) { $("fGoalAnswer").textContent = "输入目标金额。"; $("fGoalTable").innerHTML = ""; return; }
   const g = E.goalSolve(r.paths, opts.initial, opts.monthly, target, [0.5, 0.8, 0.9]);
   const req = g.required, now = opts.monthly;
-  const verdict = g.p >= 0.8 ? "已经比较稳" : g.p >= 0.5 ? "一半多一点的把握" : "多数路径到不了";
-  $("fGoalAnswer").innerHTML = `按现在每月 <b>${man(now)}</b>：2000 条路径里 <b>${(g.p * 100).toFixed(0)}%</b> 能在 ${opts.years} 年后达到 ${man(target)}（${verdict}）。` +
-    `想有 80% 的把握，每月需要约 <b>${man(req[0.8])}</b>${req[0.8] > now ? `，比现在多 ${man(req[0.8] - now)}` : `，现在的金额已经够了`}。` +
-    `<br>对比一下：把每月多投 1 万円，和把手续费从 1.5% 降到 0.1%，哪个更容易做到？前者靠收入和支出，后者只要选对基金——两个都比"挑更会涨的东西"确定得多。`;
-  const rows = [[0.5, "一半的把握（中位数）"], [0.8, "80% 的把握"], [0.9, "90% 的把握"]].map(([c, l]) => {
+  const verdict = g.p >= 0.8 ? "多数路径能到" : g.p >= 0.5 ? "一半多一点" : g.p > 0.02 ? "多数路径到不了" : "几乎没有路径能到";
+  const real = target / Math.pow(1.02, opts.years);
+  const gm = Array.from(r.paths.gM).sort((a, b) => a - b)[Math.floor(r.paths.gM.length / 2)];
+  const need = m => m <= 0 ? "起步的钱就够了，不用每月投" : man(m);
+  $("fGoalAnswer").innerHTML = `按现在每月 <b>${man(now)}</b>：2000 条模拟路径里有 <b>${(g.p * 100).toFixed(0)}%</b> 在 ${opts.years} 年后达到 ${man(target)}（${verdict}）。` +
+    `想让 80% 的路径达到，每月需要约 <b>${need(req[0.8])}</b>${req[0.8] > now ? `，比现在多 ${man(req[0.8] - now)}` : req[0.8] > 0 ? "，现在的金额已经够了" : ""}。` +
+    `<br>先看清这些数字的前提：这组路径的中位数相当于一次性投入每年 <b>${pct(fMedCagr, 1)}</b>（已扣保守折扣 ${(opts.haircut * 100).toFixed(0)}%）。` +
+    `物价每年涨 2% 的话，${opts.years} 年后的 ${man(target)} 只相当于今天的约 <b>${man(real)}</b>。目标是税前的：超出 NISA 上限的部分最后卖出时还要交税。` +
+    `<br>每月多投 1 万円，中位数约多 ${man(1e4 * gm)}——投多少钱是你最能控制、也最确定的一项。`;
+  const rows = [[0.5, "一半的路径（中位数）"], [0.8, "80% 的路径"], [0.9, "90% 的路径"]].map(([c, l]) => {
     const m = req[c], total = opts.initial + m * 12 * opts.years;
-    return `<tr><td>${l}</td><td class="num">${man(m)}</td><td class="num">${man(total)}</td><td class="num">${(target / total).toFixed(2)} 倍</td></tr>`;
+    return `<tr><td>${l}</td><td class="num">${need(m)}</td><td class="num">${man(total)}</td><td class="num">${total > 0 ? (target / total).toFixed(2) + " 倍" : "—"}</td></tr>`;
   }).join("");
-  $("fGoalTable").innerHTML = `<thead><tr><th>想要的把握</th><th>每月需要</th><th>投入合计</th><th>目标 / 投入</th></tr></thead><tbody>${rows}</tbody>`;
+  $("fGoalTable").innerHTML = `<thead><tr><th>想让多少路径达到</th><th>每月需要</th><th>投入合计</th><th>目标 / 投入</th></tr></thead><tbody>${rows}</tbody>`;
 }
 // 回撤预算：股票比例 0..100% × 另一半（美国债券 / 日元现金）
 let ddGrid = null, ddKey = "";
@@ -1195,7 +1228,7 @@ function renderBudget() {
 function fan(r, opts) {
   const nar = NARROW();
   const W = 900, H = 320, L = nar ? 170 : 78, R = 16, T = 12, B = nar ? 44 : 30;
-  const n = r.bands.length, hi = Math.max(...r.bands.map(b => b[4])) * 1.05;
+  const n = r.bands.length, hi = Math.max(1, ...r.bands.map(b => b[4])) * 1.05;
   const X = k => L + k / (n - 1) * (W - L - R), Y = v => T + (hi - v) / hi * (H - T - B);
   const area = (lo, up) => "M" + r.bands.map((b, k) => `${X(k).toFixed(1)},${Y(b[up]).toFixed(1)}`).join("L") + "L" + r.bands.map((b, k) => [k, b]).reverse().map(([k, b]) => `${X(k).toFixed(1)},${Y(b[lo]).toFixed(1)}`).join("L") + "Z";
   const step = (() => { const raw = hi / 5, m = Math.pow(10, Math.floor(Math.log10(raw))); return [1, 2, 2.5, 5, 10].map(x => x * m).find(x => x >= raw); })();
