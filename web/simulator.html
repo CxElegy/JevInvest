@@ -976,6 +976,7 @@ function renderHedge() {
     `和全球股的相关系数：不对冲 ${S.unhedged.corr_vt.toFixed(2)}，对冲 ${S.hedged.corr_vt.toFixed(2)}，日元现金 ${S.yen_cash.corr_vt.toFixed(2)}（越接近 0 越能起到"不跟着跌"的作用）。` +
     `<br><b>代价：</b>这段时间日元一直贬值，不对冲的美元债每年 ${pct(S.unhedged.cagr, 1)}，对冲后 ${pct(S.hedged.cagr, 1)}，日元现金 ${pct(S.yen_cash.cagr, 1)}。` +
     `差的部分来自两样：日元贬值，和美日利差（对冲汇率每年要付掉这个利差，美国利率高时成本也高，2022 年就是这样）。日元升值时，前一部分会反过来。` +
+    `<br><b>注意时代变了：</b>这 17 年日元利率几乎是 0，所以"日元现金"一栏几乎没有回报。现在日银的政策利率是 1.25%（2026 年 9 月 24 日起），个人向け国債（变动 10 年）最新一期的初始利率是年 2.05%（税前，2026 年 10 月募集，见 docs/FUNDS.md），日元这一侧已经不是零回报；美日利差变小，对冲的成本也跟着变小。过去的数字会低估今天日元资产和对冲债券的吸引力。` +
     `<br><b>对你的意思：</b>你的配置外币已经约 87%，债券再用不对冲的美元债，等于又加了一份美元，托底作用很弱。想让债券真的托底，就用对冲汇率的债券或日元资产（比如个人向け国債）；想要更高的长期回报、能接受和股票一起跌，就不对冲。债券只占 15% 时差别不大（2008 年 ${pct(R.target.crisis.unhedged.total, 0)} 对 ${pct(R.target.crisis.hedged.total, 0)}），债券占 40% 时差别就明显了。具体买哪只，先过 independence 确认。`;
   $("hgTiles").innerHTML = keys.map(k => `<div class="tile"><div class="k">${V[k]}</div><div class="v">${pct(S[k].avg_in_bad_months, 1)}</div><div class="note">股票大跌月的平均 · 年化 ${pct(S[k].cagr, 1)}</div></div>`).join("");
   $("hgMix").innerHTML = Object.entries(X.mixes).map(([k, l]) => `<button class="chip${k === hgMix ? " on" : ""}" data-m="${k}">${l}</button>`).join("");
@@ -984,7 +985,7 @@ function renderHedge() {
   $("hgTable").innerHTML = `<thead><tr><th>期间</th>${keys.map(k => `<th>${V[k]}<br><span class="note">涨跌 / 最大回撤</span></th>`).join("")}</tr></thead><tbody>` +
     Object.entries(X.periods).map(([pk, label]) => { const r = rows[pk], best = Math.max(...keys.map(k => r[k].total));
       return `<tr><td>${label}</td>${keys.map(k => `<td class="num"${r[k].total === best ? ' style="font-weight:700"' : ""}>${pct(r[k].total, 1)} / ${pct(r[k].max_dd, 0)}</td>`).join("")}</tr>`; }).join("") + "</tbody>";
-  $("hgNote").innerHTML = `日元计、每月初调回目标比例、不含交易成本和税。"对冲汇率"是合成的：美元债的美元回报 − (美国短期利率 − 日本短期利率) − 每年 0.3% 的对冲额外成本（换成 0% 或 0.6%，结论不变）。美国短期利率用 BIL，日本用日银政策利率（2025 年以后按 0.5% 概算）。2008 年那一行，日本股没有数据，用全球股代替。实际的对冲型基金还有信托报酬的差别。粗体 = 该期间最好。数据到 ${X.generated_to}。`;
+  $("hgNote").innerHTML = `日元计、每月初调回目标比例、不含交易成本和税。"对冲汇率"是合成的：美元债的美元回报 − (美国短期利率 − 日本短期利率) − 每年 0.3% 的对冲额外成本（换成 0% 或 0.6%，结论不变）。美国短期利率用 BIL，日本用日银政策利率（按日银公告的生效日切换，2026 年 9 月 24 日起 1.25%）。2008 年那一行，日本股没有数据，用全球股代替。实际的对冲型基金还有信托报酬的差别。粗体 = 该期间最好。数据到 ${X.generated_to}。`;
 }
 function initRebalance() {
   $("rbMix").onclick = e => { const b = e.target.closest("[data-mix]"); if (!b) return; rbSel.mix = b.dataset.mix; renderRebalance(); };
