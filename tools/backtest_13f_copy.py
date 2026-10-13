@@ -5,8 +5,11 @@
     python tools/backtest_13f_copy.py --cost-bps 0 50 100 --bench SPY SMH
     python tools/backtest_13f_copy.py --entry same      # 提出日の終値で買えた楽観ケース
     python tools/backtest_13f_copy.py --no-fetch        # SEC に行かず、キャッシュだけで計算
+    python tools/backtest_13f_copy.py --no-fetch --web web/copycheck.json   # ページ用の要約も書く
 
 出力: reports/13f_copy_<cik>.md（読む用）と data/13f_copy_<cik>.json（機械可読）。どちらも .gitignore 済み。
+--web を付けると、web/ledger.html の「13F を写す」タブが読む公開用の要約（丸めた数字・週次の資産推移。
+個人の金額・手元のパス・SEC への連絡先は入れない）も書く。
 
 何を測るか:
   13F は四半期末の保有を、最大 45 日後に開示する。「〇〇の宿題を写せ」という話は、
@@ -97,6 +100,7 @@ WEIGHT_DESC = {
     "equal": "等金額（13F の比率は無視。1/銘柄数）",
 }
 ROUGHLY_EQUAL = 0.03     # 総リターンの差がこれ未満なら「ほぼ同じ」（運・コストの仮定で入れ替わる差）
+NISA_GROWTH_MANYEN = 240  # NISA 成長投資枠の年間上限（万円）。買付額で減り、売っても年内は戻らない
 
 
 # ------------------------------------------------------------ 13F の読み込み
@@ -1132,6 +1136,15 @@ def compare_to_benchmarks(res: dict, w: str) -> dict[str, list[str]]:
     return out
 
 
+def acceptance_counts(periods: list[dict]) -> dict:
+    """受理時刻（米東部）の分布。引け後（16:00 以降）の受理は、提出日の終値では買えない。"""
+    acc = [pd.Timestamp(p["accepted_et"]) for p in periods if p.get("accepted_et")]
+    late = sum(1 for a in acc if a.time() >= MARKET_CLOSE)
+    early = sum(1 for a in acc if a.time() < dtime(9, 30))
+    return {"known": len(acc), "unknown": len(periods) - len(acc), "after_close": late,
+            "pre_open": early, "intraday": len(acc) - late - early}
+
+
 def _headline(res: dict, name: str, sensitivity: list[dict] | None = None) -> list[str]:
     c0 = min(res["cost_bps"])
     hi = max(res["cost_bps"])
@@ -1205,14 +1218,11 @@ def _headline(res: dict, name: str, sensitivity: list[dict] | None = None) -> li
             f"エントリーの仮定別（{WEIGHT_JP[w0]}、{c0:g}bp）: "
             + " / ".join(f"{MODE_JP[r['mode']]} {_pct(r.get(w0))}" for r in sensitivity) + "。"
         )
-    acc = [pd.Timestamp(p["accepted_et"]) for p in res["periods"] if p.get("accepted_et")]
-    if acc:
-        late = sum(1 for a in acc if a.time() >= MARKET_CLOSE)
-        early = sum(1 for a in acc if a.time() < dtime(9, 30))
-        mid = len(acc) - late - early
+    ac = acceptance_counts(res["periods"])
+    if ac["known"]:
         lines.append(
-            f"EDGAR の受理時刻（米東部）が分かる {len(acc)} 回のうち、{late} 回は 16:00 以降（引け後）、"
-            f"{early} 回は取引開始（9:30）前、{mid} 回は場中。引け後の回は提出日の終値では買えず、"
+            f"EDGAR の受理時刻（米東部）が分かる {ac['known']} 回のうち、{ac['after_close']} 回は 16:00 以降（引け後）、"
+            f"{ac['pre_open']} 回は取引開始（9:30）前、{ac['intraday']} 回は場中。引け後の回は提出日の終値では買えず、"
             "「提出日の終値」は実行できない楽観値になる。"
         )
     pre = [r["pre_disclosure"]["value"] for r in res["missed"] if r["pre_disclosure"]["value"] is not None]
@@ -1231,6 +1241,31 @@ def _headline(res: dict, name: str, sensitivity: list[dict] | None = None) -> li
             + "。フォロワーはこの上がった後の値段で買うことになる。"
         )
     return lines
+
+
+def _years(res: dict) -> float:
+    return (pd.Timestamp(res["end"]) - pd.Timestamp(res["start"])).days / 365.25
+
+
+def limitations(res: dict) -> list[tuple[str | None, str]]:
+    """この計算の限界（見出し, 本文）。Markdown のレポートと Web 用の JSON で同じ文を使う。"""
+    return [
+        ("期間が短い。", (f"13F {len(res['periods'])} 回分・約 {_years(res):.1f} 年で、"
+                        "1 つの相場（AI・半導体の上昇局面）しか含まない。数回の組み替えの結果は運の影響が大きく、"
+                        "将来のリターンの見積もりにはならない")),
+        ("戦略的な出資を含む。", ("事業会社の 13F は、提携・資金支援のための出資（相対取引・"
+                              "発表前の条件での取得）が中心になりうる。13F には取得単価が出ないので、本人の損益とは別物で、"
+                              "フォロワーは開示後の市場価格で買うしかない")),
+        ("生存者バイアス。", ("「写せ」と話題になるのは、うまくいった提出者・期間だけ。"
+                          "同じことをして失敗した提出者は話題にならない")),
+        ("コスト・税・為替。", ("片道コストは手数料・為替手数料・売買の価格への影響をまとめた目安。"
+                            "課税口座なら組み替えのたびに利益に約 20% の税、NISA でも組み替えのたびに成長投資枠を使う"
+                            "（売っても枠はその年には戻らない）。円建ては為替の動きを含む")),
+        ("リスク指標は仮定の計算。", ("最大下落・ボラは「この方法で持っていたら」の計算で、"
+                                "実際に持っていた人の実績ではない。最大下落の途中で売ってしまうと、結果はこれより悪くなる")),
+        (None, "13F は米国上場の株式ロングだけ。非上場の出資・現金・空売りは写らない。四半期の途中の売買も見えない"),
+        (None, "店頭（OTC）かどうかは現在の上場市場で判定している。当時と市場が違う銘柄では判定がずれうる"),
+    ]
 
 
 def render_markdown(res: dict, meta: dict, sensitivity: list[dict],
@@ -1326,8 +1361,8 @@ def render_markdown(res: dict, meta: dict, sensitivity: list[dict],
             unit = "円換算" if s.get("buys_in_jpy") else "ドル建て"
             L.append(f"- NISA 成長投資枠の消費（{WEIGHT_JP[w]}。年ごとの買付額 ÷ 初期資金、{unit}、初回の購入を含む）: "
                      + " / ".join(f"{y} 年 {v:.2f} 倍" for y, v in sorted(yb.items()))
-                     + f"。枠は買付額で減り売っても年内は戻らないので、年 240 万円の枠の中で全額を写し続けられる"
-                     f"初期資金は約 {240 / top:.0f} 万円まで（買付の最も多い年で決まる）")
+                     + f"。枠は買付額で減り売っても年内は戻らないので、年 {NISA_GROWTH_MANYEN} 万円の枠の中で"
+                     f"全額を写し続けられる初期資金は約 {NISA_GROWTH_MANYEN / top:.0f} 万円まで（買付の最も多い年で決まる）")
     L.append("")
 
     # ---- 感度
@@ -1478,22 +1513,8 @@ def render_markdown(res: dict, meta: dict, sensitivity: list[dict],
     # ---- 限界
     L.append("## この計算の限界")
     L.append("")
-    L.append(f"- **期間が短い。** 13F {len(res['periods'])} 回分・約 "
-             f"{(pd.Timestamp(res['end']) - pd.Timestamp(res['start'])).days / 365.25:.1f} 年で、"
-             "1 つの相場（AI・半導体の上昇局面）しか含まない。数回の組み替えの結果は運の影響が大きく、"
-             "将来のリターンの見積もりにはならない")
-    L.append("- **戦略的な出資を含む。** 事業会社の 13F は、提携・資金支援のための出資（相対取引・"
-             "発表前の条件での取得）が中心になりうる。13F には取得単価が出ないので、本人の損益とは別物で、"
-             "フォロワーは開示後の市場価格で買うしかない")
-    L.append("- **生存者バイアス。** 「写せ」と話題になるのは、うまくいった提出者・期間だけ。"
-             "同じことをして失敗した提出者は話題にならない")
-    L.append("- **コスト・税・為替。** 片道コストは手数料・為替手数料・売買の価格への影響をまとめた目安。"
-             "課税口座なら組み替えのたびに利益に約 20% の税、NISA でも組み替えのたびに成長投資枠を使う"
-             "（売っても枠はその年には戻らない）。円建ては為替の動きを含む")
-    L.append("- **リスク指標は仮定の計算。** 最大下落・ボラは「この方法で持っていたら」の計算で、"
-             "実際に持っていた人の実績ではない。最大下落の途中で売ってしまうと、結果はこれより悪くなる")
-    L.append("- 13F は米国上場の株式ロングだけ。非上場の出資・現金・空売りは写らない。四半期の途中の売買も見えない")
-    L.append("- 店頭（OTC）かどうかは現在の上場市場で判定している。当時と市場が違う銘柄では判定がずれうる")
+    for head, body in limitations(res):
+        L.append(f"- **{head}** {body}" if head else f"- {body}")
     L.append("")
 
     # ---- 方法
@@ -1518,6 +1539,307 @@ def render_markdown(res: dict, meta: dict, sensitivity: list[dict],
     L.append(f"- 再実行: `python tools/backtest_13f_copy.py --cik {meta['cik']}`（--no-fetch でキャッシュのみ）")
     L.append("")
     return "\n".join(L)
+
+
+# ------------------------------------------------------------ Web 用（公開してよい要約）
+#
+# web/ledger.html の「13F を写す」タブが読む。13F（SEC が公開）と市場価格から作った数字だけで、
+# 個人の金額・ファイルの場所・SEC への連絡先は入れない。数字はページに書かず、ここから差し込む
+# （四半期ごとに作り直してもページの文章が古くならないように）。
+
+WEB_MAX_BYTES = 80_000
+BENCH_JP = {"SPY": "S&P500（米国の大型株）", "QQQ": "NASDAQ100（米国のハイテク中心）",
+            "SMH": "米国の半導体株", "NVDA": "NVIDIA 株そのもの", "ACWI": "全世界株"}
+
+
+def _r(x, nd: int = 6):
+    """丸めた float。None・NaN・無限大は None（厳密な JSON にする）。
+
+    比率は小数 6 桁（0.0001% 単位）で持つ。ページは % の小数 1 桁で表示するので、ここで 4 桁に丸めると
+    2 回丸めになり、レポートと 0.1pt ずれることがある（-7.554% → -7.55 → -7.5%）。
+    6 桁でも境目の値はずれる（0.0444999… → 0.0445 → 4.5%、レポートは 4.4%）。表示より細かく持つ値
+    （nd が 4 以上）は、ページの表示（% の小数 0・1 桁、比率の小数 2 桁）が丸めで変わるときだけ丸めずに出す。
+    年数・為替（nd が 2）は表示に合わせた丸めなので、そのまま丸める。
+    """
+    if x is None or isinstance(x, bool):
+        return None
+    try:
+        f = float(x)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(f):
+        return None
+    r = round(f, nd) + 0.0
+    if nd < 4:
+        return r
+
+    def shown(v: float) -> tuple[float, float, float]:     # 0.0 と -0.0 は同じ表示（ページは符号を付けない）
+        return float(f"{v * 100:.0f}"), float(f"{v * 100:.1f}"), float(f"{v:.2f}")
+
+    return r if shown(r) == shown(f) else f + 0.0
+
+
+def _public(text: str) -> str:
+    """公開する文から、手元のパスと SEC への連絡先（User-Agent）を消す。"""
+    s = str(text).replace(str(ROOT) + "/", "").replace(str(ROOT), ".")
+    ua = getattr(fetch_13f, "USER_AGENT", "")
+    if ua and "example.com" not in ua:
+        s = s.replace(ua, "（連絡先）")
+    return s
+
+
+def _web_dd(dd: dict | None) -> dict | None:
+    if not dd:
+        return None
+    return {"v": _r(dd.get("mdd")), "peak": dd.get("peak"), "trough": dd.get("trough"),
+            "recovery": dd.get("recovery")}
+
+
+def _web_metrics(m: dict) -> dict:
+    wp = m.get("worst_period") or {}
+    return {
+        "total_usd": _r(m.get("total_return_usd")), "total_jpy": _r(m.get("total_return_jpy")),
+        "cagr_usd": _r(m.get("cagr_usd")), "cagr_jpy": _r(m.get("cagr_jpy")),
+        "vol": _r(m.get("vol_ann")),
+        "mdd": _web_dd(m.get("max_drawdown_usd")), "mdd_jpy": _web_dd(m.get("max_drawdown_jpy")),
+        "worst_period": {"ret": _r(wp.get("return")), "report_date": wp.get("report_date")} if wp else None,
+        "losing_periods": m.get("losing_periods"), "n_periods": m.get("n_periods"),
+        "ret_per_vol": _r(m.get("ret_per_vol"), 4), "calmar": _r(m.get("calmar"), 4),
+    }
+
+
+def _web_summary(res: dict) -> list[dict]:
+    """コストごとに、写した戦略とベンチマーク（買って持つだけ）の指標を並べる。"""
+    out = []
+    for c in res["cost_bps"]:
+        rows = []
+        for s in res["strategies"]:
+            if s["cost_bps"] != c:
+                continue
+            w = s["weights"]
+            bp = s.get("best_period") or {}
+            rows.append({
+                "kind": "copy", "key": w, "label": f"写す（{WEIGHT_JP[w]}）", "desc": WEIGHT_DESC[w],
+                **_web_metrics(s["metrics"]),
+                "best_period": {"report_date": bp.get("report_date"), "ret": _r(bp.get("return"))},
+                "total_without_best": _r(s.get("total_without_best_period")),
+                "first_bench_without_best": _r(s.get("first_bench_without_best_period")),
+                "periods_beating_first_bench": s.get("periods_beating_first_bench"),
+                "cost_total": _r(s.get("cost_total")),
+                "turnover": [_r(t, 4) for t in s.get("turnover", [])],
+            })
+        for b in res["benchmarks"]:
+            if b["cost_bps"] != c:
+                continue
+            rows.append({"kind": "bench", "key": b["symbol"], "label": b["symbol"],
+                         "desc": BENCH_JP.get(b["symbol"], b["symbol"]), **_web_metrics(b["metrics"])})
+        out.append({"cost_bps": c, "rows": rows})
+    return out
+
+
+def _web_sensitivity(res: dict, sensitivity: list[dict]) -> list[dict]:
+    """エントリーの仮定別。実行できるかどうかと、その理由を付ける。"""
+    ac = acceptance_counts(res["periods"])
+    late = ac["after_close"] + ac["unknown"]
+    same_ok = late == 0
+    why = {
+        "next": (True, "提出日の翌営業日の引けで買う。開示を見てから動く人が実際に取れる値"),
+        "accepted": (True, ("EDGAR の受理時刻（米東部）が 16:00 より前ならその日の引け、後なら翌営業日の引け。"
+                            "受理を見てすぐ動ければ実行できる")),
+        "same": (same_ok, "全回とも受理が引け前で、提出日の終値に間に合う" if same_ok else
+                 (f"{len(res['periods'])} 回中 {late} 回は受理が引け後（16:00 以降）か時刻不明で、"
+                  "その日の終値ではもう買えない。実行できない楽観値")),
+        "report": (False, ("四半期末の時点では 13F はまだ開示されていない（開示は最大 45 日後）。"
+                           "誰にも実行できない参考値")),
+    }
+    out = []
+    for r in sensitivity:
+        ok, txt = why.get(r["mode"], (None, ""))
+        out.append({
+            "mode": r["mode"], "label": MODE_JP.get(r["mode"], r["mode"]),
+            "start": r.get("start"), "end": r.get("end"),
+            "copy": {w: _r(r.get(w)) for w in res["weights"]},
+            "bench": {k: _r(v) for k, v in (r.get("benches") or {}).items()},
+            "executable": ok, "why": txt,
+        })
+    return out
+
+
+def _web_periods(res: dict) -> list[dict]:
+    out = []
+    for p in res["periods"]:
+        out.append({
+            "report_date": p["report_date"], "filed_date": p["filed_date"],
+            "accepted_et": p.get("accepted_et"), "accepted_source": p.get("accepted_source"),
+            "entry": p["entry"], "exit": p["exit"],
+            "n_positions": p["n_positions"], "n_priced": p["n_priced"],
+            "positions": [{"symbol": r["symbol"], "issuer": r.get("issuer"),
+                           "w13f": _r(r.get("reported_weight")), "w_value": _r(r.get("weight_value")),
+                           "w_equal": _r(r.get("weight_equal"))} for r in p["priced"]],
+            "unpriced": [{"symbol": u.get("symbol"), "issuer": u.get("issuer"),
+                          "w13f": _r(u.get("reported_weight")), "reason": u.get("reason")}
+                         for u in p["unpriced"]],
+            "unpriced_weight": _r(p.get("unpriced_weight")),
+            "returns": {w: _r(v) for w, v in p["returns"].items()},
+            "turnover": {w: _r(v, 4) for w, v in p["turnover"].items()},
+            "bench": {b: _r(v) for b, v in p["bench_returns"].items()},
+            "gaps": [{k: (_r(v) if isinstance(v, float) else v) for k, v in g.items()}
+                     for g in p.get("trading_gaps", [])],
+            "n_options": len(p.get("options") or []),
+        })
+    return out
+
+
+def _web_missed(res: dict) -> dict:
+    def wr(x: dict) -> dict:
+        return {"value": _r(x.get("value")), "equal": _r(x.get("equal")), "n": x.get("n", 0)}
+
+    rows = [{
+        "report_date": r["report_date"], "filed_date": r["filed_date"],
+        "report_close": r.get("report_close"), "pre_filing_close": r.get("pre_filing_close"),
+        "pre_filing_rule": r.get("pre_filing_rule"), "entry": r.get("entry"),
+        "pre": wr(r["pre_disclosure"]), "pre_all": _r(r["pre_disclosure_all_holdings"].get("value")),
+        "pre_bench": _r(r.get("pre_disclosure_bench")),
+        "new_names": r.get("new_names", []), "new_label": r.get("new_label"),
+        "pop": wr(r["pop"]), "pop_bench": _r(r.get("pop_bench")),
+    } for r in res["missed"]]
+    names = [{
+        "report_date": r["report_date"], "symbol": r.get("symbol"), "issuer": r.get("issuer"),
+        "w13f": _r(r.get("reported_weight")), "pre_filing_close": r.get("pre_filing_close"),
+        "pop": _r(r.get("pop")), "after": _r(r.get("after_entry_to_exit")), "exit": r.get("exit"),
+        "copyable": bool(r.get("copyable", True)),
+        "reason": r.get("excluded_reason") or r.get("not_copyable_reason"),
+    } for r in res["new_names"]]
+    return {"bench": res.get("first_bench"), "rows": rows, "new_names": names}
+
+
+def _web_holdings(res: dict) -> list[dict]:
+    return [{
+        "symbol": h["symbol"], "issuer": h.get("issuer"), "periods_held": h["periods_held"],
+        "held_from": h["held_from"], "held_to": h["held_to"], "ret": _r(h["return_while_held"]),
+        "mdd": _web_dd(h["max_drawdown_while_held"]),
+        "contrib": {w: _r(v) for w, v in h["contribution"].items()},
+    } for h in res["holdings"]]
+
+
+def _web_nisa(res: dict) -> dict:
+    c0 = min(res["cost_bps"])
+    out = {"quota_manyen": NISA_GROWTH_MANYEN, "by_weights": {}}
+    for w in res["weights"]:
+        s = _strategy(res, w, c0)
+        yb = (s or {}).get("buys_by_year") or {}
+        if not yb:
+            continue
+        y_top = max(yb, key=yb.get)
+        top = yb[y_top]
+        out["by_weights"][w] = {
+            "buys_by_year": {y: _r(v, 4) for y, v in sorted(yb.items())}, "in_jpy": bool(s.get("buys_in_jpy")),
+            "max_year": y_top, "max_multiple": _r(top, 4),
+            "max_initial_manyen": round(NISA_GROWTH_MANYEN / top) if top > 0 else None,
+        }
+    return out
+
+
+def _web_curve(res: dict) -> dict:
+    """最小コストの資産推移（開始 = 1.0）を週次に間引く。最大下落のピークと底の日は残す。"""
+    c0 = min(res["cost_bps"])
+    dates = res["nav"]["dates"]
+    allser = res["nav"]["series"]
+    keys = [(w, f"{w}_{c0:g}bp") for w in res["weights"]] + [(b, f"{b}_{c0:g}bp") for b in res["bench"]]
+    keys = [(k, s) for k, s in keys if s in allser and len(allser[s]) == len(dates)]
+    if not dates:
+        return {"cost_bps": c0, "dates": [], "series": {}, "entries": []}
+    wk = pd.DatetimeIndex(pd.to_datetime(dates)).to_period("W-FRI")
+    last_of_week = np.r_[np.asarray(wk[1:] != wk[:-1]), True]
+    keep = set(np.flatnonzero(last_of_week).tolist()) | {0, len(dates) - 1}
+    pos = {d: i for i, d in enumerate(dates)}
+    for row in res["strategies"] + res["benchmarks"]:
+        if row["cost_bps"] != c0:
+            continue
+        dd = row["metrics"]["max_drawdown_usd"]
+        for k in ("peak", "trough"):
+            if dd.get(k) in pos:
+                keep.add(pos[dd[k]])
+    sel = sorted(keep)
+    return {
+        "cost_bps": c0, "freq": "週次（各週の最後の終値。最大下落のピークと底の日を含む）",
+        "dates": [dates[i] for i in sel],
+        "series": {k: [_r(allser[s][i], 5) for i in sel] for k, s in keys},
+        "entries": [p["entry"] for p in res["periods"]],
+    }
+
+
+def data_warnings(res: dict) -> list[str]:
+    """結果に効くデータの問題（評価不能・写せない銘柄、取引の途絶、比べられないベンチマーク）。"""
+    out = []
+    for p in res["periods"]:
+        for u in p["unpriced"]:
+            out.append(f"{p['report_date']} 期: {u.get('symbol') or '—'}（{u.get('issuer')}、13F 上の比率 "
+                       f"{_w(u.get('reported_weight'))}）は写せない・評価できない銘柄として除外し、その期の買える銘柄"
+                       f"だけで按分し直した（0 円扱いにはしていない）。理由: {u.get('reason')}")
+        for g in p.get("trading_gaps", []):
+            if g["kind"] == "stopped":
+                out.append(f"{g['symbol']}（{p['report_date']} 期）: {g['last_date']} を最後に価格が途絶"
+                           f"（期末まで {g['missing_days']} 営業日）。最後の終値で据え置いた")
+            else:
+                out.append(f"{g['symbol']}（{p['report_date']} 期）: {g['from']}〜{g['to']} に "
+                           f"{g['missing_days']} 営業日価格が無い。直前の終値で据え置いた")
+    for b in res["bench_unavailable"]:
+        out.append(f"ベンチマーク {b['symbol']} は比較できない: {b['reason']}")
+    return out
+
+
+def web_payload(res: dict, meta: dict, sensitivity: list[dict],
+                variants: list[dict] | None = None) -> dict:
+    """ページ用の要約（丸めた数字・週次の資産推移）。公開してよい情報だけを選んで入れる。"""
+    c0 = min(res["cost_bps"])
+    per = res["periods"]
+    return _clean({
+        "schema": 1,
+        "meta": {
+            "generated": meta.get("generated_at"),
+            "sources": {"filings": "SEC EDGAR（13F-HR）",
+                        "prices": "Yahoo Finance（配当込みの調整後終値）",
+                        "fx": "Yahoo Finance（JPY=X、1 ドル = 何円）"},
+            "tool": "tools/backtest_13f_copy.py",
+            "cik": str(meta.get("cik")), "filer": meta.get("name"), "edgar_name": meta.get("edgar_name"),
+            "n_filings": len(per), "report_first": per[0]["report_date"], "report_last": per[-1]["report_date"],
+            "start": res["start"], "end": res["end"], "years": _r(_years(res), 2),
+            "entry": {"mode": res["mode"], "label": MODE_JP[res["mode"]]},
+            "calendar": meta.get("calendar_ref"),
+            "weights": res["weights"], "weights_jp": {w: WEIGHT_JP[w] for w in WEIGHT_JP},
+            "cost_bps": res["cost_bps"], "cost_base": c0,
+            "bench": res["bench"], "bench_jp": {b: BENCH_JP.get(b, b) for b in res["bench"]},
+            "first_bench": res.get("first_bench"), "include_otc": bool(res.get("include_otc")),
+            "max_stale_days": MAX_STALE, "roughly_equal": ROUGHLY_EQUAL,
+            "fx_start": _r(res.get("fx_start"), 2), "fx_end": _r(res.get("fx_end"), 2),
+            "acceptance": acceptance_counts(per),
+            "first_filing_is_initial": meta.get("first_filing_is_initial"),
+            "caveats": [{"head": h, "body": b} for h, b in limitations(res)],
+            "warnings": [_public(x) for x in data_warnings(res)],
+            "notes": [_public(x) for x in list(meta.get("notes", [])) + list(res.get("notes", []))],
+            "price_warnings": [_public(x) for x in meta.get("price_warnings", [])],
+        },
+        "summary": _web_summary(res),
+        "compare": {w: compare_to_benchmarks(res, w) for w in res["weights"]},
+        "sensitivity": _web_sensitivity(res, sensitivity),
+        "variants": [{
+            "weights": v["weights"], "label": WEIGHT_DESC[v["weights"]], "include_otc": bool(v["include_otc"]),
+            "total_usd": _r(v["metrics"].get("total_return_usd")), "cagr_usd": _r(v["metrics"].get("cagr_usd")),
+            "vol": _r(v["metrics"].get("vol_ann")), "mdd": _r(v["metrics"]["max_drawdown_usd"]["mdd"]),
+            "ret_per_vol": _r(v["metrics"].get("ret_per_vol"), 4),
+        } for v in (variants or [])],
+        "periods": _web_periods(res),
+        "missed": _web_missed(res),
+        "holdings": _web_holdings(res),
+        "nisa": _web_nisa(res),
+        "curve": _web_curve(res),
+    })
+
+
+def web_json(payload: dict) -> str:
+    """厳密な JSON（NaN・Infinity を出さない）で、空白を詰めて書く。"""
+    return json.dumps(payload, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
 
 
 # ------------------------------------------------------------ CLI
@@ -1586,6 +1908,8 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--no-fetch", action="store_true", help="SEC に行かずキャッシュだけで計算する")
     ap.add_argument("--out", help="Markdown の出力先（既定 reports/13f_copy_<cik>.md）")
     ap.add_argument("--json", help="JSON の出力先（既定 data/13f_copy_<cik>.json）")
+    ap.add_argument("--web", metavar="PATH",
+                    help="ページ用の公開してよい要約 JSON も書く（例 web/copycheck.json。丸めた数字と週次の資産推移）")
     args = ap.parse_args(argv)
 
     cik = str(int(args.cik))
@@ -1733,6 +2057,15 @@ def main(argv: list[str] | None = None) -> None:
         print(f"⚠ 評価不能・写せない銘柄 {n_un} 件（除外して按分し直した。レポートに一覧）")
     print(f"レポート: {out_md}")
     print(f"JSON    : {out_js}")
+    if args.web:
+        out_web = Path(args.web)
+        out_web.parent.mkdir(parents=True, exist_ok=True)
+        text = web_json(web_payload(res, meta, sens, variants))
+        out_web.write_text(text, encoding="utf-8")
+        size = len(text.encode("utf-8"))
+        print(f"Web 用  : {out_web}（{size / 1000:.1f} KB）")
+        if size > WEB_MAX_BYTES:
+            print(f"⚠ Web 用の JSON が {WEB_MAX_BYTES / 1000:.0f} KB を超えた。ページの読み込みが重くなる")
     db.close()
 
 

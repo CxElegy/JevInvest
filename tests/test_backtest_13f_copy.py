@@ -1,6 +1,7 @@
 """tools/backtest_13f_copy.py のテスト。ネットワークには出ない（合成の価格と 13F）。"""
 
 import json
+import re
 from datetime import datetime
 
 import numpy as np
@@ -641,3 +642,129 @@ def test_otc_hindsight_warning_depends_on_zero_volume_before_entry():
     late = next(n for n in notes if "LATE" in n)
     assert "2024-02-07" in old and "⚠" not in old
     assert late.startswith("⚠") and "--include-otc" in late
+
+
+# ------------------------------------------------------------ Web 用の要約（--web）
+
+def _strict_loads(text: str):
+    """NaN・Infinity を含む JSON は通さない（ブラウザの JSON.parse と同じ厳密さ）。"""
+    def bad(c):
+        raise ValueError(f"non-standard JSON constant: {c}")
+    return json.loads(text, parse_constant=bad)
+
+
+WEB_KEYS = {"schema", "meta", "summary", "compare", "sensitivity", "variants", "periods", "missed",
+            "holdings", "nisa", "curve"}
+
+
+def test_web_export_shape_is_strict_json_and_keeps_drawdown_dates(two_filings):
+    cal, adj, filings = two_filings
+    adj = adj.copy()
+    adj.loc[cal[5]:cal[6], "A"] = 8.0                             # 1 期目の途中に下落を入れる
+    fx = pd.Series(150.0, index=cal)
+    kw = {"fx": fx, "bench": ["SPY"], "weight_modes": ["value", "equal"], "costs": [0.0, 50.0]}
+    res = bt.run_backtest(filings, adj, cal, mode="next", **kw)
+    rep = bt.run_backtest(filings, adj, cal, mode="report", **kw)
+    sens = [bt._sensitivity_row(res, "next", 0.0), bt._sensitivity_row(rep, "report", 0.0)]
+    variants = [{"weights": "value", "include_otc": True, "metrics": res["strategies"][0]["metrics"]}]
+    meta = {"name": "Test", "edgar_name": "TEST CORP", "cik": "1", "generated_at": "now",
+            "calendar_ref": "SPY", "notes": [f"キャッシュ {bt.ROOT}/data/x.sqlite"], "price_warnings": []}
+    text = bt.web_json(bt.web_payload(res, meta, sens, variants))
+    d = _strict_loads(text)
+
+    assert set(d) == WEB_KEYS and d["schema"] == 1
+    assert "NaN" not in text and "Infinity" not in text
+    assert str(bt.ROOT) not in text                                   # 手元のパスは出さない
+    assert len(text.encode("utf-8")) < bt.WEB_MAX_BYTES
+    m = d["meta"]
+    assert (m["start"], m["end"], m["n_filings"]) == (res["start"], res["end"], 2)
+    assert m["entry"]["mode"] == "next" and m["caveats"] and m["caveats"][0]["head"] == "期間が短い。"
+    assert m["fx_start"] == 150.0 and m["acceptance"]["unknown"] == 2
+
+    # コストごとに 写す 2 本 + ベンチマーク 1 本。数字は丸めてある
+    assert [s["cost_bps"] for s in d["summary"]] == [0.0, 50.0]
+    rows = d["summary"][0]["rows"]
+    assert [(r["kind"], r["key"]) for r in rows] == [("copy", "value"), ("copy", "equal"), ("bench", "SPY")]
+    v = rows[0]
+    tot = res["strategies"][0]["metrics"]["total_return_usd"]
+    assert v["total_usd"] == pytest.approx(tot, abs=5e-7) and f"{v['total_usd'] * 100:.1f}" == f"{tot * 100:.1f}"
+    assert v["mdd"]["v"] == pytest.approx(-0.1) and v["n_periods"] == 2
+    assert v["ret_per_vol"] == round(res["strategies"][0]["metrics"]["ret_per_vol"], 4)
+    assert d["compare"]["value"]["beats"] == ["SPY"]
+
+    # 実行できない仮定には印が付く
+    ex = {r["mode"]: r["executable"] for r in d["sensitivity"]}
+    assert ex == {"next": True, "report": False}
+
+    # 資産推移: 開始 1.0、全系列が日付と同じ長さ、最大下落のピークと底の日を含む
+    c = d["curve"]
+    assert set(c["series"]) == {"value", "equal", "SPY"}
+    assert all(len(s) == len(c["dates"]) for s in c["series"].values())
+    assert c["series"]["value"][0] == 1.0 and c["series"]["SPY"][0] == 1.0
+    assert v["mdd"]["peak"] in c["dates"] and v["mdd"]["trough"] in c["dates"]
+    assert c["dates"][-1] == res["end"] and c["entries"] == [p["entry"] for p in res["periods"]]
+
+    assert d["periods"][0]["positions"][0]["w_value"] == pytest.approx(0.5)
+    assert d["nisa"]["quota_manyen"] == 240 and "value" in d["nisa"]["by_weights"]
+    assert d["variants"][0]["include_otc"] is True
+
+
+def test_web_export_writes_null_not_nan_when_values_are_missing(two_filings):
+    cal, adj, filings = two_filings
+    res = bt.run_backtest(filings, adj, cal, fx=None, bench=["SPY"], weight_modes=["value"], costs=[0.0])
+    res["strategies"][0]["metrics"]["vol_ann"] = float("nan")          # 計算できなかった値
+    res["strategies"][0]["metrics"]["calmar"] = float("inf")
+    text = bt.web_json(bt.web_payload(res, {"name": "T", "cik": "1", "generated_at": "now"}, []))
+    row = _strict_loads(text)["summary"][0]["rows"][0]
+    assert row["total_jpy"] is None and row["vol"] is None and row["calmar"] is None
+    assert bt._r(float("-inf")) is None and bt._r(-0.00001, 4) == 0.0 and bt._r(None) is None
+    # 表示（% の小数 1 桁）で 2 回丸めにならない桁数で持つ: -7.554% は -7.6% と表示されるべき
+    assert round(bt._r(-0.0755422) * 100, 1) == -7.6
+    # 6 桁でも境目の値は 2 回丸めになる（0.0444999… → 0.0445 → 4.5%）。表示が変わる値は丸めずに持つ
+    assert f"{bt._r(0.044499969482421964) * 100:.1f}" == "4.4"
+    assert f"{bt._r(0.774999996) * 100:.0f}" == "77"                  # % の小数 0 桁（グラフの端の値）
+    assert f"{bt._r(0.3749999996):.2f}" == "0.37"                       # 比率の小数 2 桁（0.375 なら 0.38）
+    assert bt._r(0.123456789) == 0.123457                              # 境目でなければ 6 桁に丸める
+    with pytest.raises(ValueError):
+        bt.web_json({"x": float("nan")})                              # 丸めずに渡しても NaN は書かない
+
+
+def test_web_export_stays_small_for_years_of_daily_prices():
+    rng = np.random.default_rng(7)
+    cal = pd.bdate_range("2023-01-02", periods=900)                   # 約 3.5 年の日足
+    syms = [f"S{k:02d}" for k in range(25)]
+    adj = pd.DataFrame({s: 20 * np.cumprod(1 + rng.normal(0.0005, 0.03, len(cal))) for s in syms + ["SPY", "QQQ"]},
+                       index=cal)
+    filings = []
+    for q in range(13):
+        names = rng.choice(syms, size=12, replace=False)
+        filings.append(filing(cal[q * 63], cal[q * 63 + 30],
+                              [pos(s, float(rng.integers(1, 100))) for s in names]))
+    res = bt.run_backtest(filings, adj, cal, fx=pd.Series(150.0, index=cal), bench=["SPY", "QQQ"],
+                          weight_modes=["value", "equal"], costs=[0.0, 50.0])
+    text = bt.web_json(bt.web_payload(res, {"name": "T", "cik": "1", "generated_at": "now"},
+                                      [bt._sensitivity_row(res, "next", 0.0)]))
+    d = _strict_loads(text)
+    assert len(text.encode("utf-8")) < bt.WEB_MAX_BYTES
+    n_days = len(res["nav"]["dates"])
+    assert len(d["curve"]["dates"]) < n_days / 4                      # 週次に間引いてある
+    assert len(d["periods"]) == 13
+
+
+def test_published_copycheck_json_is_strict_small_and_public_safe():
+    path = bt.ROOT / "web" / "copycheck.json"
+    if not path.exists():
+        pytest.skip("web/copycheck.json はまだ作っていない（--web で作る）")
+    raw = path.read_bytes()
+    assert len(raw) < bt.WEB_MAX_BYTES
+    text = raw.decode("utf-8")
+    d = _strict_loads(text)
+    assert set(d) == WEB_KEYS
+    assert str(bt.ROOT) not in text                                   # 手元のパスを出さない
+    assert re.search(r"[\w.+-]+@[\w-]+\.[\w.]+", text) is None          # 連絡先（メール）を出さない
+    m = d["meta"]
+    assert m["start"] <= m["end"] and m["n_filings"] == len(d["periods"])
+    lens = {len(s) for s in d["curve"]["series"].values()}
+    assert lens == {len(d["curve"]["dates"])}
+    copy0 = [r for r in d["summary"][0]["rows"] if r["kind"] == "copy"]
+    assert copy0 and all(r["total_usd"] is not None for r in copy0)

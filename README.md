@@ -148,9 +148,54 @@ DCF（3 シナリオ・確率加重・感応度表、銘柄ごとの必要な利
 
 - 株価や為替は取得しない（評価額を手入力する）。Python 版の相関・リスク指標は出ない
 - ブラウザのデータを消すと入力も消える。ページ下部の「バックアップ」をメモに控えておく
-- Claude Code の Artifact として公開して使う。単体の HTML ではなく、公開時に枠が付く断片
+- Claude Code の Artifact として公開して使う。単体の HTML ではなく、公開時に枠が付く断片。
+  GitHub Pages では `tools/build_site.py` が完全な HTML に組み立てて公開する（次の節）
+- タブは道筋・ファンド分析・家計の入力・台帳・攻め口座・市場の参考と、**13F を写す**（「NVIDIA の 13F を写せ」を
+  開示後に写した場合で検証した結果。下の「開示後に写した場合の検証」の数字を `web/copycheck.json` から表示する）
 
-### 著名投資家の動向（同じページの「著名投資家の動向」タブ）
+### GitHub Pages で開く
+
+同じページを **https://cxelegy.github.io/JevInvest/** で開ける。
+
+- **インターネット全体に公開される。** リポジトリは非公開でも、Pages のサイトは URL を知っている人なら誰でも見られる。
+  `noindex` で検索に出さないようにしているだけで、アクセス制限ではない
+- 公開されるのは、ページと `tools/build_site.py` の許可リストにある JSON（`investors.json` `evidence.json`
+  `strategy.json` `deepdive.json` `copycheck.json`）だけ。選んだファンドと比率、ページの文面（勤務先に独立性の
+  規則があること、使い方の例など）、13F の集計、検証の結果は誰でも見られる。入力した金額はブラウザ内にだけあるので
+  公開されない。ページの先頭に「個人の記録と検証で、投資助言ではない」と出す
+- `seed.json`（個人の明細）は許可リストに入れない。`web/` にあってもビルドが公開せず、コミットもしない（.gitignore 済み）。
+  `serenity_history.json` もページが読まない（投稿の抜粋と持ち分の比率が入っている）ので公開しない
+- **ページの文面に個人の事情を書かない。** `web/ledger.html` は claude.ai の Artifact と同じファイルなので、年齢・
+  勤務先の社内の仕組みの名前（DESC・GIMS など）・事前承認が通った／通らなかった運用会社・使っている証券会社とカード・
+  実際の金額は文面に書かず、公開しない `seed.json`（`profile` と `clearance`）から読む。ビルドは
+  `PRIVATE_TEXT` に当たる文面がページか JSON にあると止まる
+
+最初の 1 回だけ: Settings → Pages → Build and deployment → Source を **GitHub Actions** にする
+（非公開リポジトリの Pages は GitHub Pro が必要）。そのあと main にマージするか、Actions の「GitHub Pages」を
+Run workflow で手動実行する。
+
+更新するときは、いつもの手順で `web/*.json` を作り直してコミットし、main にマージすると自動で公開し直す
+（`.github/workflows/pages.yml`。`web/` か `tools/build_site.py` が変わったときだけ動く）。Actions では `--strict` で
+組み立てるので、許可リストの JSON が 1 つでもコミットされていないと公開しない（`web/copycheck.json` もコミットする）。
+新しい 13F が出たら、`tools/backtest_13f_copy.py` で SEC から取り直したあと、次で `web/copycheck.json` を作る。
+
+```bash
+python tools/backtest_13f_copy.py --no-fetch --web web/copycheck.json
+python tools/build_site.py --strict && python -m http.server -d _site    # 手元で確かめる → http://localhost:8000/
+```
+
+**入力したデータは github.io 版には出てこない。** ブラウザの保存領域（localStorage）はサイト（オリジン）ごとに
+分かれるので、claude.ai の Artifact 版で入れた数字は github.io 版では空になる（逆も同じ）。台帳タブの
+「バックアップと復元」でコピーして、もう一方に貼れば移せる。ただし移せるのは台帳タブの入力だけで、家計の入力・明細・
+攻め口座の入力は移す機能が無いので、github.io 版で入れ直す。
+
+**cxelegy.github.io の下の Pages サイトは、すべて同じ保存領域を共有する。** `https://cxelegy.github.io/JevInvest/` と
+`https://cxelegy.github.io/<別のリポジトリ>/` は同じオリジンなので、このアカウントで公開した別の Pages サイトの
+スクリプトは、ここで入れた金額（`jevinvest.*` のキー）を読める。このアカウントで他の Pages サイト（特に外部の
+スクリプトを読むもの）を公開しない。気になるなら、金額の入力は claude.ai の Artifact 版で行う
+（リポジトリごとに独自のサブドメインを割り当てれば分けられる）。
+
+### 著名投資家の動向（同じページの「市場の参考」タブ）
 
 SEC の 13F（四半期ごとの保有報告）から、バフェットなど約 40 人・社について
 **投資家ごとの注目分野（業種の比率と前期比）・上位 10 銘柄・新規購入・全売却**と、
@@ -401,6 +446,7 @@ python tools/backtest_13f_copy.py --cik 1067983 --name Berkshire --cost-bps 0 50
 python tools/backtest_13f_copy.py --entry same           # 提出日の終値で買えた楽観ケース
 python tools/backtest_13f_copy.py --no-fetch             # SEC に行かずキャッシュだけで計算
 # → reports/13f_copy_<cik>.md と data/13f_copy_<cik>.json
+python tools/backtest_13f_copy.py --no-fetch --web web/copycheck.json   # ページの「13F を写す」タブ用（GitHub Pages で公開される）
 ```
 
 - **先読みしない。** 既定のエントリーは提出日の翌営業日の終値（13F の受理はほとんど引け後）。

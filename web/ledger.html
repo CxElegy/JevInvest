@@ -85,6 +85,7 @@ button.primary { background: var(--accent); color: var(--accent-fg); border-colo
 button.ghost { border-color: transparent; color: var(--muted); padding: 8px; }
 button.danger { color: var(--crit); border-color: var(--crit); }
 .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.row button { white-space: normal; }
 .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
 .field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .field label { font-size: 12px; color: var(--muted); }
@@ -339,6 +340,8 @@ input[type="checkbox"] { width: auto; flex: none; }
 .mixbar { display: flex; height: 34px; border-radius: 8px; overflow: hidden; gap: 2px; font-size: 12px; font-weight: 700; }
 .mixbar span { display: flex; align-items: center; justify-content: center; color: #fff; min-width: 0; white-space: nowrap; overflow: hidden; padding: 0 4px; }
 .mixbar.small { height: 26px; flex: 1; }
+.mixbar .mixnm { font-style: normal; white-space: pre; }
+@media (max-width: 520px) { .mixbar .mixnm { display: none; } }
 .m-sp { background: var(--k-idx); } .m-fang { background: var(--k-stock); } .m-semi { background: var(--k-gold); }
 .why { margin: 0; padding-left: 1.3em; display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
 .why b { display: block; }
@@ -381,11 +384,51 @@ input[type="checkbox"] { width: auto; flex: none; }
 .instl dd { margin: 0; }
 .calcList { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
 @media (max-width: 520px) { .instl { grid-template-columns: 1fr; } .instl dt { margin-top: 4px; } }
+/* 13F を写す */
+#viewCopy .tools th, #viewCopy .tools td { padding-left: 6px; padding-right: 6px; }
+#viewCopy .tools td.n, #viewCopy .tools th.n { text-align: right; white-space: nowrap; }
+#viewCopy .tools thead th.n { white-space: normal; word-break: keep-all; }   /* 語の途中（「総リター／ン」）では折り返さない */
+#viewCopy .tools tr.me td, #viewCopy .tools tr.me th { background: var(--accent-soft); }
+#viewCopy .tools th[scope="row"] { color: var(--fg); font-size: 13px; white-space: normal; min-width: 11em; }
+/* 表を横に送っても、どの行か分かるように行見出しを左に固定する */
+#viewCopy .cp-tbl tbody th[scope="row"], #viewCopy .cp-tbl thead th:first-child { position: sticky; left: 0; z-index: 1; background: var(--surface); }
+#viewCopy .cp-tbl tr.me th[scope="row"] { background: var(--accent-soft); }
+@media (max-width: 520px) { #viewCopy .tools th[scope="row"] { min-width: 7.5em; } }
+.cp-tbl { min-width: 640px; }
+.cp-tbl.cp-wide { min-width: 980px; }
+.cp-tbl .names { white-space: normal; }
+.cp-pos { min-width: 15em; font-size: 12px; line-height: 1.5; }
+.cp-pos span { white-space: nowrap; }
+.cp-rk { color: var(--muted); font-size: 11px; }
+#viewCopy .cp-d, .cp-tbl .names.cp-d { white-space: nowrap; }
+#cp-tiles { grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); }
+.cp-why { min-width: 13em; white-space: normal; }
+.cp-ok { color: var(--good); font-weight: 700; white-space: nowrap; } .cp-ng { color: var(--crit); font-weight: 700; white-space: nowrap; }
+#cp-lines button { display: inline-flex; align-items: center; gap: 6px; }
+#cp-lines button[aria-pressed="true"] { background: var(--surface); color: var(--fg); border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+#cp-lines button[aria-pressed="false"] { color: var(--muted); border-style: dashed; }
+#cp-lines button[aria-pressed="false"] .cp-key { opacity: .35; }
+#cp-lines button b { font-family: var(--f-num); font-weight: 500; }
+#cp-lines button[aria-pressed="true"] b { color: inherit; }
+.cp-key { flex: none; display: block; }
+.cp-chartwrap { min-width: 0; }
+.cp-chart { touch-action: pan-y; }
+.cp-chart:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.cp-chart .base { stroke: var(--axis); stroke-width: 1.5; }
+.cp-chart .dd { fill: var(--crit-soft); }
+.cp-chart text.ddl { fill: var(--fg); }
+.cp-chart .ent { stroke: var(--axis); stroke-width: 1.5; }
+.cp-chart .xh { stroke: var(--fg); stroke-width: 1; }
+.cp-chart .end { fill: var(--fg); }
+#vtip .cp-row { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+#vtip .cp-row b { font-family: var(--f-num); font-weight: 700; min-width: 4.6em; text-align: right; }
+#vtip .cp-row span.l { color: var(--muted); }
 </style>
 
 <div class="wrap">
   <header>
     <h1>JevInvest 持仓台帳</h1>
+    <p class="note">個人の記録と検証です。投資助言ではなく、特定の商品の売買を勧めるものではありません。</p>
     <nav class="tabs" role="tablist" aria-label="表示の切り替え">
       <button type="button" role="tab" id="tabRoad" aria-controls="viewRoad" aria-selected="true">道筋</button>
       <button type="button" role="tab" id="tabDeep" aria-controls="viewDeep" aria-selected="false">ファンド分析</button>
@@ -393,6 +436,7 @@ input[type="checkbox"] { width: auto; flex: none; }
       <button type="button" role="tab" id="tabLedger" aria-controls="viewLedger" aria-selected="false">台帳</button>
       <button type="button" role="tab" id="tabAtk" aria-controls="viewAtk" aria-selected="false">攻め口座</button>
       <button type="button" role="tab" id="tabInvestors" aria-controls="viewInvestors" aria-selected="false">市場の参考</button>
+      <button type="button" role="tab" id="tabCopy" aria-controls="viewCopy" aria-selected="false">13F を写す</button>
     </nav>
   </header>
 
@@ -401,11 +445,11 @@ input[type="checkbox"] { width: auto; flex: none; }
       <div class="eyebrow">いまの戦略・<span data-v="asof">—</span> 時点のデータ</div>
       <h2 id="h-strat" class="stratTitle">米国株を土台に、テックと半導体で上を狙う積極型</h2>
       <div class="mixbar" role="img" aria-label="S&amp;P500 65%、FANG+ 25%、日経半導体 10%">
-        <span class="m-sp" style="flex:65">S&amp;P500 65%</span><span class="m-fang" style="flex:25">FANG+ 25%</span><span class="m-semi" style="flex:10">半導体 10%</span>
+        <span class="m-sp" style="flex:65">S&amp;P500 65%</span><span class="m-fang" style="flex:25">FANG+ 25%</span><span class="m-semi" style="flex:10"><i class="mixnm">半導体 </i>10%</span>
       </div>
       <ol class="why">
-        <li><b>29 歳で、使う予定まで 15 年以上ある。</b>途中で大きく下がっても取り戻す時間があるので、値動きの大きい株式 100% で上を狙える。</li>
-        <li><b>独立性のルールの中で、通った商品だけで組んだ。</b>三菱UFJ・SBI 系は不可だったため、Pre-Clear が通った大和・AMOne・野村のファンドで同じ考え方を再現した。</li>
+        <li><b>使う予定まで 15 年以上ある。</b>途中で大きく下がっても取り戻す時間があるので、値動きの大きい株式 100% で上を狙える。</li>
+        <li><b>勤務先の独立性の規則の中で、買える商品だけで組んだ。</b>規則で買えないファンドは外し、買える運用会社のファンドで同じ考え方を再現した。</li>
         <li><b>攻める部分は全体の 35% に抑えた。</b>テックと半導体は上振れも下振れも大きい。土台の S&amp;P500 を過半にして、1 本の暴落で計画が崩れないようにした。</li>
       </ol>
     </section>
@@ -445,7 +489,7 @@ input[type="checkbox"] { width: auto; flex: none; }
             <dt>最大の下落</dt><dd data-v="semi.common.mdd">—</dd>
             <dt>信託報酬</dt><dd>0.33%</dd>
           </dl>
-          <p class="note">選んだ理由：独立性で通った半導体の中で手数料が低い。FANG+ とは中身が重ならない（月次の連動 <span data-v="corrm.fang.semi">—</span>）。注意：月単位では米国の半導体とほぼ同じ動き（0.93）で、上位 3 社（キオクシア・東京エレクトロン・アドバンテスト）で約 47%。今は高値から <span data-v="semi.common.from_high">—</span>。</p>
+          <p class="note">選んだ理由：独立性の規則で買える半導体の中で手数料が低い。FANG+ とは中身が重ならない（月次の連動 <span data-v="corrm.fang.semi">—</span>）。注意：月単位では米国の半導体とほぼ同じ動き（0.93）で、上位 3 社（キオクシア・東京エレクトロン・アドバンテスト）で約 47%。今は高値から <span data-v="semi.common.from_high">—</span>。</p>
         </article>
       </div>
     </section>
@@ -465,7 +509,7 @@ input[type="checkbox"] { width: auto; flex: none; }
       <h2 id="h-lump">今回まとめて買う分</h2>
       <div class="grid3"><div class="field"><label for="pol-lump">今回の金額（万円）</label><input id="pol-lump" type="number" inputmode="decimal" step="0.1" min="0" placeholder="例 20"></div></div>
       <div class="tablewrap"><table class="tools" id="pol-lumpTable"></table></div>
-      <p class="note">まとめて買うときはつみたて投資枠は使えない（積立専用）ので、預り区分は「NISA（成長投資枠）」。分けずに一度に買うのが基本（過去の統計では約 3 回に 2 回、一括のほうが結果がよい）。Pre-Clear の期限内に約定させ、約定後は GIMS に保有を登録する。</p>
+      <p class="note">まとめて買うときはつみたて投資枠は使えない（積立専用）ので、預り区分は「NISA（成長投資枠）」。分けずに一度に買うのが基本（過去の統計では約 3 回に 2 回、一括のほうが結果がよい）。事前承認の期限内に約定させ、約定後は勤務先の規則どおり保有を届け出る。</p>
     </section>
 
     <section aria-labelledby="h-notchosen">
@@ -473,8 +517,7 @@ input[type="checkbox"] { width: auto; flex: none; }
       <div class="tablewrap"><table class="tools">
         <thead><tr><th>候補</th><th>理由</th></tr></thead>
         <tbody>
-          <tr><td>eMAXIS Slim（オルカン・S&amp;P500 など）</td><td>独立性で不可（三菱UFJ グループが制限先）</td></tr>
-          <tr><td>SBI・V・S&amp;P500 など SBI 系</td><td>独立性で不可（ファンド自体が監査先）</td></tr>
+          <tr><td>手数料が同じくらい低い、他の運用会社の S&amp;P500・全世界株ファンド</td><td>勤務先の独立性の規則で買えないものは候補から外した</td></tr>
           <tr><td>たわら NASDAQ100</td><td>S&amp;P500 と 0.92 連動し、持っても分散がほとんど増えない。FANG+ が使えないときの代わり</td></tr>
           <tr><td>米国半導体（SOX）ファンド</td><td>日本の半導体と月次で 0.93 連動し（2024 年 6 月〜）、中身は FANG+ と重なる。通るものは手数料も高め</td></tr>
           <tr><td>レバレッジ型（アドバンスト・レバレッジ、4.3 倍ブルなど）</td><td>下落の後に戻りにくく、過去に −90% もある。積極でも使わない</td></tr>
@@ -489,7 +532,7 @@ input[type="checkbox"] { width: auto; flex: none; }
         <li><b>下がっても売らない</b>FANG+ や半導体は 1 年で半分になることがある。そこで売るのが一番の損（過去 150 年の検証で、下落で売る人の 20 年後は買い続けた人の約 7 割）。</li>
         <li><b>年 1 回だけ比率を戻す</b>FANG+ が 30%、半導体が 15% を超えたら、超えた分を S&amp;P500 へ。追加のお金で少ないものを買えば売らずに済む。</li>
         <li><b>38 歳から少しずつ守りへ</b>使う時期が近づいたら、テックと半導体を毎年減らして S&amp;P500・全世界株へ。</li>
-        <li><b>全世界株が通ったら加える</b>米国に偏っている。たわら 全世界株式の Pre-Clear が通ったら、S&amp;P500 の一部を置き換える。</li>
+        <li><b>全世界株が買えるなら加える</b>米国に偏っている。全世界株のファンドの購入可を確認できたら、S&amp;P500 の一部を置き換える。</li>
       </ul>
     </section>
 
@@ -515,7 +558,7 @@ input[type="checkbox"] { width: auto; flex: none; }
       <p class="sub">方針と年齢を選ぶと、毎月の振り分け・年齢ごとの切り替え・目標までの進み具合が出ます。入力はこのブラウザ内だけに保存します。</p>
       <div class="grid3">
         <div class="field"><label for="pol-age">年齢</label><input id="pol-age" type="number" inputmode="numeric" min="18" max="80" placeholder="例 30"></div>
-        <div class="field"><label for="pol-fixed">毎月の固定積立（万円）</label><input id="pol-fixed" type="number" inputmode="decimal" step="0.1" min="0" placeholder="例 22"></div>
+        <div class="field"><label for="pol-fixed">毎月の固定積立（万円）</label><input id="pol-fixed" type="number" inputmode="decimal" step="0.1" min="0" placeholder="例 10"></div>
         <div class="field wide"><label for="pol-strat">方針</label><select id="pol-strat"></select></div>
       </div>
       <p class="note" id="pol-stratNote"></p>
@@ -570,7 +613,7 @@ input[type="checkbox"] { width: auto; flex: none; }
         <li><b>短期売買・値動きの予測</b>手数料と税で手取りが減り、当たり外れの差は長期では残りにくいです。</li>
         <li><b>著名投資家（13F）の後追い</b>1〜4 か月遅れの情報です。「市場の参考」タブは雰囲気をつかむためだけに使います。</li>
         <li><b>AI の自動売買</b>下の 16 個のうち多くはこれです。実際のお金を動かす判断は任せません。</li>
-        <li><b>確認前の商品を買う</b>勤務先の独立性の規則があります。買う前に DESC で購入可を確認し、「台帳」タブに記録します。</li>
+        <li><b>確認前の商品を買う</b>勤務先の独立性の規則があります。買う前に購入可を確認し、「台帳」タブに記録します。</li>
         <li><b>手数料の高い商品</b>信託報酬が年 1% 違うと、20 年で最終額が一括投資なら約 2 割、積立でも約 1 割変わります。</li>
       </ul>
     </section>
@@ -629,7 +672,7 @@ input[type="checkbox"] { width: auto; flex: none; }
       </div>
       <details class="limits" id="st-pasteBox">
         <summary>テキストから取り込む</summary>
-        <p class="note">1 行に 1 取引で「日付, 内容, 金額, 残高」の形で貼って「取り込む」を押してください。1 行に 1 取引の「日付, 内容, 金額, 残高」の形でも取り込めます（例: 2026-09-25, 給料振込, 423086, 2280907）。</p>
+        <p class="note">1 行に 1 取引で「日付, 内容, 金額, 残高」の形で貼って「取り込む」を押してください（例: 2026-09-25, 給料振込, 300000, 1500000）。</p>
         <textarea id="st-paste" placeholder="ここに貼り付け" aria-label="取り込むテキスト"></textarea>
         <div class="row"><button type="button" id="st-pasteGo" class="primary">取り込む</button></div>
       </details>
@@ -672,7 +715,7 @@ input[type="checkbox"] { width: auto; flex: none; }
     <section aria-labelledby="h-next">
       <h2 id="h-next">次の一手（効く順）</h2>
       <ol id="planAdvice" class="advice"></ol>
-      <p class="note">税・手数料を引いた後の、長期のリターンを基準にしています。個別株を買う前には、独立性の確認（DESC と事前承認）が必要です。</p>
+      <p class="note">税・手数料を引いた後の、長期のリターンを基準にしています。個別株を買う前には、独立性の確認（購入可の確認と事前承認）が必要です。</p>
     </section>
 
     <section aria-labelledby="h-hist">
@@ -704,7 +747,7 @@ input[type="checkbox"] { width: auto; flex: none; }
         <li><b>撤退</b>攻め口座の損失が入れた元本の 50% に届いたら 6 か月休む。</li>
         <li><b>持つ期間</b>原則 1 年以上。株価は決算の後に四半期に 1 回だけ見る。</li>
         <li><b>買わないもの</b>信用取引・オプション・先物・FX・レバレッジ型・暗号資産。</li>
-        <li><b>独立性</b>1 銘柄ずつ DESC で購入可を確認してから。IPO の申込も同じ。</li>
+        <li><b>独立性</b>1 銘柄ずつ購入可を確認してから。IPO の申込も同じ。</li>
       </ul>
     </section>
 
@@ -729,7 +772,7 @@ input[type="checkbox"] { width: auto; flex: none; }
       <div class="field"><label for="aq-q3">③ 今の値段は高すぎないか（PER など）</label><input id="aq-q3"></div>
       <label class="check"><input type="checkbox" id="aq-q4"> ④ 最近上がったから・人に勧められたから、ではない</label>
       <div class="field"><label for="aq-q5">⑤ どうなったら売るか（株価ではなく事実で）</label><input id="aq-q5" placeholder="例 2 期続けて営業利益が減ったら"></div>
-      <label class="check"><input type="checkbox" id="aq-q6"> ⑥ DESC で購入可を確認した</label>
+      <label class="check"><input type="checkbox" id="aq-q6"> ⑥ 独立性の規則で購入可を確認した</label>
       <p class="note" id="aq-size"></p>
       <div class="row"><button type="button" class="primary" id="aq-add" disabled>この銘柄を追加</button><span class="note" id="aq-msg" role="status"></span></div>
     </section>
@@ -749,7 +792,7 @@ input[type="checkbox"] { width: auto; flex: none; }
 
     <section aria-labelledby="h-atkIpo">
       <h2 id="h-atkIpo">IPO の抽選</h2>
-      <p class="sub">外れても SBI の IPO チャレンジポイントが 1 つたまり、ためるほど当たりやすくなります。申込金は外れれば戻ります。審査先の IPO は申し込めないので、毎回 DESC で確認します。</p>
+      <p class="sub">証券会社によっては、外れてもポイントがたまり、ためるほど当たりやすくなります（SBI 証券の IPO チャレンジポイントなど）。申込金は外れれば戻ります。勤務先の規則で申し込めない IPO もあるので、毎回購入可を確認します。</p>
       <div class="grid3">
         <div class="field"><label for="ipo-pt">IPO チャレンジポイント</label><input id="ipo-pt" type="number" inputmode="numeric" min="0"></div>
         <div class="field"><label for="ipo-n">今年の申込回数</label><input id="ipo-n" type="number" inputmode="numeric" min="0"></div>
@@ -794,7 +837,7 @@ input[type="checkbox"] { width: auto; flex: none; }
     <h2 id="h-alloc">目標配分との差</h2>
     <div class="legend"><span><i></i>現在</span><span><i class="t"></i>目標</span></div>
     <div class="tablewrap"><table id="allocTable"></table></div>
-    <p class="note">調整額は、プラスが買い増し、マイナスが売却です。税と手数料は含めていません。課税口座で売ると約 20.315% の税がかかるため、売却より新しい資金の振り分けで合わせるほうが有利なことが多くなります。個別株は、購入の前に独立性の確認（DESC と事前承認）を済ませてください。</p>
+    <p class="note">調整額は、プラスが買い増し、マイナスが売却です。税と手数料は含めていません。課税口座で売ると約 20.315% の税がかかるため、売却より新しい資金の振り分けで合わせるほうが有利なことが多くなります。個別株は、購入の前に独立性の確認（購入可の確認と事前承認）を済ませてください。</p>
   </section>
 
   <section aria-labelledby="h-conc">
@@ -850,7 +893,7 @@ input[type="checkbox"] { width: auto; flex: none; }
           <li>分野は、各社が SEC に届け出ている業種コード（SIC）からおおまかに分けています。証券会社の業種分類とは一致しないことがあります。</li>
           <li>売買の判定は株数の前期比です（±10% 以上で「買い増し」「減少」）。取得単価や売買の理由は分かりません。</li>
           <li>名簿は今有名な運用者で作っており、同じ手法で失敗した運用者は入っていません（生存者バイアス）。</li>
-          <li>個別株を買う前には、独立性の確認（DESC と事前承認）が必要です。</li>
+          <li>個別株を買う前には、独立性の確認（購入可の確認と事前承認）が必要です。</li>
         </ul>
       </details>
     </section>
@@ -932,6 +975,99 @@ input[type="checkbox"] { width: auto; flex: none; }
       <h3>多くの投資家が共通して持つ銘柄</h3>
       <div class="tablewrap"><table id="groupConsensus"></table></div>
     </section>
+  </div>
+
+  <div id="viewCopy" class="view" role="tabpanel" aria-labelledby="tabCopy" hidden>
+    <header class="atkhead">
+      <h2>13F を開示後に写したら儲かったのか</h2>
+      <p class="sub">小紅書（RED）などで「抄黄仁勋作业」（NVIDIA の 13F を写せ）という話が広まっています。13F が開示されてから、個人が実際に買える日に同じ銘柄を同じ比率で買っていたらどうなったかを、過去の値動きで確かめた個人の検証です。</p>
+      <p class="privacy"><b>投資助言ではありません。</b>特定の銘柄の売買を勧めるものではなく、過去の値動きを使った仮定の計算です。個別株を買う前には独立性の確認（購入可の確認と事前承認）が必要で、このページは購入できるかどうかを判定しません。</p>
+      <p class="note" id="cp-asof" aria-live="polite">検証結果を読み込み中…</p>
+    </header>
+    <ul class="alerts" id="cp-error" role="alert" hidden></ul>
+
+    <div id="cp-body" class="view" hidden>
+      <div class="verdict" id="cp-verdict"></div>
+      <div class="tiles" id="cp-tiles"></div>
+
+      <section aria-labelledby="h-cpPoints">
+        <h2 id="h-cpPoints">数字から言えること</h2>
+        <ul class="points" id="cp-points"></ul>
+      </section>
+
+      <section aria-labelledby="h-cpChart">
+        <h2 id="h-cpChart">資産の推移（開始時を 1 倍）</h2>
+        <p class="sub" id="cp-chartSub"></p>
+        <div class="chips" id="cp-lines" role="group" aria-label="表示する線（押すと表示・非表示を切り替え）"></div>
+        <div id="cp-chart" class="cp-chartwrap"></div>
+        <p class="note" id="cp-chartNote"></p>
+      </section>
+
+      <section aria-labelledby="h-cpSum">
+        <h2 id="h-cpSum">写した場合と、指数を買って持つだけの場合</h2>
+        <p class="sub" id="cp-sumSub"></p>
+        <div class="chips" id="cp-cost" role="group" aria-label="片道コストの仮定"></div>
+        <div class="tablewrap"><table class="tools cp-tbl" id="cp-sum"></table></div>
+        <p class="note">年率÷ボラ・年率÷最大下落は、リスク 1 単位あたりの年率リターンで、大きいほど効率がよい。総リターンが高くてもこの値が低ければ、同じリスクなら指数を多めに持つほうが効率がよかったことになります。最大下落は途中の一番深い下げ（ドル建て）。</p>
+      </section>
+
+      <section aria-labelledby="h-cpSens">
+        <h2 id="h-cpSens">いつ買えたことにするかで、結果が大きく変わる</h2>
+        <p class="sub">13F は四半期末（報告日）の保有を、最大 45 日後に提出します。提出が米国の取引終了（16:00）の後なら、提出日の終値ではもう買えません。報告日の終値で買えたとする計算は、まだ誰も中身を知らない時点なので実行できません。よく見かける「写せば儲かった」という数字は、この実行できない仮定で計算されていることがあります。</p>
+        <div class="tablewrap"><table class="tools cp-tbl" id="cp-sens"></table></div>
+        <p class="note" id="cp-sensNote"></p>
+      </section>
+
+      <section aria-labelledby="h-cpVar">
+        <h2 id="h-cpVar">比率の決め方・店頭銘柄の扱いを変えると</h2>
+        <p class="sub">どれも「写した」と言える範囲の違いです。エントリーは既定のまま、コストは最小の仮定。</p>
+        <div class="tablewrap"><table class="tools cp-tbl" id="cp-var"></table></div>
+      </section>
+
+      <section aria-labelledby="h-cpPer">
+        <h2 id="h-cpPer">期ごとの結果と組み入れ</h2>
+        <p class="sub" id="cp-perSub"></p>
+        <div class="tablewrap"><table class="tools cp-tbl cp-wide" id="cp-per"></table></div>
+        <p class="note">受理は EDGAR が提出を受け付けた時刻（米東部）。※は提出一覧の値で代えたもの（数時間ずれることがある）。写せない銘柄（店頭・価格が無いなど）は 0 円扱いにも黙った削除にもせず、その期の買える銘柄だけで比率を按分し直しています。</p>
+      </section>
+
+      <section aria-labelledby="h-cpMiss">
+        <h2 id="h-cpMiss">フォロワーには取れなかった値動き</h2>
+        <p class="sub">報告日からエントリーまでの値動きは、報告日に実際に持っていた本人だけが取れた分です。新しく開示された銘柄は、開示の直後に上がる（開示ポップ）ことがあり、フォロワーは上がった後の値段で買うことになります。</p>
+        <p id="cp-missSum"></p>
+        <div class="tablewrap"><table class="tools cp-tbl" id="cp-miss"></table></div>
+        <h3>新しく開示された銘柄ごと</h3>
+        <div class="tablewrap"><table class="tools cp-tbl" id="cp-new"></table></div>
+        <p class="note" id="cp-missNote"></p>
+      </section>
+
+      <section aria-labelledby="h-cpHold">
+        <h2 id="h-cpHold">銘柄ごと：全体への寄与と、持っていた間の最大下落</h2>
+        <p class="sub" id="cp-holdSub"></p>
+        <div class="tablewrap"><table class="tools cp-tbl" id="cp-hold"></table></div>
+      </section>
+
+      <section aria-labelledby="h-cpNisa">
+        <h2 id="h-cpNisa">NISA の枠をどれだけ使うか</h2>
+        <div id="cp-nisa"></div>
+      </section>
+
+      <section aria-labelledby="h-cpLim">
+        <h2 id="h-cpLim">この計算の限界</h2>
+        <ul class="points" id="cp-limits"></ul>
+        <ul class="alerts" id="cp-warn"></ul>
+        <details class="limits" id="cp-notesBox"><summary id="cp-notesSum">データの注意</summary><ul id="cp-notes"></ul></details>
+      </section>
+
+      <section aria-labelledby="h-cpInd">
+        <h2 id="h-cpInd">このページの位置づけ</h2>
+        <ul class="dont">
+          <li><b>投資助言ではない</b>個人の検証です。特定の銘柄の売買を勧めるものではありません。過去の値動きでの仮定の計算で、将来の結果を示すものでもありません。</li>
+          <li><b>個別株は独立性の確認が先</b>個別株を買う前には、購入可の確認と事前承認が必要です。このページは、どの銘柄が購入できるかを判定しません。</li>
+          <li><b>手取りに効く順番</b>根拠の強い順に、NISA などの税制と手数料、資産配分と分散、売買を減らすこと、銘柄選び。13F を写すのは銘柄選びで、組み替えのたびに売買も増えます。</li>
+        </ul>
+      </section>
+    </div>
   </div>
 </div>
 <div id="toast" role="status" aria-live="polite"></div>
@@ -1231,15 +1367,20 @@ input[type="checkbox"] { width: auto; flex: none; }
   };
 
   // ---- タブ ----
-  function showTab(which) {
+  var TABS = [['road', 'viewRoad', 'tabRoad'], ['deep', 'viewDeep', 'tabDeep'], ['plan', 'viewPlan', 'tabPlan'], ['ledger', 'viewLedger', 'tabLedger'], ['atk', 'viewAtk', 'tabAtk'], ['investors', 'viewInvestors', 'tabInvestors'], ['copy', 'viewCopy', 'tabCopy']];
+  function showTab(which, focus) {
     var inv = which === 'investors';
-    [['road', 'viewRoad', 'tabRoad'], ['deep', 'viewDeep', 'tabDeep'], ['plan', 'viewPlan', 'tabPlan'], ['ledger', 'viewLedger', 'tabLedger'], ['atk', 'viewAtk', 'tabAtk'], ['investors', 'viewInvestors', 'tabInvestors']].forEach(function (t) {
-      $(t[1]).hidden = t[0] !== which; $(t[2]).setAttribute('aria-selected', String(t[0] === which));
+    TABS.forEach(function (t) {
+      var on = t[0] === which;
+      $(t[1]).hidden = !on; $(t[2]).setAttribute('aria-selected', String(on));
+      $(t[2]).tabIndex = on ? 0 : -1;     // Tab キーで止まるのは選んでいるタブだけ。タブ同士は矢印キーで移る
+      if (on && focus) $(t[2]).focus();
     });
     try { localStorage.setItem(TAB_KEY, which); } catch (e) { /* 保存できなくても表示はできる */ }
     if (inv) loadData();
     if (which === 'road' && window.JevRoad) window.JevRoad.render();
     if (which === 'deep' && window.JevDeep) window.JevDeep.show();
+    if (which === 'copy' && window.JevCopy) window.JevCopy.show();
     if ((which === 'road' || which === 'atk') && window.JevAtk) window.JevAtk.render();
   }
   $('tabLedger').addEventListener('click', function () { showTab('ledger'); });
@@ -1248,6 +1389,18 @@ input[type="checkbox"] { width: auto; flex: none; }
   $('tabDeep').addEventListener('click', function () { showTab('deep'); });
   $('tabAtk').addEventListener('click', function () { showTab('atk'); });
   $('tabInvestors').addEventListener('click', function () { showTab('investors'); });
+  $('tabCopy').addEventListener('click', function () { showTab('copy'); });
+  document.querySelector('.tabs').addEventListener('keydown', function (e) {
+    var i = TABS.map(function (t) { return t[2]; }).indexOf(e.target.id), n = TABS.length, j = -1;
+    if (i < 0) return;
+    if (e.key === 'ArrowRight') j = (i + 1) % n;
+    else if (e.key === 'ArrowLeft') j = (i - 1 + n) % n;
+    else if (e.key === 'Home') j = 0;
+    else if (e.key === 'End') j = n - 1;
+    if (j < 0) return;
+    e.preventDefault();
+    showTab(TABS[j][0], true);
+  });
 
   // ---- データ ----
   var data = null, loading = false, style = 'all', current = null;
@@ -1536,7 +1689,7 @@ input[type="checkbox"] { width: auto; flex: none; }
       (e.holders.length ? '<div class="tablewrap"><table><thead><tr><th>投資家</th><th class="n">比率</th><th>前期比</th></tr></thead><tbody>' +
         e.holders.map(function (x) { return '<tr><td>' + esc(x.p) + '</td><td class="n">' + (x.chg === 'exit' ? '—' : x.w.toFixed(2) + '%') + '</td><td>' + tag(x.chg, x.chg_pct) + '</td></tr>'; }).join('') +
         '</tbody></table></div><p class="note">比率はその投資家の 13F 保有総額に対する割合です。大規模な運用会社は上位 300 銘柄だけを照合しています。</p>' : '<p class="note">照合できた保有者はいません。</p>') +
-      '<p class="note">参考情報で、買い推奨ではありません。個別株を買う前には独立性の確認（DESC と事前承認）が必要です。</p>';
+      '<p class="note">参考情報で、買い推奨ではありません。個別株を買う前には独立性の確認（購入可の確認と事前承認）が必要です。</p>';
     $('sheetPanel').innerHTML = h;
     $('sheet').hidden = false;
     $('sheetClose').focus();
@@ -1575,9 +1728,9 @@ input[type="checkbox"] { width: auto; flex: none; }
     $('personDetail').scrollIntoView({ block: 'start', behavior: 'smooth' });
   });
 
-  var start = { '#investors': 'investors', '#plan': 'plan', '#ledger': 'ledger', '#road': 'road', '#atk': 'atk', '#deep': 'deep' }[location.hash] || null;
+  var start = { '#investors': 'investors', '#plan': 'plan', '#ledger': 'ledger', '#road': 'road', '#atk': 'atk', '#deep': 'deep', '#copy': 'copy' }[location.hash] || null;
   if (!start) { try { start = localStorage.getItem(TAB_KEY); } catch (e) { start = null; } }
-  showTab(['road', 'deep', 'plan', 'ledger', 'atk', 'investors'].indexOf(start) >= 0 ? start : 'road');
+  showTab(['road', 'deep', 'plan', 'ledger', 'atk', 'investors', 'copy'].indexOf(start) >= 0 ? start : 'road');
 })();
 </script>
 
@@ -1830,11 +1983,11 @@ input[type="checkbox"] { width: auto; flex: none; }
     // 書式の例（架空の数字）。読み取るか「手で行を追加」すると消える
     var m = stm.month;
     stm.rows = [
-      { date: m + '-05', desc: '例）ATM 引き出し', amount: -50000, cat: 'cash' },
-      { date: m + '-10', desc: '例）携帯会社のカード', amount: -40000, cat: 'card' },
-      { date: m + '-18', desc: '例）勤務先から振込（経費精算）', amount: 200000, cat: 'reimb' },
-      { date: m + '-25', desc: '例）給料振込', amount: 400000, cat: 'salary' },
-      { date: m + '-27', desc: '例）クレジットカード', amount: -380000, cat: 'card' }
+      { date: m + '-05', desc: '例）ATM 引き出し', amount: -30000, cat: 'cash' },
+      { date: m + '-10', desc: '例）携帯会社のカード', amount: -10000, cat: 'card' },
+      { date: m + '-18', desc: '例）勤務先から振込（経費精算）', amount: 50000, cat: 'reimb' },
+      { date: m + '-25', desc: '例）給料振込', amount: 300000, cat: 'salary' },
+      { date: m + '-27', desc: '例）クレジットカード', amount: -200000, cat: 'card' }
     ];
   }
   function stSave() { try { localStorage.setItem(ST_KEY, JSON.stringify(stm)); } catch (e) { /* 保存できなくても表示はできる */ } }
@@ -2105,7 +2258,7 @@ input[type="checkbox"] { width: auto; flex: none; }
       if (d.free < d.buffer) {
         todo.push({ t: '毎月の黒字 ' + man(d.netB) + ' をまず現金でためる', b: '生活防衛資金まであと ' + man(d.buffer - d.free) + '。約 ' + Math.ceil((d.buffer - d.free) / d.netB) + ' か月で届きます。', how: '並行して NISA の積立を月 1 万円だけ始めておくと、届いたときに金額を変えるだけで済みます。' });
       } else {
-        todo.push({ t: '買う商品を DESC で確認する', b: '勤務先の独立性の規則で、確認前の商品は買えません。候補は手数料の安い全世界株か米国株のインデックスファンド（投資信託）です。', how: '確認できたら「台帳」タブに記録します。このページは購入可かどうかを判定しません。' });
+        todo.push({ t: '買う商品の購入可を確認する', b: '勤務先の独立性の規則で、確認前の商品は買えません。候補は手数料の安い全世界株か米国株のインデックスファンド（投資信託）です。', how: '確認できたら「台帳」タブに記録します。このページは購入可かどうかを判定しません。' });
         todo.push({ t: 'NISA で毎月 <span class="num">' + man(mN) + '</span> の積立を設定する', b: 'つみたて投資枠に月 ' + man(tsumi) + (growth ? '、成長投資枠に月 ' + man(growth) : '') + '。給料日の翌営業日など、引き落とし後に買う日にします。', how: m > mN ? '黒字のうち NISA の枠を超える月 ' + man(m - mN) + ' は、現金のままか課税口座で同じ商品を積み立てます。' : '' });
         if (lump) todo.push({ t: '余った現金 <span class="num">' + man(lump) + '</span> を年内に成長投資枠へ', b: '今年の NISA 枠は残り ' + man(yearRoom) + '。使わなかった枠は翌年に繰り越せません。', how: '一度に入れるのが不安なら、年末までの ' + monthsLeft + ' か月に分けても結果の差は小さいです。' });
       }
@@ -2203,7 +2356,7 @@ input[type="checkbox"] { width: auto; flex: none; }
   // ---- 方針（積立の配分）----
   // nisa: つみたて投資枠の対象か（半導体指数は成長投資枠のみとして扱う）
   var FUNDS = {
-    // 商品は SBI 証券で買える、三菱UFJ・SBI 系以外の運用会社のもの。可否は各自 DESC／Pre-Clear で確認する
+    // 商品はネット証券で買える投資信託。買えるかどうかは各自、勤務先の規則（購入可の確認・事前承認）で確かめる
     acwi: { nm: '全世界株', fund: 'たわらノーロード 全世界株式', code: '47312197', tsumi: true },
     spx: { nm: 'S&P500', fund: 'たわらノーロード S&P500', code: '47318233', tsumi: true },
     fang: { nm: 'FANG+', fund: 'iFreeNEXT FANG+インデックス', code: '04311181', tsumi: true },
@@ -2213,12 +2366,12 @@ input[type="checkbox"] { width: auto; flex: none; }
   var STRATS = {
     A: { nm: '標準：全世界株 100%', w: { acwi: 100 }, note: '全世界に 1 本で分散。値動きは一番小さい。' },
     C: { nm: 'やや高：全世界 50・S&P 20・FANG+ 20・TOPIX 10', w: { acwi: 50, spx: 20, fang: 20, topix: 10 }, note: '米国の大型テックに少し賭けつつ、円の資産も 1 割持つ。' },
-    X2: { nm: '積極（いまの戦略）：S&P 65・FANG+ 25・半導体 10', w: { spx: 65, fang: 25, semi: 10 }, note: 'Pre-Clear が通った 3 本で組んだ積極型。理由と計算は上の「なぜ 65・25・10 なのか」と「数字の出し方」。全世界株が通ったら「積極」に切り替える。' },
+    X2: { nm: '積極（いまの戦略）：S&P 65・FANG+ 25・半導体 10', w: { spx: 65, fang: 25, semi: 10 }, note: '購入可を確認できた 3 本で組んだ積極型。理由と計算は上の「なぜ 65・25・10 なのか」と「数字の出し方」。全世界株も買えるなら「積極」に切り替える。' },
     X: { nm: '積極：全世界 30・S&P 30・FANG+ 25・半導体 15', w: { acwi: 30, spx: 30, fang: 25, semi: 15 }, note: 'テックが勝ち続ければ 20 年で大きく伸びる。途中で資産が半分になる確率は約 12%。' },
     XX: { nm: '超積極：S&P 40・FANG+ 35・半導体 25', w: { spx: 40, fang: 35, semi: 25 }, note: '上振れは最大だが、途中で半分になる確率は約 24%。米国以外を持たない。' }
   };
   var CARD_MAX = 10;   // クレカ積立の上限（万円／月）
-  var CLR = {};        // Pre-Clear の状況。公開時に添える seed.json からだけ読む（リポジトリには入れない）
+  var CLR = {};        // 事前承認の状況。公開時に添える seed.json からだけ読む（リポジトリには入れない）
   var PKEY = 'jevinvest.policy.v1', AKEY = 'jevinvest.attack.v1';
   var pol = load(PKEY, { age: '', fixed: '', strat: 'X', checks: {} });
   if (!pol.checks) pol.checks = {};
@@ -2249,7 +2402,7 @@ input[type="checkbox"] { width: auto; flex: none; }
 
   function renderPolicy() {
     var s = STRATS[pol.strat] || STRATS.X;
-    $('pol-stratNote').textContent = s.note + ' どの商品も、買う前に DESC で購入可を確認します。';
+    $('pol-stratNote').textContent = s.note + ' どの商品も、買う前に購入可を確認します。';
     var fixed = num(pol.fixed);
     var rows = allocate(fixed, s.w);
     var tsumiTotal = rows.reduce(function (a, r) { return a + r.card; }, 0);
@@ -2260,10 +2413,10 @@ input[type="checkbox"] { width: auto; flex: none; }
         if (r.card > 0) how.push('クレカ積立 ' + mn(r.card) + '（つみたて投資枠）');
         if (r.cash > 0.04) how.push('現金積立 ' + mn(r.cash) + '（成長投資枠）');
         var f = FUNDS[r.k], c = CLR[r.k], badge = '';
-        if (c && c.st === 'ok') badge = '<span class="badge ok">Pre-Clear 済み' + (c.exp ? '（' + esc(c.exp) + ' まで）' : '') + '</span>';
+        if (c && c.st === 'ok') badge = '<span class="badge ok">事前承認済み' + (c.exp ? '（' + esc(c.exp) + ' まで）' : '') + '</span>';
         else if (c && c.st === 'wait') badge = '<span class="badge warn">結果を確認中</span>';
         else if (c && c.st === 'ng') badge = '<span class="badge crit">購入不可</span>';
-        else badge = '<span class="badge warn">DESC 未確認</span>';
+        else badge = '<span class="badge warn">購入可を未確認</span>';
         return '<tr><td><b>' + esc(f.nm) + '</b><br><span class="note">' + esc(f.fund) + (f.code ? '（' + f.code + '）' : '') + '</span><br>' + badge + (f.tsumi ? '' : '<br><span class="note">つみたて投資枠の対象外</span>') + '</td><td class="n">' + r.w + '%</td><td class="n">' + (fixed ? mn(r.amt) : '—') + '</td><td>' + (fixed ? how.join('<br>') : '固定積立額を入れると出ます') + '</td></tr>';
       }).join('') + '</tbody>' +
       (fixed ? '<tfoot><tr><td colspan="4" class="note">積立の設定画面の「預り区分」で、クレカ積立は「NISA（つみたて投資枠）」、現金積立は「NISA（成長投資枠）」を選ぶ（特定口座にしない）。<br>つみたて投資枠 月 ' + mn(tsumiTotal) + '・成長投資枠 月 ' + mn(growthTotal) + '（年 ' + mn(growthTotal * 12) + '、上限 240 万円）' + (growthTotal * 12 > 240 ? '。<b>成長投資枠の年間上限を超えます。超えた分は特定口座で。</b>' : '') + (tsumiTotal * 12 > 120 ? '。<b>つみたて投資枠の年間上限を超えます。</b>' : '') + '</td></tr></tfoot>' : '');
@@ -2273,7 +2426,7 @@ input[type="checkbox"] { width: auto; flex: none; }
     $('pol-lump').value = pol.lump || '';
     $('pol-lumpTable').innerHTML = lump ? '<thead><tr><th>ファンド</th><th>比率</th><th>金額</th><th>預り区分</th></tr></thead><tbody>' + Object.keys(s.w).map(function (k) {
       var c = CLR[k], ok = c && c.st === 'ok';
-      return '<tr><td>' + esc(FUNDS[k].fund) + (ok ? '' : '<br><span class="badge warn">Pre-Clear の結果を確認してから</span>') + '</td><td class="n">' + s.w[k] + '%</td><td class="n">' + mn(lump * s.w[k] / 100) + '</td><td>NISA（成長投資枠）</td></tr>';
+      return '<tr><td>' + esc(FUNDS[k].fund) + (ok ? '' : '<br><span class="badge warn">事前承認の結果を確認してから</span>') + '</td><td class="n">' + s.w[k] + '%</td><td class="n">' + mn(lump * s.w[k] / 100) + '</td><td>NISA（成長投資枠）</td></tr>';
     }).join('') + '</tbody>' : '<tbody><tr><td class="note">金額を入れると、戦略の比率で分けた金額が出ます。</td></tr></tbody>';
 
     // 月末の残り
@@ -2316,15 +2469,15 @@ input[type="checkbox"] { width: auto; flex: none; }
     // やることリスト
     var y = new Date().getFullYear();
     var items = [
-      ['desc', 'DESC で積立のファンドを 1 本ずつ確認し、Pre-Clear を通す', '最初に'],
-      ['firstbuy', 'Pre-Clear の期限内に最初の買付を約定させる' + (clrExp() ? '（' + clrExp() + ' まで）' : ''), '期限内'],
-      ['recurring', '毎月の積立が Pre-Clear の承認に含まれるか、Independence チームに確認', '今月'],
-      ['card', 'SBI 証券で三井住友カードのクレカ積立を設定（月 10 万円）', '今月'],
+      ['desc', '積立のファンドを 1 本ずつ購入可か確認し、事前承認を取る', '最初に'],
+      ['firstbuy', '事前承認の期限内に最初の買付を約定させる' + (clrExp() ? '（' + clrExp() + ' まで）' : ''), '期限内'],
+      ['recurring', '毎月の積立が事前承認に含まれるか、勤務先の独立性の担当に確認', '今月'],
+      ['card', 'クレカ積立を設定（月 10 万円まで）', '今月'],
       ['growth', '成長投資枠の現金積立を設定', '今月'],
       ['furusato', 'ふるさと納税（源泉徴収票の見込みで上限を確認）', y + ' 年 12 月 31 日まで'],
-      ['ideco', '企業型 DC の有無・マッチング拠出・iDeCo 加入可否を人事に確認', '今月'],
+      ['ideco', '企業型 DC の有無・マッチング拠出・iDeCo に入れるかを勤務先で確認', '今月'],
       ['advance', '立替は当月中に精算する', '毎月'],
-      ['buffer', '生活防衛資金を何か月分にするか決める（6 か月→4 か月で約 40 万円を投資に回せる）', '任意']
+      ['buffer', '生活防衛資金を何か月分にするか決める（減らした分は投資に回せる）', '任意']
     ];
     $('pol-checks').innerHTML = items.map(function (it) {
       var on = !!pol.checks[it[0]];
@@ -2381,7 +2534,7 @@ input[type="checkbox"] { width: auto; flex: none; }
       if (p.closed) return;
       var w = total ? num(p.value || p.cost) / total * 100 : 0;
       if (w > 5) al.push(['warn', '1 銘柄 5% 超え', (p.name || p.code) + ' が投資資産の ' + pct(w) + '。5% を超えた分を売って積立側へ。']);
-      if (!p.desc) al.push(['crit', 'DESC 未確認', (p.name || p.code) + ' の購入可を DESC で確認していません。']);
+      if (!p.desc) al.push(['crit', '購入可を未確認', (p.name || p.code) + ' の購入可（独立性）を確認していません。']);
     });
     $('atk-alerts').innerHTML = al.map(function (a) { return '<li class="' + a[0] + '"><span class="chip">' + esc(a[1]) + '</span><span>' + esc(a[2]) + '</span></li>'; }).join('');
 
@@ -2393,7 +2546,7 @@ input[type="checkbox"] { width: auto; flex: none; }
         var held = p.date ? (today - new Date(p.date)) / 864e5 : null;
         if (held != null && held < 365) b.push('<span class="badge warn">1 年未満（' + Math.floor(held / 30) + ' か月）</span>');
         if (w > 5) b.push('<span class="badge crit">5% 超え</span>');
-        b.push(p.desc ? '<span class="badge ok">DESC 確認済み</span>' : '<span class="badge crit">DESC 未確認</span>');
+        b.push(p.desc ? '<span class="badge ok">購入可を確認済み</span>' : '<span class="badge crit">購入可を未確認</span>');
         var g = num(p.value || p.cost) - num(p.cost);
         return '<tr data-id="' + p.id + '"><td><b>' + esc(p.name) + '</b><br><span class="note">' + esc(p.code) + (p.date ? '・' + esc(p.date) : '') + '</span><br>' + b.join('') + '</td>' +
           '<td>' + esc(p.acct) + '</td><td class="n">' + mn(num(p.cost)) + '</td>' +
@@ -2781,5 +2934,429 @@ input[type="checkbox"] { width: auto; flex: none; }
   }
   window.JevDeep = { show: load };
   if (!$('viewDeep').hidden) load();
+})();
+</script>
+
+<script>
+(function () {
+  'use strict';
+  // 13F を写すタブ。数字はすべて copycheck.json（tools/backtest_13f_copy.py --web）から差し込む。
+  // ページに数字を書かないので、次の四半期に JSON を作り直しても文章が古くならない。
+  function $(id) { return document.getElementById(id); }
+  function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function pc(x, d) { if (x == null) return '—'; var v = x * 100, t = Math.abs(v).toFixed(d == null ? 1 : d); if (Number(t) === 0) return t + '%'; return (v > 0 ? '+' : '−') + t + '%'; }
+  function pu(x, d) { return x == null ? '—' : (x * 100).toFixed(d == null ? 1 : d) + '%'; }
+  function pt(x) { if (x == null) return '—'; var t = Math.abs(x * 100).toFixed(1); if (Number(t) === 0) return t + 'pt'; return (x > 0 ? '+' : '−') + t + 'pt'; }
+  function r2(x) { return x == null ? '—' : Number(x).toFixed(2); }
+  function ud(x) { return x == null || Math.abs(x) < 0.0005 ? '' : x > 0 ? 'up' : 'down'; }   // 表示が 0.0% になる値は色を付けない
+  function td(x, f) { return '<td class="n ' + ud(x) + '">' + (f || pc)(x) + '</td>'; }
+  function list(xs) { return xs.map(esc).join('・'); }
+  function day(s) { return Date.parse(s + 'T00:00:00Z'); }
+  var LINE_KEY = 'jevinvest.copy.lines.v1';
+  // 線の見た目。色はトークンで、ダークモードはトークン側で切り替わる。色だけに頼らないよう線の種類と文字も付ける
+  var STYLE = {
+    value: { c: 'var(--k-debt)', w: 3.5, d: '' },
+    equal: { c: 'var(--k-stock)', w: 2.5, d: '7 4' },
+    SPY: { c: 'var(--k-idx)', w: 2, d: '' },
+    QQQ: { c: 'var(--k-gold)', w: 2, d: '' },
+    SMH: { c: 'var(--k-crypto)', w: 2, d: '' },
+    NVDA: { c: 'var(--k-oetf)', w: 1.5, d: '2 3' },
+    ACWI: { c: 'var(--muted)', w: 1.5, d: '1 3' }
+  };
+  var LIGHT = { NVDA: 1, ACWI: 1 };   // 最初は隠しておく線（押すと出る）
+  function sty(k) { return STYLE[k] || { c: 'var(--muted)', w: 1.5, d: '2 3' }; }
+
+  var D = null, loading = false, cost = null, shown = null, CH = null, at = -1;
+
+  function short(k) { return (D.meta.weights_jp || {})[k] || k; }
+  function label(k) { return (D.meta.weights_jp || {})[k] ? '写す（' + D.meta.weights_jp[k] + '）' : k; }
+  function rowsAt(c) { var g = D.summary.filter(function (s) { return s.cost_bps === c; })[0]; return g ? g.rows : []; }
+  function find(rows, kind, key) { return rows.filter(function (r) { return r.kind === kind && r.key === key; })[0] || null; }
+  function rankOf(rows, r) {
+    var xs = rows.filter(function (x) { return x.ret_per_vol != null; }).sort(function (a, b) { return b.ret_per_vol - a.ret_per_vol; });
+    return { rank: xs.indexOf(r) + 1, n: xs.length, best: xs[0] || null };
+  }
+  function rankText(k) {
+    if (!k.rank) return '比べられない';
+    return k.rank === k.n ? '比べた ' + k.n + ' 本の中で最下位' : k.rank === 1 ? '比べた ' + k.n + ' 本の中で最も高い' : '比べた ' + k.n + ' 本の中で ' + k.rank + ' 番目';
+  }
+  function mainRow(rows) { return find(rows, 'copy', 'value') || rows.filter(function (r) { return r.kind === 'copy'; })[0] || null; }
+
+  // ---- 読み込み（初めてタブを開いたとき）----
+  function load() {
+    if (D || loading) return;
+    loading = true;
+    $('cp-error').hidden = true;
+    $('cp-asof').textContent = '検証結果を読み込み中…';
+    fetch('copycheck.json').then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    }).then(function (d) {
+      if (!d || !d.meta || !d.summary || !d.curve) throw new Error('中身の形式が違います');
+      D = d; render();
+    }).catch(function (e) {
+      D = null;
+      $('cp-body').hidden = true;
+      $('cp-asof').textContent = '';
+      $('cp-error').innerHTML = '<li class="crit"><span class="chip">読み込めない</span><span>検証結果（copycheck.json）を読み込めませんでした（' + esc(e && e.message ? e.message : e) + '）。このタブの数字は表示できません。' +
+        ' <button type="button" id="cp-retry">もう一度読み込む</button></span></li>';
+      $('cp-error').hidden = false;
+    }).then(function () { loading = false; });
+  }
+  $('cp-error').addEventListener('click', function (e) { if (e.target.id === 'cp-retry') load(); });
+
+  function render() {
+    var m = D.meta;
+    if (cost == null) cost = m.cost_base;
+    $('cp-asof').textContent = m.generated + ' 作成。対象は ' + m.filer + '（CIK ' + m.cik + '）の 13F ' + m.n_filings + ' 回分（報告日 ' + m.report_first + '〜' + m.report_last + '）。13F は ' + m.sources.filings + '、価格は ' + m.sources.prices + '、為替は ' + m.sources.fx + '。' + m.tool + ' で計算。';
+    $('cp-error').hidden = true;
+    $('cp-body').hidden = false;     // 先に表示して、グラフの幅を測れるようにする
+    renderVerdict(); renderLines(); drawChart(); renderSum(); renderSens(); renderVar(); renderPer(); renderMiss(); renderHold(); renderNisa(); renderLimits();
+  }
+
+  // ---- 結論（文章はデータから組み立てる）----
+  function renderVerdict() {
+    var m = D.meta, rows = rowsAt(m.cost_base), v = mainRow(rows);
+    if (!v) throw new Error('写した場合の結果がありません');
+    var fb = find(rows, 'bench', m.first_bench), rk = rankOf(rows, v), yrs = Number(m.years).toFixed(1);
+    var dd = v.mdd || {}, wp = v.worst_period || {}, bp = v.best_period || {}, lose = Number(v.losing_periods), n = Number(v.n_periods);
+    var big = '開示を見てから写すと、' + esc(short(v.key)) + 'で <span class="num">' + pc(v.total_usd) + '</span>（約 ' + yrs + ' 年・ドル建て）。';
+    if (rk.rank) big += (rk.rank > rk.n / 2 ? 'ただし、' : '') + 'リスク当たりのリターンは' + rankText(rk) + '。';
+    var p1 = '年率ボラ ' + pu(v.vol) + '・途中の最大下落 ' + pc(dd.v) + '（' + esc(dd.peak || '—') + ' → ' + esc(dd.trough || '—') + '）' +
+      (fb ? '。同じ期間の ' + esc(fb.key) + ' は年率ボラ ' + pu(fb.vol) + '・最大下落 ' + pc(fb.mdd && fb.mdd.v) : '') + '。';
+    var notSure = lose > 0 || (v.total_without_best != null && v.total_without_best < 0);
+    var p2 = '<b>' + (notSure ? '「稳赚」（確実に儲かる）ではない。' : '「稳赚」（確実に儲かる）と言える根拠にはならない。') + '</b>' +
+      n + ' 期中 ' + lose + ' 期がマイナス' +
+      (bp.report_date ? '、最も良かった 1 期（' + esc(bp.report_date) + ' 期 ' + pc(bp.ret) + '）を除くと ' + pc(v.total_without_best) +
+        (fb && v.first_bench_without_best != null ? '（' + esc(fb.key) + ' は同じ期を除いても ' + pc(v.first_bench_without_best) + '）' : '') : '') + '。' +
+      (notSure ? '' : '期間が約 ' + yrs + ' 年・' + n + ' 回分と短く、1 つの相場しか含みません。');
+    $('cp-verdict').innerHTML = '<div class="eyebrow">結論・' + esc(m.filer) + ' の 13F ' + esc(m.n_filings) + ' 回分（' + esc(m.start) + '〜' + esc(m.end) + '）</div>' +
+      '<p class="big">' + big + '</p><p>' + p1 + '</p><p>' + p2 + '</p>';
+
+    function tile(k, val, sub, c) { return '<div class="tile"><div class="k">' + k + '</div><div class="v' + (c ? ' ' + c : '') + '">' + val + '</div><div class="s">' + sub + '</div></div>'; }
+    var need = dd.v != null && dd.v > -1 && dd.v < 0 ? 1 / (1 + dd.v) - 1 : null;
+    $('cp-tiles').innerHTML =
+      tile('総リターン・' + esc(label(v.key)), pc(v.total_usd), '年率 ' + pc(v.cagr_usd) + '・円建て ' + pc(v.total_jpy), ud(v.total_usd)) +
+      tile('年率ボラ（値動きの大きさ）', pu(v.vol), fb ? esc(fb.key) + ' は ' + pu(fb.vol) : '') +
+      tile('途中の最大下落', pc(dd.v), need != null ? '元に戻るには ' + pc(need, 0) + ' の上昇が要る' : '', ud(dd.v)) +
+      tile('リスク当たり（年率÷ボラ）', r2(v.ret_per_vol), rk.rank ? rk.n + ' 本中 ' + rk.rank + ' 位（最高は ' + esc(label(rk.best.key)) + ' の ' + r2(rk.best.ret_per_vol) + '）' : '') +
+      tile('マイナスの期', lose + ' / ' + n + ' 期', '最悪は ' + esc(wp.report_date || '—') + ' 期の ' + pc(wp.ret)) +
+      tile('最良の 1 期を除くと', pc(v.total_without_best), bp.report_date ? esc(bp.report_date) + ' 期の ' + pc(bp.ret) + ' を除いた場合' : '', ud(v.total_without_best));
+
+    var pts = [], cmp = (D.compare || {})[v.key];
+    if (cmp) {
+      var parts = [];
+      if (cmp.beats.length) parts.push(list(cmp.beats) + ' を上回った');
+      if (cmp.roughly_equal.length) parts.push(list(cmp.roughly_equal) + ' とはほぼ同じ');
+      if (cmp.loses.length) parts.push(list(cmp.loses) + ' を下回った');
+      pts.push('総リターンだけで比べると、' + (parts.join('、') || '比べられる指数がない') + '（どのコストの仮定でも ' + Math.round(m.roughly_equal * 100) + 'pt 以上の差があるものだけを「上回った・下回った」とした）。リスク当たり（年率÷ボラ）では' + (cmp.beats_risk_adj.length ? ' ' + list(cmp.beats_risk_adj) + ' を上回った' : '、上回った指数はない') + '。');
+    }
+    rows.filter(function (r) { return r.kind === 'copy' && r !== v; }).forEach(function (e) {
+      var k2 = rankOf(rows, e);
+      pts.push(esc(label(e.key)) + 'なら ' + pc(e.total_usd) + '、年率ボラ ' + pu(e.vol) + '、最大下落 ' + pc(e.mdd && e.mdd.v) + '、年率÷ボラ ' + r2(e.ret_per_vol) + '（' + k2.n + ' 本中 ' + k2.rank + ' 位）。' + esc(e.n_periods) + ' 期中 ' + esc(e.losing_periods) + ' 期がマイナス。');
+    });
+    var hs = (D.holdings || []).filter(function (h) { return h.contrib && h.contrib[v.key] != null; }).sort(function (a, b) { return b.contrib[v.key] - a.contrib[v.key]; });
+    if (hs.length) {
+      var top = hs[0], worst = hs[hs.length - 1], share = v.total_usd > 0 ? top.contrib[v.key] / v.total_usd : null;
+      pts.push('寄与が最も大きかったのは ' + esc(top.symbol) + '（' + esc(top.issuer) + '）の ' + pt(top.contrib[v.key]) +
+        (share != null ? ' で、総リターン ' + pc(v.total_usd) + ' の ' + Math.round(share * 100) + '% にあたる' + (share >= 0.5 ? '。結果の大半が 1 銘柄で決まっている' : '') : '') +
+        (worst !== top && worst.contrib[v.key] < 0 ? '。最も足を引っ張ったのは ' + esc(worst.symbol) + ' の ' + pt(worst.contrib[v.key]) : '') + '。');
+    }
+    var by = {}; (D.sensitivity || []).forEach(function (r) { by[r.mode] = r; });
+    var cur = by[m.entry.mode];
+    if (cur && by.report) {
+      pts.push('報告日（四半期末）の終値で買えたとすると ' + pc(by.report.copy[v.key]) + '（実行できない）' +
+        (by.same ? '、提出日の終値なら ' + pc(by.same.copy[v.key]) + '（' + (by.same.executable ? '実行できる' : '多くの回で実行できない楽観値') + '）' : '') +
+        '。実際に買える' + esc(m.entry.label) + 'では ' + pc(cur.copy[v.key]) + '。この差は、開示前から持っていた本人だけが取れた分です。');
+    }
+    var hi = Math.max.apply(null, m.cost_bps);
+    if (hi !== m.cost_base) {
+      var vh = find(rowsAt(hi), 'copy', v.key);
+      var turn = (v.turnover || []).reduce(function (a, x) { return a + (x || 0); }, 0);
+      if (vh) pts.push('売買のたびに片道 ' + hi + 'bp のコストがかかるとすると ' + pc(vh.total_usd) + '。組み替えで売買した金額は、合計で資産の ' + turn.toFixed(1) + ' 倍（初回の購入を含む）。');
+    }
+    $('cp-points').innerHTML = pts.map(function (x) { return '<li>' + x + '</li>'; }).join('');
+  }
+
+  // ---- 資産の推移（SVG の折れ線）----
+  function keys() { return Object.keys(D.curve.series); }
+  function lastOf(k) { var a = D.curve.series[k]; return a[a.length - 1]; }
+  function lineKey(k) { var s = sty(k); return '<svg class="cp-key" width="22" height="10" aria-hidden="true"><line x1="2" x2="20" y1="5" y2="5" stroke="' + s.c + '" stroke-width="' + Math.max(s.w, 2) + '" stroke-linecap="round"' + (s.d ? ' stroke-dasharray="' + s.d + '"' : '') + '/></svg>'; }
+  function renderLines() {
+    if (!shown) {
+      var saved = null;
+      try { saved = JSON.parse(localStorage.getItem(LINE_KEY) || 'null'); } catch (e) { saved = null; }
+      shown = {};
+      keys().forEach(function (k) { shown[k] = saved && typeof saved[k] === 'boolean' ? saved[k] : !LIGHT[k]; });
+    }
+    var c = D.curve;
+    $('cp-chartSub').textContent = D.meta.start + '〜' + D.meta.end + '。片道コスト ' + c.cost_bps + 'bp、ドル建て、配当込み。点は' + c.freq + '。下のボタンで線の表示を切り替えられます。グラフの上でポインタを動かす（またはグラフを選んで ← → キー）と、その日の値が出ます。';
+    $('cp-lines').innerHTML = keys().map(function (k) {
+      return '<button type="button" data-k="' + esc(k) + '" aria-pressed="' + !!shown[k] + '">' + lineKey(k) + '<span>' + esc(label(k)) + '</span><b>' + pc(lastOf(k) - 1) + '</b></button>';
+    }).join('');
+    $('cp-chartNote').textContent = '指数（' + D.meta.bench.join('・') + '）は初日に買って持つだけ。薄い赤の帯は「' + label(mainRow(rowsAt(c.cost_bps)).key) + '」の最大下落（ピーク → 底）。下端の短い縦線は組み替えの日（' + c.entries.length + ' 回）。過去の仮定の計算で、実績ではありません。';
+  }
+  $('cp-lines').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b || !D) return;
+    var k = b.dataset.k;
+    shown[k] = !shown[k];
+    if (!keys().some(function (x) { return shown[x]; })) shown[k] = true;   // 全部は消さない
+    try { localStorage.setItem(LINE_KEY, JSON.stringify(shown)); } catch (err) { /* 保存できなくても表示はできる */ }
+    renderLines(); drawChart();
+    Array.prototype.forEach.call($('cp-lines').children, function (x) { if (x.dataset.k === k) x.focus(); });
+  });
+
+  function drawChart() {
+    var c = D.curve, box = $('cp-chart');
+    var ks = keys().filter(function (k) { return shown[k]; });
+    var W = Math.round(Math.max(300, Math.min(940, box.clientWidth || 640))), narrow = W < 520;
+    var H = narrow ? 250 : 290, L = 44, R = narrow ? 60 : 118, T = 24, B = 26;
+    var ts = c.dates.map(day), t0 = ts[0], t1 = ts[ts.length - 1];
+    var lo = 1, hi = 1;
+    ks.forEach(function (k) { c.series[k].forEach(function (v) { if (v != null) { lo = Math.min(lo, v); hi = Math.max(hi, v); } }); });
+    var step = [0.1, 0.2, 0.25, 0.5, 1, 2, 5].filter(function (s) { return (hi - lo) / s <= 6; })[0] || 10;
+    var g0 = Math.floor(lo / step), g1 = Math.ceil(hi / step); if (g1 === g0) g1 = g0 + 1;
+    lo = g0 * step; hi = g1 * step;
+    function x(t) { return L + (W - L - R) * (t - t0) / ((t1 - t0) || 1); }
+    function y(v) { return T + (H - T - B) * (1 - (v - lo) / (hi - lo)); }
+    var main = mainRow(rowsAt(c.cost_bps));
+    var aria = '資産の推移（開始時 = 1 倍、' + D.meta.start + '〜' + D.meta.end + '、片道コスト ' + c.cost_bps + 'bp）。最後の値: ' +
+      ks.map(function (k) { return label(k) + ' ' + pc(lastOf(k) - 1); }).join('、') + '。' +
+      (main && main.mdd ? label(main.key) + 'の最大下落は ' + pc(main.mdd.v) + '（' + main.mdd.peak + ' → ' + main.mdd.trough + '）。' : '');
+    var svg = '<svg class="prj cp-chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" tabindex="0" aria-label="' + esc(aria) + '">';
+    if (main && shown[main.key] && main.mdd && main.mdd.peak && main.mdd.trough) {
+      var xa = x(day(main.mdd.peak)), xb = x(day(main.mdd.trough));
+      var xm = Math.min(Math.max((xa + xb) / 2, L + 60), W - R - 60);
+      svg += '<rect class="dd" x="' + xa.toFixed(1) + '" y="' + T + '" width="' + Math.max(xb - xa, 1).toFixed(1) + '" height="' + (H - T - B) + '"/>' +
+        '<text class="ddl" x="' + xm.toFixed(1) + '" y="' + (T - 8) + '" text-anchor="middle">最大下落 ' + pc(main.mdd.v) + '</text>';
+    }
+    for (var gi = g0; gi <= g1; gi++) {
+      var gv = gi * step, yy = y(gv).toFixed(1);
+      svg += '<line class="' + (Math.abs(gv - 1) < 1e-9 ? 'base' : 'grid') + '" x1="' + L + '" x2="' + (W - R) + '" y1="' + yy + '" y2="' + yy + '"/>' +
+        '<text x="' + (L - 6) + '" y="' + (+yy + 4) + '" text-anchor="end">' + gv.toFixed(step < 0.5 ? 2 : 1) + '</text>';
+    }
+    svg += '<text x="4" y="' + (T - 8) + '">倍</text>';
+    // 横軸: 始まり・年の区切り・終わり
+    var cand = [];
+    for (var yr = new Date(t0).getUTCFullYear() + 1; yr <= new Date(t1).getUTCFullYear(); yr++) {
+      var xy = x(Date.UTC(yr, 0, 1));
+      svg += '<line class="grid" x1="' + xy.toFixed(1) + '" x2="' + xy.toFixed(1) + '" y1="' + T + '" y2="' + (H - B) + '"/>';
+      cand.push({ x: xy, t: yr + ' 年', a: 'middle', w: 46 });
+    }
+    cand.push({ x: L, t: esc(c.dates[0].slice(0, 7)), a: 'start', w: 50 }, { x: W - R, t: esc(c.dates[c.dates.length - 1].slice(0, 7)), a: 'end', w: 50 });
+    var xl = [];
+    cand.forEach(function (o) {   // 年の区切りを優先し、重なるラベルは出さない
+      o.l = o.a === 'start' ? o.x : o.a === 'end' ? o.x - o.w : o.x - o.w / 2;
+      if (xl.every(function (q) { return o.l + o.w + 8 < q.l || q.l + q.w + 8 < o.l; })) xl.push(o);
+    });
+    xl.forEach(function (o) { svg += '<text x="' + o.x.toFixed(1) + '" y="' + (H - 8) + '" text-anchor="' + o.a + '">' + o.t + '</text>'; });
+    c.entries.forEach(function (d) { var xe = x(day(d)).toFixed(1); svg += '<line class="ent" x1="' + xe + '" x2="' + xe + '" y1="' + (H - B) + '" y2="' + (H - B - 7) + '"/>'; });
+    // 線（写した線を最後に描いて上に出す）
+    ks.slice().reverse().forEach(function (k) {
+      var s = sty(k), dpath = '';
+      c.series[k].forEach(function (v, i) { if (v != null) dpath += (dpath ? 'L' : 'M') + x(ts[i]).toFixed(1) + ' ' + y(v).toFixed(1); });
+      svg += '<path fill="none" stroke="' + s.c + '" stroke-width="' + s.w + '" stroke-linejoin="round" stroke-linecap="round"' + (s.d ? ' stroke-dasharray="' + s.d + '"' : '') + ' d="' + dpath + '"/>';
+    });
+    // 右端のラベル（重ならないようにずらす）。文字は本文の色、線の色は短い線で示す
+    var ends = ks.map(function (k) { return { k: k, y: y(lastOf(k)) }; }).sort(function (a, b) { return a.y - b.y; });
+    for (var e = 1; e < ends.length; e++) if (ends[e].y - ends[e - 1].y < 14) ends[e].y = ends[e - 1].y + 14;
+    var over = ends.length ? ends[ends.length - 1].y - (H - 6) : 0;
+    if (over > 0) ends.forEach(function (o) { o.y -= over; });
+    ends.forEach(function (o) {
+      var s = sty(o.k), yy = o.y.toFixed(1);
+      svg += '<line x1="' + (W - R + 6) + '" x2="' + (W - R + 18) + '" y1="' + yy + '" y2="' + yy + '" stroke="' + s.c + '" stroke-width="3"' + (s.d ? ' stroke-dasharray="' + s.d + '"' : '') + '/>' +
+        '<text class="end" x="' + (W - R + 22) + '" y="' + (o.y + 4).toFixed(1) + '">' + (narrow ? '' : esc(short(o.k)) + ' ') + pc(lastOf(o.k) - 1, 0) + '</text>';
+    });
+    svg += '<line class="xh" x1="0" x2="0" y1="' + T + '" y2="' + (H - B) + '" visibility="hidden"/><g class="dots"></g></svg>';
+    box.innerHTML = svg;
+    CH = { svg: box.firstChild, W: W, H: H, T: T, B: B, L: L, R: R, x: x, y: y, ts: ts, ks: ks, t0: t0, t1: t1 };
+    if (at >= ts.length) at = -1;
+    hookChart();
+  }
+
+  // ---- ポインタ・キーボードで、その日の値を出す ----
+  function nearest(t) { var best = 0; CH.ts.forEach(function (u, i) { if (Math.abs(u - t) < Math.abs(CH.ts[best] - t)) best = i; }); return best; }
+  function showAt(i, cx, cy) {
+    at = i;
+    var xx = CH.x(CH.ts[i]).toFixed(1), xh = CH.svg.querySelector('.xh');
+    xh.setAttribute('x1', xx); xh.setAttribute('x2', xx); xh.setAttribute('visibility', 'visible');
+    var rows = CH.ks.map(function (k) { return { k: k, v: D.curve.series[k][i] }; }).filter(function (r) { return r.v != null; }).sort(function (a, b) { return b.v - a.v; });
+    CH.svg.querySelector('.dots').innerHTML = rows.map(function (r) { return '<circle cx="' + xx + '" cy="' + CH.y(r.v).toFixed(1) + '" r="4" fill="' + sty(r.k).c + '" stroke="var(--surface)" stroke-width="2"/>'; }).join('');
+    var tip = $('vtip');
+    tip.textContent = '';
+    var h = document.createElement('b'); h.textContent = D.curve.dates[i] + '（開始からの増減）'; tip.appendChild(h);
+    rows.forEach(function (r) {
+      var row = document.createElement('div'); row.className = 'cp-row';
+      var sw = document.createElement('span'); sw.className = 'sw'; sw.style.background = sty(r.k).c;
+      var val = document.createElement('b'); val.textContent = pc(r.v - 1);
+      var lab = document.createElement('span'); lab.className = 'l'; lab.textContent = label(r.k);
+      row.appendChild(sw); row.appendChild(val); row.appendChild(lab); tip.appendChild(row);
+    });
+    tip.classList.add('on');
+    var tr = tip.getBoundingClientRect();
+    var left = Math.min(Math.max(8, cx + 14), innerWidth - tr.width - 8), top = cy + 14;
+    if (top + tr.height > innerHeight - 8) top = Math.max(8, cy - tr.height - 14);
+    tip.style.left = left + 'px'; tip.style.top = top + 'px';
+  }
+  function hideAt() {
+    if (CH) { CH.svg.querySelector('.xh').setAttribute('visibility', 'hidden'); CH.svg.querySelector('.dots').innerHTML = ''; }
+    $('vtip').classList.remove('on');
+  }
+  function fromPointer(e) {
+    var r = CH.svg.getBoundingClientRect(), px = (e.clientX - r.left) * CH.W / r.width;
+    var t = CH.t0 + (px - CH.L) / (CH.W - CH.L - CH.R) * (CH.t1 - CH.t0);
+    showAt(nearest(t), e.clientX, e.clientY);
+  }
+  function fromKey() {
+    var r = CH.svg.getBoundingClientRect(), xx = CH.x(CH.ts[at]);
+    showAt(at, r.left + xx * r.width / CH.W, r.top + CH.T * r.height / CH.H + 10);
+  }
+  function hookChart() {
+    var s = CH.svg;
+    s.addEventListener('pointermove', fromPointer);
+    s.addEventListener('pointerdown', fromPointer);
+    s.addEventListener('pointerleave', hideAt);
+    s.addEventListener('focus', function () { if (at < 0) at = CH.ts.length - 1; fromKey(); });
+    s.addEventListener('blur', hideAt);
+    s.addEventListener('keydown', function (e) {
+      var n = CH.ts.length, i = at < 0 ? n - 1 : at;
+      if (e.key === 'ArrowLeft') i = Math.max(0, i - 1);
+      else if (e.key === 'ArrowRight') i = Math.min(n - 1, i + 1);
+      else if (e.key === 'Home') i = 0;
+      else if (e.key === 'End') i = n - 1;
+      else if (e.key === 'Escape') { hideAt(); return; }
+      else return;
+      e.preventDefault(); at = i; fromKey();
+    });
+  }
+  var resizeQueued = false;
+  window.addEventListener('resize', function () {
+    if (resizeQueued || !D || $('viewCopy').hidden) return;
+    resizeQueued = true;
+    requestAnimationFrame(function () { resizeQueued = false; hideAt(); drawChart(); });
+  });
+
+  // ---- 表 ----
+  function renderSum() {
+    var m = D.meta;
+    $('cp-cost').innerHTML = m.cost_bps.map(function (c) { return '<button type="button" data-c="' + c + '" aria-pressed="' + (c === cost) + '">片道コスト ' + c + 'bp</button>'; }).join('');
+    $('cp-sumSub').textContent = '期間はすべて同じ ' + m.start + '〜' + m.end + '。資金を 1 として、写す場合は' + m.entry.label + 'で 13F ごとに組み替え、指数は初日に買って持つだけ（片道コストは初日の 1 回だけ）。' +
+      (m.fx_start && m.fx_end ? '円建ては 1 ドル ' + m.fx_start.toFixed(2) + ' 円 → ' + m.fx_end.toFixed(2) + ' 円で換算。' : '為替が取れず、円建ては出していません。');
+    var rows = rowsAt(cost);
+    $('cp-sum').innerHTML = '<thead><tr><th>戦略・指数</th><th class="n">総リターン<br>ドル</th><th class="n">総リターン<br>円</th><th class="n">年率<br>ドル</th><th class="n">年率ボラ</th><th class="n">最大下落</th><th>ピーク → 底</th><th class="n">最悪の期</th><th class="n">マイナス<br>の期</th><th class="n">年率÷ボラ<br>（順位）</th><th class="n">年率÷<br>最大下落</th></tr></thead><tbody>' +
+      rows.map(function (r) {
+        var dd = r.mdd || {}, wp = r.worst_period || {}, rk = rankOf(rows, r);
+        return '<tr' + (r.kind === 'copy' ? ' class="me"' : '') + '><th scope="row">' + esc(r.label) + '<div class="names">' + esc(r.desc) + (r.kind === 'bench' ? '・買って持つだけ' : '') + '</div></th>' +
+          td(r.total_usd) + td(r.total_jpy) + td(r.cagr_usd) + '<td class="n">' + pu(r.vol) + '</td>' + td(dd.v) +
+          '<td class="names cp-d">' + esc(dd.peak || '—') + '<br>→ ' + esc(dd.trough || '—') + '</td>' +
+          '<td class="n ' + ud(wp.ret) + '">' + pc(wp.ret) + '<div class="names cp-d">' + esc(wp.report_date || '—') + ' 期</div></td>' +
+          '<td class="n">' + esc(r.losing_periods) + ' / ' + esc(r.n_periods) + '</td>' +
+          '<td class="n">' + r2(r.ret_per_vol) + '<div class="cp-rk">' + (rk.rank ? rk.rank + ' / ' + rk.n + ' 位' : '—') + '</div></td><td class="n">' + r2(r.calmar) + '</td></tr>';
+      }).join('') + '</tbody>';
+  }
+  $('cp-cost').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b || !D) return;
+    cost = Number(b.dataset.c); renderSum();
+    Array.prototype.forEach.call($('cp-cost').children, function (x) { if (Number(x.dataset.c) === cost) x.focus(); });
+  });
+
+  function renderSens() {
+    var m = D.meta, ws = m.weights, sn = D.sensitivity || [];
+    var bs = m.bench.filter(function (b) { return sn.some(function (r) { return r.bench && r.bench[b] != null; }); });
+    $('cp-sens').innerHTML = '<thead><tr><th>いつの終値で買うか</th><th>実行できるか</th><th>期間</th>' + ws.map(function (w) { return '<th class="n">' + esc(label(w)) + '</th>'; }).join('') + bs.map(function (b) { return '<th class="n">' + esc(b) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+      sn.map(function (r) {
+        return '<tr' + (r.mode === m.entry.mode ? ' class="me"' : '') + '><th scope="row">' + esc(r.label) + '</th>' +
+          '<td class="cp-why"><span class="' + (r.executable ? 'cp-ok">できる' : 'cp-ng">できない') + '</span><div class="names">' + esc(r.why) + '</div></td>' +
+          '<td class="names cp-d">' + esc(r.start) + '<br>〜 ' + esc(r.end) + '</td>' +
+          ws.map(function (w) { return td(r.copy[w]); }).join('') + bs.map(function (b) { return td(r.bench[b]); }).join('') + '</tr>';
+      }).join('') + '</tbody>';
+    var ac = m.acceptance || {};
+    $('cp-sensNote').textContent = 'EDGAR の受理時刻（米東部）が分かる ' + ac.known + ' 回のうち、' + ac.after_close + ' 回は 16:00 以降（引け後）、' + ac.pre_open + ' 回は取引開始（9:30）前、' + ac.intraday + ' 回は場中' + (ac.unknown ? '、時刻不明が ' + ac.unknown + ' 回' : '') + '。' +
+      '期間の始まりが変わるので、指数も同じ期間で計算し直しています（片道コスト ' + m.cost_base + 'bp）。';
+  }
+
+  function renderVar() {
+    var m = D.meta, vs = D.variants || [];
+    $('cp-var').innerHTML = vs.length ? '<thead><tr><th>組み入れの比率</th><th>店頭（OTC）銘柄</th><th class="n">総リターン</th><th class="n">年率</th><th class="n">年率ボラ</th><th class="n">最大下落</th><th class="n">年率÷ボラ</th></tr></thead><tbody>' +
+      vs.map(function (v) {
+        var same = m.weights.indexOf(v.weights) >= 0 && v.include_otc === m.include_otc;
+        return '<tr' + (same ? ' class="me"' : '') + '><th scope="row">' + esc(v.label) + '</th><td>' + (v.include_otc ? '買えたことにする' : '除外（写せない）') + '</td>' +
+          td(v.total_usd) + td(v.cagr_usd) + '<td class="n">' + pu(v.vol) + '</td>' + td(v.mdd) + '<td class="n">' + r2(v.ret_per_vol) + '</td></tr>';
+      }).join('') + '</tbody>' : '<tbody><tr><td class="note">比べる計算がありません。</td></tr></tbody>';
+  }
+
+  function et(s) { return s ? esc(s.slice(5, 10) + ' ' + s.slice(11, 16)) : '—'; }
+  function renderPer() {
+    var m = D.meta, ws = m.weights, ps = D.periods || [];
+    var bs = m.bench.filter(function (b) { return ps.some(function (p) { return p.bench[b] != null; }); });
+    $('cp-perSub').textContent = m.n_filings + ' 回の 13F ごとに' + m.entry.label + 'で組み替え、次の組み替えまで持ちっぱなし（比率は値動きでずれるまま）。リターンはその期の値動き（片道コスト ' + m.cost_base + 'bp）。指数の列は同じ期間の値動き。';
+    $('cp-per').innerHTML = '<thead><tr><th>報告日</th><th>提出日</th><th>受理<br>（米東部）</th><th>持った期間</th><th>組み入れ（' + esc(short(ws[0])) + 'の比率）</th><th>写せない銘柄<br>（13F 上の比率）</th>' +
+      ws.map(function (w) { return '<th class="n">' + esc(label(w)) + '</th>'; }).join('') + bs.map(function (b) { return '<th class="n">' + esc(b) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+      ps.map(function (p) {
+        var wk = 'w_' + ws[0];
+        return '<tr><th scope="row" class="cp-d">' + esc(p.report_date) + '</th><td class="names cp-d">' + esc(p.filed_date) + '</td><td class="names cp-d">' + et(p.accepted_et) + (p.accepted_source === 'submissions_json' ? '※' : '') + '</td>' +
+          '<td class="names cp-d">' + esc(p.entry) + '<br>→ ' + esc(p.exit) + '</td>' +
+          '<td class="cp-pos">' + p.positions.map(function (q) { return '<span>' + esc(q.symbol) + ' ' + pu(q[wk] != null ? q[wk] : q.w_value) + '</span>'; }).join('、') + '</td>' +
+          '<td class="cp-pos">' + (p.unpriced.length ? p.unpriced.map(function (u) { return '<span>' + esc(u.symbol || u.issuer) + ' ' + pu(u.w13f) + '</span><div class="names">' + esc(String(u.reason || '').split('。')[0]) + '</div>'; }).join('') : '—') + '</td>' +
+          ws.map(function (w) { return td(p.returns[w]); }).join('') + bs.map(function (b) { return td(p.bench[b]); }).join('') + '</tr>';
+      }).join('') + '</tbody>';
+  }
+
+  function renderMiss() {
+    var M = D.missed || { rows: [], new_names: [] }, fb = M.bench || '—';
+    var pre = M.rows.map(function (r) { return r.pre.value; }).filter(function (x) { return x != null; }).sort(function (a, b) { return a - b; });
+    var med = pre.length ? (pre.length % 2 ? pre[(pre.length - 1) / 2] : (pre[pre.length / 2 - 1] + pre[pre.length / 2]) / 2) : null;
+    var tops = M.new_names.filter(function (r) { return r.copyable && r.pop != null; }).sort(function (a, b) { return b.pop - a.pop; }).slice(0, 3);
+    $('cp-missSum').innerHTML = pre.length ? '報告日の終値からエントリーまでの、写せる保有銘柄の値動き（時価加重）は ' + pre.length + ' 回中 ' + pre.filter(function (x) { return x > 0; }).length + ' 回がプラス、中央値 ' + pc(med) + '、最大 ' + pc(pre[pre.length - 1]) + '。' +
+      (tops.length ? '開示ポップが大きかったのは ' + tops.map(function (r) { return esc(r.symbol) + '（' + esc(r.report_date) + ' 期 ' + pc(r.pop) + '、買った後その期の終わりまで ' + pc(r.after) + '）'; }).join('、') + '。' : '') : '';
+    $('cp-miss').innerHTML = '<thead><tr><th>報告日</th><th class="n">報告日の終値<br>→ エントリー</th><th class="n">同・等金額</th><th class="n">同・13F の<br>全銘柄</th><th class="n">' + esc(fb) + '<br>同じ期間</th><th>新しく開示された銘柄</th><th class="n">開示ポップ<br>（時価加重）</th><th class="n">' + esc(fb) + '<br>同じ期間</th></tr></thead><tbody>' +
+      M.rows.map(function (r) {
+        return '<tr><th scope="row" class="cp-d">' + esc(r.report_date) + '</th>' + td(r.pre.value) + td(r.pre.equal) + td(r.pre_all) + td(r.pre_bench) +
+          '<td class="cp-pos">' + (r.new_names.length ? r.new_names.map(esc).join('、') : '—') + (r.new_label ? '<div class="names">' + esc(r.new_label) + '</div>' : '') + '</td>' + td(r.pop.value) + td(r.pop_bench) + '</tr>';
+      }).join('') + '</tbody>';
+    $('cp-new').innerHTML = M.new_names.length ? '<thead><tr><th>報告日</th><th>銘柄</th><th class="n">13F 上の比率</th><th>開示前の終値</th><th class="n">開示ポップ</th><th class="n">買った後<br>（その期の終わりまで）</th><th>写せるか</th></tr></thead><tbody>' +
+      M.new_names.map(function (r) {
+        return '<tr><th scope="row" class="cp-d">' + esc(r.report_date) + '</th><td>' + esc(r.symbol || '—') + '<div class="names">' + esc(r.issuer) + '</div></td><td class="n">' + pu(r.w13f) + '</td><td class="names cp-d">' + esc(r.pre_filing_close || '—') + '</td>' +
+          td(r.pop) + td(r.after) + '<td class="cp-why">' + (r.copyable ? '<span class="cp-ok">写せる</span>' : '<span class="cp-ng">写せない</span>') + (r.reason ? '<div class="names">' + esc(String(r.reason).split('。')[0]) + '</div>' : '') + '</td></tr>';
+      }).join('') + '</tbody>' : '<tbody><tr><td class="note">新しく開示された銘柄はありません。</td></tr></tbody>';
+    $('cp-missNote').textContent = '開示ポップは、開示前の最後の終値（受理が 16:00 ET 以降なら受理日の終値、それより前なら前営業日の終値）からエントリーの終値まで。写せない銘柄（店頭など）は参考として載せ、上の要約には入れていません。' +
+      (D.meta.first_filing_is_initial ? '最初の 13F は初回の開示なので、全銘柄を新規として扱っています。' : '');
+  }
+
+  function renderHold() {
+    var m = D.meta, ws = m.weights, w0 = ws[0];
+    var hs = (D.holdings || []).slice().sort(function (a, b) { return (b.contrib[w0] || 0) - (a.contrib[w0] || 0); });
+    $('cp-holdSub').textContent = '寄与は、資金 1 に対してその銘柄で増減した額（pt、片道コスト ' + m.cost_base + 'bp）。全銘柄の寄与からコストを引くと総リターンになります。最大下落は、写したポートフォリオがその銘柄を持っていた間の一番深い下げ。' + label(w0) + 'の寄与の大きい順。';
+    $('cp-hold').innerHTML = '<thead><tr><th>銘柄</th><th class="n">保有した期</th><th>持っていた期間</th><th class="n">その間の<br>値動き</th><th class="n">最大下落</th><th>ピーク → 底</th>' + ws.map(function (w) { return '<th class="n">寄与<br>' + esc(short(w)) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+      hs.map(function (h) {
+        var dd = h.mdd || {};
+        return '<tr><th scope="row">' + esc(h.symbol) + '<div class="names">' + esc(h.issuer) + '</div></th><td class="n">' + esc(h.periods_held) + '</td><td class="names cp-d">' + esc(h.held_from) + '<br>〜 ' + esc(h.held_to) + '</td>' +
+          td(h.ret) + td(dd.v) + '<td class="names cp-d">' + esc(dd.peak || '—') + '<br>→ ' + esc(dd.trough || '—') + '</td>' + ws.map(function (w) { return td(h.contrib[w], pt); }).join('') + '</tr>';
+      }).join('') + '</tbody>';
+  }
+
+  function renderNisa() {
+    var N = D.nisa || {}, by = N.by_weights || {};
+    var h = Object.keys(by).map(function (w) {
+      var x = by[w];
+      return '<p>' + esc(label(w)) + '：年ごとの買付額は初期資金の ' + Object.keys(x.buys_by_year).map(function (y) { return esc(y) + ' 年 ' + Number(x.buys_by_year[y]).toFixed(2) + ' 倍'; }).join(' ／ ') +
+        '（' + (x.in_jpy ? '円換算' : 'ドル建て') + '、初回の購入を含む）。成長投資枠の中で全額を写し続けられる初期資金は約 <b><span class="num">' + esc(x.max_initial_manyen) + '</span> 万円</b>まで（' + esc(x.max_year) + ' 年の買付 ' + Number(x.max_multiple).toFixed(2) + ' 倍で決まる）。</p>';
+    }).join('');
+    $('cp-nisa').innerHTML = (h || '<p class="note">買付額の計算がありません。</p>') +
+      '<p class="note">NISA の成長投資枠は年 ' + esc(N.quota_manyen) + ' 万円で、買った金額で減り、売っても枠はその年には戻りません。13F に合わせて組み替えるたびに売って買い直すので、持っている金額より多くの枠を使います。課税口座なら、組み替えで出た利益に毎回約 20% の税がかかります（この計算には入れていません）。</p>';
+  }
+
+  function renderLimits() {
+    var m = D.meta;
+    $('cp-limits').innerHTML = (m.caveats || []).map(function (c) { return '<li>' + (c.head ? '<b>' + esc(c.head) + '</b>' : '') + esc(c.body) + '</li>'; }).join('');
+    $('cp-warn').innerHTML = (m.warnings || []).map(function (w) { return '<li class="warn"><span class="chip">データ</span><span>' + esc(w) + '</span></li>'; }).join('');
+    var all = (m.notes || []).concat(m.price_warnings || []);
+    $('cp-notesSum').textContent = 'データの注意（' + all.length + ' 件）';
+    $('cp-notes').innerHTML = all.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('');
+    $('cp-notesBox').hidden = !all.length;
+  }
+
+  window.JevCopy = { show: function () { if (D) { hideAt(); drawChart(); } else load(); } };
+  if (!$('viewCopy').hidden) load();
 })();
 </script>
