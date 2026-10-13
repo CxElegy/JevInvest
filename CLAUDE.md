@@ -31,6 +31,12 @@
 
 - **個人の金額データはコミットしない。** `config/holdings.yaml` `config/compliance.yaml`
   `config/transactions.yaml` `reports/` `data/` は .gitignore 済み。`git add -A` の前に確認する。
+- **web/ は GitHub Pages で公開される（公開範囲はインターネット全体）。** 金額・個人情報・`seed.json` を
+  web/ の公開対象に入れない。公開するファイルは `tools/build_site.py` の許可リストで決める。
+  `web/ledger.html` の文面に年齢・勤務先の社内の仕組みの名前・事前承認の結果・証券会社やカード・実際の金額を
+  書かない（個人の事情は `seed.json` から読む。ビルドの `PRIVATE_TEXT` が止める）。
+  cxelegy.github.io の下の Pages サイトはすべて同じ保存領域（localStorage）を共有するので、このアカウントで
+  他の Pages サイト（特に外部のスクリプトを読むもの）を公開しない。気になるなら金額の入力は claude.ai 版で行う。
 - **独立性（independence）が最優先。** 購入可と記録されていない銘柄について配分を勧めない。
   このツールは制限対象かどうかを判定しない。判定の正は DESC と Independence & Conflicts Network。
   記録には、ユーザーが報告した結果だけを転記する。推測で `clear` や `approved` を書かない。

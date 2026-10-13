@@ -8,6 +8,7 @@ config/holdings.derived.yaml
 # 生成物・キャッシュ
 data/
 reports/
+_site/
 
 # Python
 __pycache__/

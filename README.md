@@ -148,9 +148,54 @@ DCF（3 シナリオ・確率加重・感応度表、銘柄ごとの必要な利
 
 - 株価や為替は取得しない（評価額を手入力する）。Python 版の相関・リスク指標は出ない
 - ブラウザのデータを消すと入力も消える。ページ下部の「バックアップ」をメモに控えておく
-- Claude Code の Artifact として公開して使う。単体の HTML ではなく、公開時に枠が付く断片
+- Claude Code の Artifact として公開して使う。単体の HTML ではなく、公開時に枠が付く断片。
+  GitHub Pages では `tools/build_site.py` が完全な HTML に組み立てて公開する（次の節）
+- タブは道筋・ファンド分析・家計の入力・台帳・攻め口座・市場の参考と、**13F を写す**（「NVIDIA の 13F を写せ」を
+  開示後に写した場合で検証した結果。下の「開示後に写した場合の検証」の数字を `web/copycheck.json` から表示する）
 
-### 著名投資家の動向（同じページの「著名投資家の動向」タブ）
+### GitHub Pages で開く
+
+同じページを **https://cxelegy.github.io/JevInvest/** で開ける。
+
+- **インターネット全体に公開される。** リポジトリは非公開でも、Pages のサイトは URL を知っている人なら誰でも見られる。
+  `noindex` で検索に出さないようにしているだけで、アクセス制限ではない
+- 公開されるのは、ページと `tools/build_site.py` の許可リストにある JSON（`investors.json` `evidence.json`
+  `strategy.json` `deepdive.json` `copycheck.json`）だけ。選んだファンドと比率、ページの文面（勤務先に独立性の
+  規則があること、使い方の例など）、13F の集計、検証の結果は誰でも見られる。入力した金額はブラウザ内にだけあるので
+  公開されない。ページの先頭に「個人の記録と検証で、投資助言ではない」と出す
+- `seed.json`（個人の明細）は許可リストに入れない。`web/` にあってもビルドが公開せず、コミットもしない（.gitignore 済み）。
+  `serenity_history.json` もページが読まない（投稿の抜粋と持ち分の比率が入っている）ので公開しない
+- **ページの文面に個人の事情を書かない。** `web/ledger.html` は claude.ai の Artifact と同じファイルなので、年齢・
+  勤務先の社内の仕組みの名前（DESC・GIMS など）・事前承認が通った／通らなかった運用会社・使っている証券会社とカード・
+  実際の金額は文面に書かず、公開しない `seed.json`（`profile` と `clearance`）から読む。ビルドは
+  `PRIVATE_TEXT` に当たる文面がページか JSON にあると止まる
+
+最初の 1 回だけ: Settings → Pages → Build and deployment → Source を **GitHub Actions** にする
+（非公開リポジトリの Pages は GitHub Pro が必要）。そのあと main にマージするか、Actions の「GitHub Pages」を
+Run workflow で手動実行する。
+
+更新するときは、いつもの手順で `web/*.json` を作り直してコミットし、main にマージすると自動で公開し直す
+（`.github/workflows/pages.yml`。`web/` か `tools/build_site.py` が変わったときだけ動く）。Actions では `--strict` で
+組み立てるので、許可リストの JSON が 1 つでもコミットされていないと公開しない（`web/copycheck.json` もコミットする）。
+新しい 13F が出たら、`tools/backtest_13f_copy.py` で SEC から取り直したあと、次で `web/copycheck.json` を作る。
+
+```bash
+python tools/backtest_13f_copy.py --no-fetch --web web/copycheck.json
+python tools/build_site.py --strict && python -m http.server -d _site    # 手元で確かめる → http://localhost:8000/
+```
+
+**入力したデータは github.io 版には出てこない。** ブラウザの保存領域（localStorage）はサイト（オリジン）ごとに
+分かれるので、claude.ai の Artifact 版で入れた数字は github.io 版では空になる（逆も同じ）。台帳タブの
+「バックアップと復元」でコピーして、もう一方に貼れば移せる。ただし移せるのは台帳タブの入力だけで、家計の入力・明細・
+攻め口座の入力は移す機能が無いので、github.io 版で入れ直す。
+
+**cxelegy.github.io の下の Pages サイトは、すべて同じ保存領域を共有する。** `https://cxelegy.github.io/JevInvest/` と
+`https://cxelegy.github.io/<別のリポジトリ>/` は同じオリジンなので、このアカウントで公開した別の Pages サイトの
+スクリプトは、ここで入れた金額（`jevinvest.*` のキー）を読める。このアカウントで他の Pages サイト（特に外部の
+スクリプトを読むもの）を公開しない。気になるなら、金額の入力は claude.ai の Artifact 版で行う
+（リポジトリごとに独自のサブドメインを割り当てれば分けられる）。
+
+### 著名投資家の動向（同じページの「市場の参考」タブ）
 
 SEC の 13F（四半期ごとの保有報告）から、バフェットなど約 40 人・社について
 **投資家ごとの注目分野（業種の比率と前期比）・上位 10 銘柄・新規購入・全売却**と、
@@ -387,6 +432,44 @@ CUSIP は一意なのでこれらが全部消える。結果は SQLite にキャ
 | **クオンツが票を独占** | 数千銘柄持つ運用会社が全銘柄に票を入れ、breadth 集計が大型株一覧になる | 50 銘柄以下の「選別型」に絞った集計を別に出す |
 | **NaN は Python では真値** | `if not name` で NaN を弾けず `str(nan)` = `"NAN"` になり、**未解決の CUSIP 78 件が「NAN」という 1 社にまとまって「保有者 41 社」という実在しない銘柄が首位に出た** | `pd.isna()` で明示的に判定。`fillna(Series)` に頼らず内包表記で組む |
 | **shareClassFIGI は会社 ID ではない** | 株式クラスの識別子なので GOOGL と GOOG で別値になり、議決権クラスがまとまらない | FIGI の標準化された名称からクラス表記（`-CL A` 等）を落としてまとめる |
+
+### 開示後に写した場合の検証（`tools/backtest_13f_copy.py`）
+
+「〇〇の 13F を写せ」が、**開示を見てから動く個人に実際に取れたか**を測る。13F は四半期末の保有を
+最大 45 日後に開示するので、報告日から開示までの値動きと、開示直後の急騰（開示ポップ）は
+フォロワーには取れない。その遅れを入れたリターンと、取れなかった分を別々に出す。
+
+```bash
+export SEC_USER_AGENT="JevInvest research you@example.com"
+python tools/backtest_13f_copy.py                        # 既定は NVIDIA（CIK 1045810）
+python tools/backtest_13f_copy.py --cik 1067983 --name Berkshire --cost-bps 0 50 100
+python tools/backtest_13f_copy.py --entry same           # 提出日の終値で買えた楽観ケース
+python tools/backtest_13f_copy.py --no-fetch             # SEC に行かずキャッシュだけで計算
+# → reports/13f_copy_<cik>.md と data/13f_copy_<cik>.json
+python tools/backtest_13f_copy.py --no-fetch --web web/copycheck.json   # ページの「13F を写す」タブ用（GitHub Pages で公開される）
+```
+
+- **先読みしない。** 既定のエントリーは提出日の翌営業日の終値（13F の受理はほとんど引け後）。
+  出口は次の提出のエントリー日。`--entry accepted` は EDGAR の受理時刻が 16:00 ET より前なら当日の終値。
+  四半期末に組み替えられたとする「実行不可能な参考値」も並べて出し、遅れのコストの目安にする
+- 時価加重（13F の金額比）と等金額、片道コスト（既定 0bp と 50bp、売買した金額に掛ける）、
+  SPY・QQQ・SMH・NVDA・ACWI を同じ日付の範囲で買って持った場合と比べる。ドル建てと円建て（JPY=X）
+- **黙って直さない。** エントリー日に価格の無い銘柄・店頭（OTC）銘柄・ティッカー未解決の CUSIP は、
+  除外して残りで按分し、期ごとに 13F 上の比率つきで一覧する。期中に取引が途絶えた銘柄は最後の終値で
+  据え置き、その旨を書く。プット・コールは写さず別に一覧する
+- 出すもの: 総リターン・年率・ボラ・最大下落（日付つき）・最悪の期・マイナスの期の数、
+  **リスク当たりのリターン（年率÷ボラ、年率÷最大下落）**、ベンチマークに勝った期の数と、最も良かった
+  1 期を除いた結果、期ごとの表、報告日→エントリーの値動き、新規銘柄の開示ポップとその後、
+  銘柄ごとの保有中の最大下落と寄与、NISA 成長投資枠の消費（年ごとの買付額）。
+  総リターンの差が 3pt 未満・コスト次第で逆転するベンチマークは「ほぼ同じ」と書く
+- 感度: エントリーの仮定（翌営業日・受理直後・提出日・報告日）と、組み入れ比率（13F の金額・
+  13F の株数×エントリー日株価・等金額）、店頭銘柄を買えたことにした場合
+- 受理時刻は各提出の `-index-headers.html` の `ACCEPTANCE-DATETIME`（米東部）。submissions JSON の
+  `acceptanceDateTime` は 4〜5 時間ずれることがあるので、ヘッダーが取れない時だけ、つじつまが合う場合に使う。
+  開示ポップは開示前の最後の終値（受理が 16:00 ET 以降なら受理日の終値）から測る
+- 最後の足が場中のものかどうかは、実行時刻ではなく価格の取得時刻（キャッシュの記録）で判定する
+- NVIDIA のような事業会社の 13F は戦略的な出資が中心なので、`config/investors.yaml` には入れない
+  （著名投資家の集計を歪める）。この検証は単独で回す
 
 ### 13F の限界（レポート冒頭にも明記してある）
 
