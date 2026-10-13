@@ -138,7 +138,7 @@ def load_state() -> dict:
 def save_state(st: dict) -> None:
     out = dict(st)
     out["books"] = {n: b.to_dict() for n, b in st["books"].items()}
-    out["updated_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    out["updated_at"] = st["updated_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
     STATE.write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")
 
 
