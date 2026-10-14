@@ -104,9 +104,11 @@ button.danger { color: var(--crit); border-color: var(--crit); }
 #toast.on { opacity: 1; }
 @media (prefers-reduced-motion: reduce) { #toast { transition: none; } }
 /* tabs */
-.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+/* 横スクロールにすると、スマホでは右の方のタブ（13F を写す など）があることに気づけない。折り返して全部見せる */
+.tabs { display: flex; flex-wrap: wrap; gap: 0 4px; border-bottom: 1px solid var(--line); }
 .tabs button { border: 0; border-bottom: 3px solid transparent; border-radius: 0; background: transparent; color: var(--muted); padding: 10px 12px; min-height: 44px; font-weight: 500; }
 .tabs button[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); font-weight: 700; }
+@media (max-width: 520px) { .tabs button { padding: 8px 9px; } }
 .view { display: flex; flex-direction: column; gap: 18px; }
 /* investors */
 .asof { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
