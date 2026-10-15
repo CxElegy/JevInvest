@@ -1,0 +1,221 @@
+<title>JevInvest 構成図</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* 文字のない構成図: 4 つの色の帯（入力・計算・出力・判断）、アイコン、流れる線。名前はアイコンに触れたときだけ出る */
+:root {
+  --bg: #f3f5f4;
+  --ink: #1f2b26;
+  --faint: #c9d3ce;
+  --in: #8a6d3b;   --in-t: #efe6d6;
+  --calc: #1d6a93; --calc-t: #dcebf3;
+  --out: #1f8a54;  --out-t: #dcf0e4;
+  --you: #b06f00;  --you-t: #f6e8cf;
+  --loop: #d9572b;
+  --tile: #ffffff;
+  --rail: #e4eae7;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1412; --ink: #dfe7e3; --faint: #34403b;
+    --in: #d5b77f; --in-t: #2a241a; --calc: #6fbbe0; --calc-t: #14283a;
+    --out: #5fcf95; --out-t: #12291f; --you: #f0b443; --you-t: #2e2412;
+    --loop: #ff8a5c; --tile: #18201d; --rail: #18201d;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1412; --ink: #dfe7e3; --faint: #34403b;
+  --in: #d5b77f; --in-t: #2a241a; --calc: #6fbbe0; --calc-t: #14283a;
+  --out: #5fcf95; --out-t: #12291f; --you: #f0b443; --you-t: #2e2412;
+  --loop: #ff8a5c; --tile: #18201d; --rail: #18201d;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--ink); margin: 0; }
+.stage { min-height: 100%; display: grid; place-items: center; padding-block: 20px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); box-sizing: border-box; }
+figure { margin: 0; width: 100%; max-width: 1280px; }
+svg { display: block; width: 100%; height: auto; }
+#wide { display: block; } #tall { display: none; }
+@media (max-width: 700px) { #wide { display: none; } #tall { display: block; max-width: 460px; margin: 0 auto; } }
+.zone { stroke: none; }
+.tile { fill: var(--tile); stroke-width: 2; }
+.ico { fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.ico .f { fill: currentColor; stroke: none; }
+.edge { fill: none; stroke-width: 2.4; stroke-linecap: round; opacity: .55; stroke-dasharray: 2 9; animation: flow 1.6s linear infinite; }
+.edge.thin { stroke-width: 1.8; opacity: .4; }
+.loop { fill: none; stroke: var(--loop); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 10 8; animation: flow 1.2s linear infinite; opacity: .9; }
+.big-arrow { fill: none; stroke: var(--faint); stroke-width: 10; stroke-linecap: round; }
+.node { cursor: default; }
+.node:hover .tile, .node:focus .tile { stroke-width: 3.5; }
+.node:focus { outline: none; }
+.rail { fill: var(--rail); }
+@keyframes flow { to { stroke-dashoffset: -22; } }
+@media (prefers-reduced-motion: reduce) { .edge, .loop { animation: none; } }
+</style>
+
+<div class="stage">
+  <figure>
+    <svg id="wide" viewBox="0 0 1240 820" role="img" aria-label="データは左の入力から計算、出力を通って右の判断へ流れる。橙の輪は毎朝の自動処理。下の帯は守っていること。"></svg>
+    <svg id="tall" viewBox="0 0 420 1420" role="img" aria-label="データは上の入力から計算、出力を通って下の判断へ流れる。橙の線は毎朝の自動処理。"></svg>
+  </figure>
+</div>
+
+<script>
+// ---- アイコン（48×48 の線画）
+const ICON = {
+  tray: '<path d="M8 28v10h32V28"/><path d="M24 8v20M16 21l8 8 8-8"/>',
+  ledger: '<rect x="9" y="7" width="24" height="33" rx="2"/><path d="M14 7v33M18 15h10M18 21h10"/><rect x="27" y="29" width="13" height="11" rx="2"/><path d="M30 29v-3a3.5 3.5 0 0 1 7 0v3"/>',
+  sheet: '<rect x="8" y="8" width="32" height="32" rx="3"/><path d="M8 18h32M8 28h32M19 8v32M30 8v32"/>',
+  candles: '<path d="M8 41h32"/><path d="M14 9v28"/><rect x="11" y="16" width="6" height="13" rx="1" class="f"/><path d="M24 7v26"/><rect x="21" y="11" width="6" height="15" rx="1"/><path d="M34 13v26"/><rect x="31" y="19" width="6" height="12" rx="1" class="f"/>',
+  pillars: '<path d="M6 18L24 8l18 10Z"/><path d="M11 22v13M19 22v13M29 22v13M37 22v13M8 36h32M6 41h36"/>',
+  bubble: '<path d="M8 11h32v21H23l-8 7v-7H8Z"/><circle cx="17" cy="21.5" r="1.9" class="f"/><circle cx="24" cy="21.5" r="1.9" class="f"/><circle cx="31" cy="21.5" r="1.9" class="f"/>',
+  scroll: '<path d="M12 7h20v34H12Z"/><path d="M17 15h10M17 21h10M17 27h6"/><circle cx="32" cy="35" r="6"/><path d="M29 40l-1 6 4-2 4 2-1-6"/>',
+  gear: '',
+  plan: '<rect x="7" y="11" width="26" height="26" rx="2"/><path d="M13 7v8M27 7v8M7 19h26"/><circle cx="35" cy="34" r="8"/><path d="M35 30v8"/>',
+  shield: '<path d="M24 6l14 5v11c0 9-6 15-14 19-8-4-14-10-14-19V11Z"/><path d="M17 23l5 5 9-10"/>',
+  percent: '<circle cx="24" cy="24" r="16"/><path d="M17 31l14-14"/><circle cx="18.5" cy="18.5" r="2.6"/><circle cx="29.5" cy="29.5" r="2.6"/>',
+  drop: '<path d="M8 8v32h32"/><path d="M12 14l8 7 6-4 11 14"/><path d="M31 31h6v-6"/>',
+  twins: '',
+  flask: '<path d="M19 7h10M21 7v12L11 37a3 3 0 0 0 3 4h20a3 3 0 0 0 3-4L27 19V7"/><path d="M15 31h18"/><circle cx="21" cy="35" r="1.6" class="f"/><circle cx="27" cy="36.5" r="1.3" class="f"/>',
+  doclock: '<path d="M10 6h17l8 8v27H10Z"/><path d="M27 6v8h8M15 18h10M15 24h14"/><rect x="25" y="30" width="14" height="11" rx="2"/><path d="M28 30v-3a4 4 0 0 1 8 0v3"/>',
+  winpic: '<rect x="6" y="9" width="36" height="30" rx="3"/><path d="M6 16h36"/><circle cx="10.5" cy="12.5" r="1" class="f"/><circle cx="14.5" cy="12.5" r="1" class="f"/><path d="M11 34l8-9 6 6 4-4 7 7"/><circle cx="32" cy="22" r="2.5"/>',
+  winchart: '<rect x="6" y="9" width="36" height="30" rx="3"/><path d="M6 16h36"/><circle cx="10.5" cy="12.5" r="1" class="f"/><circle cx="14.5" cy="12.5" r="1" class="f"/><path d="M11 33l7-6 6 3 7-9 6 2"/>',
+  winlock: '<rect x="6" y="9" width="36" height="30" rx="3"/><path d="M6 16h36"/><circle cx="10.5" cy="12.5" r="1" class="f"/><circle cx="14.5" cy="12.5" r="1" class="f"/><rect x="18" y="25" width="12" height="10" rx="2"/><path d="M21 25v-3a3 3 0 0 1 6 0v3"/>',
+  coins: '<ellipse cx="19" cy="36" rx="11" ry="4"/><path d="M8 36v-5c0 2.2 5 4 11 4s11-1.8 11-4v5"/><ellipse cx="19" cy="26" rx="11" ry="4"/><path d="M8 26v5M30 26v5"/><circle cx="35" cy="15" r="8"/><path d="M35 11v4l3 2"/>',
+  books: '<rect x="8" y="12" width="8" height="28" rx="1"/><rect x="18" y="8" width="8" height="32" rx="1"/><path d="M29 14l7-2 6 27-7 2Z"/><path d="M6 41h36"/>',
+  spark: '<path d="M24 5c2 10 8 16 19 19-11 3-17 9-19 19-2-10-8-16-19-19 11-3 17-9 19-19Z"/>',
+  person: '<circle cx="24" cy="15" r="7.5"/><path d="M9 42c0-9 7-15 15-15s15 6 15 15"/>',
+  bank: '<path d="M6 18L24 8l18 10Z"/><path d="M11 22v13M19 22v13M29 22v13M37 22v13M6 40h36"/><circle cx="24" cy="15" r="2.4" class="f"/>',
+  clock: '<circle cx="24" cy="24" r="16"/><path d="M24 14v10l7 5"/><path d="M8 10l5 1-1 5M40 10l-5 1 1 5"/>',
+  phone: '<rect x="14" y="5" width="20" height="38" rx="4"/><path d="M21 37h6"/><path d="M38 14a9 9 0 0 1 0 13M42 10a15 15 0 0 1 0 21"/>',
+  lock: '<rect x="10" y="21" width="28" height="21" rx="4"/><path d="M16 21v-6a8 8 0 0 1 16 0v6"/><circle cx="24" cy="31" r="2.5" class="f"/>',
+  warn: '<path d="M24 7l18 32H6Z"/><path d="M24 19v10"/><circle cx="24" cy="34" r="1.8" class="f"/>',
+  nocart: '<path d="M7 10h5l5 20h18l4-14H15"/><circle cx="19" cy="37" r="2.5"/><circle cx="33" cy="37" r="2.5"/><circle cx="24" cy="24" r="19"/><path d="M11 37L37 11"/>',
+};
+function gearPath(cx, cy, r, teeth, depth) {
+  let d = "";
+  for (let i = 0; i < teeth * 2; i++) {
+    const a0 = (i / (teeth * 2)) * Math.PI * 2, a1 = ((i + 1) / (teeth * 2)) * Math.PI * 2;
+    const rr = i % 2 ? r : r + depth;
+    const p = a => `${(cx + rr * Math.cos(a)).toFixed(1)} ${(cy + rr * Math.sin(a)).toFixed(1)}`;
+    d += (i ? "L" : "M") + p(a0) + "L" + p(a1);
+  }
+  return `<path d="${d}Z"/>`;
+}
+ICON.gear = gearPath(24, 24, 13, 9, 4) + '<circle cx="24" cy="24" r="5"/>';
+ICON.twins = gearPath(16, 20, 8, 7, 3) + '<circle cx="16" cy="20" r="2.5"/>' + gearPath(32, 30, 8, 7, 3) + '<circle cx="32" cy="30" r="2.5"/>';
+
+const Z = { in: "var(--in)", calc: "var(--calc)", out: "var(--out)", you: "var(--you)" };
+// 名前はアイコンに触れたときだけ（title）
+const NODES = {
+  ledger: ["in", "ledger", "本人の台帳（PC の中だけ）"], csv: ["in", "sheet", "証券会社の CSV"], market: ["in", "candles", "Yahoo Finance の価格・為替"],
+  sec: ["in", "pillars", "SEC の 13F（著名投資家）"], social: ["in", "bubble", "X の投稿"], pub: ["in", "scroll", "国税庁・日銀などの資料"],
+  engine: ["calc", "gear", "本体: 台帳 → 評価 → 配分・リスク"], plan: ["calc", "plan", "積立計画・今月の振り分け"], guard: ["calc", "shield", "売買前の点検・独立性"],
+  risk: ["calc", "drop", "急落の当てはめ・成績の振り返り"], sim: ["calc", "twins", "模擬売買エンジン（Python と JS で同じ数字）"], tax: ["calc", "percent", "税: iDeCo・ふるさと納税・損出し"],
+  lab: ["calc", "flask", "実データの実験"],
+  report: ["out", "doclock", "レポート（PC の中だけ）"], overview: ["out", "winpic", "説明ページ"], simulator: ["out", "winchart", "シミュレーター"],
+  ledgerpage: ["out", "winlock", "台帳ページ（金額はブラウザの中だけ）"], paper: ["out", "coins", "ペーパートレード 19 口座"],
+  claude: ["you", "spark", "Claude が読み解く"], you: ["you", "person", "本人が決める"], plandoc: ["you", "books", "決めたことの記録"],
+  gate: ["you", "shield", "独立性の確認（DESC・事前承認）"], broker: ["you", "bank", "証券会社で本人が売買（ツールは発注しない）"],
+  clock: ["loop", "clock", "毎朝 7:07 の自動処理"], phone: ["loop", "phone", "スマホに通知"],
+};
+const EDGES = [
+  ["ledger", "engine"], ["csv", "engine"], ["market", "engine"], ["market", "sim"], ["market", "lab"], ["pub", "tax"],
+  ["sec", "ledgerpage", "low"], ["social", "claude", "lower"],
+  ["engine", "plan", "thin"], ["engine", "guard", "thin"], ["engine", "risk", "thin"], ["engine", "tax", "thin"],
+  ["engine", "report"], ["sim", "simulator"], ["lab", "simulator"], ["lab", "overview"], ["sim", "paper"],
+  ["report", "claude"], ["ledgerpage", "claude"], ["overview", "you"], ["simulator", "you"], ["claude", "you"],
+  ["you", "plandoc", "thin"], ["you", "gate"], ["gate", "broker"],
+];
+const GUARDS = [["shield", "独立性が最優先"], ["lock", "金額はコミットしない"], ["warn", "取れない価格は 0 円にしない"], ["nocart", "実発注しない"]];
+
+function tile(id, x, y, s) {
+  const [zone, icon, tip] = NODES[id];
+  const col = zone === "loop" ? "var(--loop)" : Z[zone];
+  const k = (s * 0.62) / 48, o = s / 2;
+  return `<g class="node" tabindex="0" transform="translate(${x} ${y})" style="color:${col}"><title>${tip}</title>` +
+    `<rect class="tile" x="${-o}" y="${-o}" width="${s}" height="${s}" rx="${s * 0.26}" stroke="${col}"/>` +
+    `<g class="ico" transform="translate(${-24 * k} ${-24 * k}) scale(${k})">${ICON[icon]}</g></g>`;
+}
+function header(icon, x, y, col) {
+  return `<g class="ico" style="color:${col}" opacity=".85" transform="translate(${x - 18} ${y - 18}) scale(.75)">${ICON[icon]}</g>`;
+}
+function curve(a, b, mode, P, size) {
+  const [x1, y1] = P[a], [x2, y2] = P[b];
+  const sa = (size[a] || 64) / 2, sb = (size[b] || 64) / 2;
+  if (mode === "low" || mode === "lower") {      // 下を回る長い線
+    const yy = mode === "low" ? 700 : 718;
+    return `M${x1 + sa} ${y1} C${x1 + 140} ${y1}, ${x1 + 80} ${yy}, ${x1 + 260} ${yy} L${x2 - 180} ${yy} C${x2 - 60} ${yy}, ${x2 - 140} ${y2}, ${x2 - sb} ${y2}`;
+  }
+  if (Math.abs(x1 - x2) < 40) {                  // 縦に並ぶもの
+    const dir = y2 > y1 ? 1 : -1;
+    return `M${x1} ${y1 + dir * sa} L${x2} ${y2 - dir * sb}`;
+  }
+  const sx = x1 + (x2 > x1 ? sa : -sa), ex = x2 - (x2 > x1 ? sb : -sb), m = (sx + ex) / 2;
+  return `M${sx} ${y1} C${m} ${y1}, ${m} ${y2}, ${ex} ${y2}`;
+}
+function zoneColor(id) { const z = NODES[id][0]; return z === "loop" ? "var(--loop)" : Z[z]; }
+
+function drawWide() {
+  const P = {
+    ledger: [130, 130], csv: [130, 235], market: [130, 340], sec: [130, 445], social: [130, 550], pub: [130, 640],
+    engine: [470, 140], plan: [400, 290], guard: [540, 290], risk: [400, 410], sim: [540, 410], tax: [400, 530], lab: [540, 530],
+    report: [805, 140], overview: [805, 260], simulator: [805, 380], ledgerpage: [805, 500], paper: [805, 615],
+    claude: [1085, 150], you: [1085, 330], plandoc: [1185, 330], gate: [1085, 480], broker: [1085, 615],
+    clock: [665, 52], phone: [1185, 200],
+  };
+  const S = { engine: 92, clock: 56, phone: 56, plandoc: 56 };
+  let g = "";
+  // 帯
+  const zones = [["in", 30, 200], ["calc", 300, 340], ["out", 690, 230], ["you", 960, 260]];
+  for (const [z, x, w] of zones) g += `<rect class="zone" x="${x}" y="70" width="${w}" height="600" rx="28" style="fill:var(--${z}-t)"/>`;
+  g += header("tray", 130, 40, Z.in) + header("gear", 470, 40, Z.calc) + header("winpic", 805, 40, Z.out) + header("person", 1085, 40, Z.you);
+  // 線
+  for (const [a, b, mode] of EDGES) g += `<path class="edge${mode === "thin" ? " thin" : ""}" d="${curve(a, b, mode, P, S)}" stroke="${zoneColor(a)}"/>`;
+  // 毎朝の輪: 時計 → 模擬売買 → ペーパートレード → 説明ページ → スマホ → 本人
+  for (const d of ["M665 82 C665 250, 640 340, 574 398", "M574 424 C680 470, 720 600, 771 612",
+                   "M839 615 C908 615, 908 262, 839 262", "M839 250 C960 236, 1080 204, 1155 200",
+                   "M1185 230 C1185 296, 1140 300, 1119 318"]) g += `<path class="loop" d="${d}"/>`;
+  // ノード
+  for (const id of Object.keys(P)) g += tile(id, P[id][0], P[id][1], S[id] || 64);
+  // 守ること
+  g += `<rect class="rail" x="30" y="750" width="1180" height="58" rx="18"/>`;
+  GUARDS.forEach(([icon, tip], i) => {
+    const x = 180 + i * 295;
+    g += `<g class="node" tabindex="0" style="color:var(--ink)" transform="translate(${x - 18} ${761}) scale(.75)"><title>${tip}</title><g class="ico">${ICON[icon]}</g></g>`;
+  });
+  document.getElementById("wide").innerHTML = g;
+}
+
+function drawTall() {
+  // 縦: 入力（3×2）→ 計算（本体 + 3×2）→ 出力（3×2）→ 判断（2 段）
+  const P = {
+    ledger: [80, 110], csv: [210, 110], market: [340, 110], sec: [80, 210], social: [210, 210], pub: [340, 210],
+    engine: [210, 360], plan: [80, 470], guard: [210, 470], risk: [340, 470], sim: [80, 570], tax: [210, 570], lab: [340, 570],
+    report: [80, 730], overview: [210, 730], simulator: [340, 730], ledgerpage: [80, 830], paper: [210, 830],
+    claude: [80, 990], you: [210, 990], plandoc: [340, 990], gate: [210, 1100], broker: [210, 1210],
+    clock: [340, 830], phone: [340, 1100],
+  };
+  const S = { engine: 84, clock: 60, phone: 56, plandoc: 56 };
+  let g = "";
+  const zones = [["in", 40, 300, "tray"], ["calc", 300, 330, "gear"], ["out", 670, 220, "winpic"], ["you", 930, 330, "person"]];
+  for (const [z, y, h, icon] of zones) g += `<rect class="zone" x="16" y="${y + 12}" width="388" height="${h - 30}" rx="26" style="fill:var(--${z}-t)"/>` + header(icon, 34 + 2, y, Z[z]);
+  // 帯から帯への太い矢印
+  for (const [y1, y2] of [[285, 320], [612, 688], [882, 948]]) g += `<path class="big-arrow" d="M210 ${y1} L210 ${y2}"/><path d="M198 ${y2 - 8} L210 ${y2 + 6} L222 ${y2 - 8}" fill="none" stroke="var(--faint)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>`;
+  // 本体からの線
+  for (const b of ["plan", "guard", "risk"]) g += `<path class="edge thin" d="M${P.engine[0]} ${P.engine[1] + 42} L${P[b][0]} ${P[b][1] - 32}" stroke="var(--calc)"/>`;
+  g += `<path class="edge" d="M210 1022 L210 1068" stroke="var(--you)"/><path class="edge" d="M210 1132 L210 1178" stroke="var(--you)"/>`;
+  g += `<path class="edge" d="M112 990 L178 990" stroke="var(--you)"/><path class="edge thin" d="M242 990 L312 990" stroke="var(--you)"/>`;
+  // 毎朝の輪（右端を縦に走る）
+  g += `<path class="loop" d="M340 862 C380 900, 380 1040, 340 1072"/><path class="loop" d="M310 1100 C280 1060, 250 1040, 236 1020"/><path class="loop" d="M308 830 L242 830"/><path class="loop" d="M210 800 L210 762"/>`;
+  for (const id of Object.keys(P)) g += tile(id, P[id][0], P[id][1], S[id] || 64);
+  g += `<rect class="rail" x="16" y="1290" width="388" height="100" rx="22"/>`;
+  GUARDS.forEach(([icon, tip], i) => {
+    const x = 66 + i * 96;
+    g += `<g class="node" tabindex="0" style="color:var(--ink)" transform="translate(${x - 20} ${1320}) scale(.85)"><title>${tip}</title><g class="ico">${ICON[icon]}</g></g>`;
+  });
+  document.getElementById("tall").innerHTML = g;
+}
+drawWide();
+drawTall();
+</script>

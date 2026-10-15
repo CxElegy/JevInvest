@@ -90,6 +90,7 @@ META = {
     "web/simulator.html": ("page", "シミュレーター（中国語）の雛形"),
     "web/ledger.html": ("page", "台帳ページ。金額はブラウザの中だけに保存し、比率だけを Claude に渡す"),
     "web/project_map.html": ("page", "このページの雛形"),
+    "web/architecture.html": ("page", "文字のない構成図（アイコンと色と流れだけ。名前は触れたときに出る）"),
     "tools/estimate_cost.py": ("jev", "Jev を使った場合のコストの見積り"),
     "tools/install_skills.sh": ("setup", "他の AI 投資ツール 16 個を読むために取得する（評価は docs/TOOLS.md）"),
     "tools/install_x_timeline.sh": ("setup", "X の投稿を取り込む道具を入れる"),
