@@ -49,6 +49,8 @@ svg { display: block; width: 100%; height: auto; }
 .node:hover .tile, .node:focus .tile { stroke-width: 3.5; }
 .node:focus { outline: none; }
 .rail { fill: var(--rail); }
+.lbl { font: 600 12.5px/1 system-ui, -apple-system, "Segoe UI", "Hiragino Sans", sans-serif; fill: var(--ink); opacity: .82; }
+.zl { font: 700 13px/1 system-ui, -apple-system, "Segoe UI", sans-serif; letter-spacing: .16em; }
 @keyframes flow { to { stroke-dashoffset: -22; } }
 @media (prefers-reduced-motion: reduce) { .edge, .loop { animation: none; } }
 </style>
@@ -119,6 +121,14 @@ const NODES = {
   gate: ["you", "shield", "独立性の確認（DESC・事前承認）"], broker: ["you", "bank", "証券会社で本人が売買（ツールは発注しない）"],
   clock: ["loop", "clock", "毎朝 7:07 の自動処理"], phone: ["loop", "phone", "スマホに通知"],
 };
+// 図に出す短い言葉
+const LABEL = {
+  ledger: "My ledger", csv: "Broker CSV", market: "Prices", sec: "Big funds", social: "X posts", pub: "Gov data",
+  engine: "Core", plan: "Plan", guard: "Check", risk: "Risk", sim: "Sim engine", tax: "Tax", lab: "Lab",
+  report: "Report", overview: "Summary", simulator: "Simulator", ledgerpage: "Ledger page", paper: "Paper trade",
+  claude: "Claude", you: "You", plandoc: "Decisions", gate: "Approval", broker: "Broker",
+  clock: "Daily 7:07", phone: "Alert",
+};
 const EDGES = [
   ["ledger", "engine"], ["csv", "engine"], ["market", "engine"], ["market", "sim"], ["market", "lab"], ["pub", "tax"],
   ["sec", "ledgerpage", "low"], ["social", "claude", "lower"],
@@ -127,18 +137,23 @@ const EDGES = [
   ["report", "claude"], ["ledgerpage", "claude"], ["overview", "you"], ["simulator", "you"], ["claude", "you"],
   ["you", "plandoc", "thin"], ["you", "gate"], ["gate", "broker"],
 ];
-const GUARDS = [["shield", "独立性が最優先"], ["lock", "金額はコミットしない"], ["warn", "取れない価格は 0 円にしない"], ["nocart", "実発注しない"]];
+const GUARDS = [["shield", "独立性が最優先", "Approval first", "Approval"], ["lock", "金額はコミットしない", "Amounts stay private", "Private"],
+                ["warn", "取れない価格は 0 円にしない", "No fake zeros", "No fake 0"], ["nocart", "実発注しない", "No auto orders", "No orders"]];
 
-function tile(id, x, y, s) {
+function tile(id, x, y, s, lp) {
   const [zone, icon, tip] = NODES[id];
   const col = zone === "loop" ? "var(--loop)" : Z[zone];
   const k = (s * 0.62) / 48, o = s / 2;
   return `<g class="node" tabindex="0" transform="translate(${x} ${y})" style="color:${col}"><title>${tip}</title>` +
     `<rect class="tile" x="${-o}" y="${-o}" width="${s}" height="${s}" rx="${s * 0.26}" stroke="${col}"/>` +
-    `<g class="ico" transform="translate(${-24 * k} ${-24 * k}) scale(${k})">${ICON[icon]}</g></g>`;
+    `<g class="ico" transform="translate(${-24 * k} ${-24 * k}) scale(${k})">${ICON[icon]}</g>` +
+    (lp === "left" ? `<text class="lbl" x="${-o - 8}" y="5" text-anchor="end">${LABEL[id]}</text>`
+      : lp === "above" ? `<text class="lbl" x="0" y="${-o - 8}" text-anchor="middle">${LABEL[id]}</text>`
+      : `<text class="lbl" x="0" y="${o + 16}" text-anchor="middle">${LABEL[id]}</text>`) + `</g>`;
 }
-function header(icon, x, y, col) {
-  return `<g class="ico" style="color:${col}" opacity=".85" transform="translate(${x - 18} ${y - 18}) scale(.75)">${ICON[icon]}</g>`;
+function header(icon, x, y, col, word) {
+  return `<g class="ico" style="color:${col}" opacity=".85" transform="translate(${x - 18} ${y - 18}) scale(.75)">${ICON[icon]}</g>` +
+    `<text class="zl" x="${x + 24}" y="${y + 5}" style="fill:${col}">${word}</text>`;
 }
 function curve(a, b, mode, P, size) {
   const [x1, y1] = P[a], [x2, y2] = P[b];
@@ -169,7 +184,7 @@ function drawWide() {
   // 帯
   const zones = [["in", 30, 200], ["calc", 300, 340], ["out", 690, 230], ["you", 960, 260]];
   for (const [z, x, w] of zones) g += `<rect class="zone" x="${x}" y="70" width="${w}" height="600" rx="28" style="fill:var(--${z}-t)"/>`;
-  g += header("tray", 130, 40, Z.in) + header("gear", 470, 40, Z.calc) + header("winpic", 805, 40, Z.out) + header("person", 1085, 40, Z.you);
+  g += header("tray", 95, 40, Z.in, "INPUT") + header("gear", 420, 40, Z.calc, "COMPUTE") + header("winpic", 770, 40, Z.out, "OUTPUT") + header("person", 1050, 40, Z.you, "DECIDE");
   // 線
   for (const [a, b, mode] of EDGES) g += `<path class="edge${mode === "thin" ? " thin" : ""}" d="${curve(a, b, mode, P, S)}" stroke="${zoneColor(a)}"/>`;
   // 毎朝の輪: 時計 → 模擬売買 → ペーパートレード → 説明ページ → スマホ → 本人
@@ -177,12 +192,13 @@ function drawWide() {
                    "M839 615 C908 615, 908 262, 839 262", "M839 250 C960 236, 1080 204, 1155 200",
                    "M1185 230 C1185 296, 1140 300, 1119 318"]) g += `<path class="loop" d="${d}"/>`;
   // ノード
-  for (const id of Object.keys(P)) g += tile(id, P[id][0], P[id][1], S[id] || 64);
+  for (const id of Object.keys(P)) g += tile(id, P[id][0], P[id][1], S[id] || 64, id === "clock" ? "left" : "");
   // 守ること
   g += `<rect class="rail" x="30" y="750" width="1180" height="58" rx="18"/>`;
-  GUARDS.forEach(([icon, tip], i) => {
-    const x = 180 + i * 295;
-    g += `<g class="node" tabindex="0" style="color:var(--ink)" transform="translate(${x - 18} ${761}) scale(.75)"><title>${tip}</title><g class="ico">${ICON[icon]}</g></g>`;
+  GUARDS.forEach(([icon, tip, word], i) => {
+    const x = 110 + i * 295;
+    g += `<g class="node" tabindex="0" style="color:var(--ink)"><title>${tip}</title><g class="ico" transform="translate(${x - 18} ${761}) scale(.75)">${ICON[icon]}</g>` +
+      `<text class="lbl" x="${x + 28}" y="${784}">${word}</text></g>`;
   });
   document.getElementById("wide").innerHTML = g;
 }
@@ -198,21 +214,22 @@ function drawTall() {
   };
   const S = { engine: 84, clock: 60, phone: 56, plandoc: 56 };
   let g = "";
-  const zones = [["in", 40, 300, "tray"], ["calc", 300, 330, "gear"], ["out", 670, 220, "winpic"], ["you", 930, 330, "person"]];
-  for (const [z, y, h, icon] of zones) g += `<rect class="zone" x="16" y="${y + 12}" width="388" height="${h - 30}" rx="26" style="fill:var(--${z}-t)"/>` + header(icon, 34 + 2, y, Z[z]);
+  const zones = [["in", 40, 300, "tray", "INPUT"], ["calc", 300, 330, "gear", "COMPUTE"], ["out", 670, 220, "winpic", "OUTPUT"], ["you", 930, 330, "person", "DECIDE"]];
+  for (const [z, y, h, icon, word] of zones) g += `<rect class="zone" x="16" y="${y + 12}" width="388" height="${h - 30}" rx="26" style="fill:var(--${z}-t)"/>` + header(icon, 34 + 2, y, Z[z], word);
   // 帯から帯への太い矢印
   for (const [y1, y2] of [[285, 320], [612, 688], [882, 948]]) g += `<path class="big-arrow" d="M210 ${y1} L210 ${y2}"/><path d="M198 ${y2 - 8} L210 ${y2 + 6} L222 ${y2 - 8}" fill="none" stroke="var(--faint)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>`;
   // 本体からの線
-  for (const b of ["plan", "guard", "risk"]) g += `<path class="edge thin" d="M${P.engine[0]} ${P.engine[1] + 42} L${P[b][0]} ${P[b][1] - 32}" stroke="var(--calc)"/>`;
+  for (const b of ["plan", "guard", "risk"]) g += `<path class="edge thin" d="M${P.engine[0]} ${P.engine[1] + 64} L${P[b][0]} ${P[b][1] - 34}" stroke="var(--calc)"/>`;
   g += `<path class="edge" d="M210 1022 L210 1068" stroke="var(--you)"/><path class="edge" d="M210 1132 L210 1178" stroke="var(--you)"/>`;
   g += `<path class="edge" d="M112 990 L178 990" stroke="var(--you)"/><path class="edge thin" d="M242 990 L312 990" stroke="var(--you)"/>`;
   // 毎朝の輪（右端を縦に走る）
-  g += `<path class="loop" d="M340 862 C380 900, 380 1040, 340 1072"/><path class="loop" d="M310 1100 C280 1060, 250 1040, 236 1020"/><path class="loop" d="M308 830 L242 830"/><path class="loop" d="M210 800 L210 762"/>`;
+  g += `<path class="loop" d="M371 838 C404 900, 392 1040, 352 1074"/><path class="loop" d="M310 1100 C280 1060, 250 1040, 236 1020"/><path class="loop" d="M308 830 L242 830"/><path class="loop" d="M210 800 L210 762"/>`;
   for (const id of Object.keys(P)) g += tile(id, P[id][0], P[id][1], S[id] || 64);
   g += `<rect class="rail" x="16" y="1290" width="388" height="100" rx="22"/>`;
-  GUARDS.forEach(([icon, tip], i) => {
+  GUARDS.forEach(([icon, tip, , word], i) => {
     const x = 66 + i * 96;
-    g += `<g class="node" tabindex="0" style="color:var(--ink)" transform="translate(${x - 20} ${1320}) scale(.85)"><title>${tip}</title><g class="ico">${ICON[icon]}</g></g>`;
+    g += `<g class="node" tabindex="0" style="color:var(--ink)"><title>${tip}</title><g class="ico" transform="translate(${x - 20} ${1306}) scale(.85)">${ICON[icon]}</g>` +
+      `<text class="lbl" x="${x + 0.4}" y="${1372}" text-anchor="middle">${word}</text></g>`;
   });
   document.getElementById("tall").innerHTML = g;
 }
