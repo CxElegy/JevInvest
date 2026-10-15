@@ -92,6 +92,11 @@ reports/latest.md を読んで分析して
 ### ブラウザのシミュレーター
 
 `python tools/build_overview.py reports/` で `reports/simulator.html` ができる（データ込みの 1 ファイル）。
+
+全体マップ（すべてのプログラムが何をしているか・データの流れ・毎朝の自動処理・場面ごとの使い方）は
+`python tools/build_project_map.py reports/` で `reports/project_map.html` に作る。一覧・行数・説明・テスト数は
+毎回リポジトリから数え直す。新しいファイルを足したら `tools/build_project_map.py` の META に分類を書く
+（書き忘れるとテストが「未分類」で落ちる）。
 タブは 5 つ:
 
 - 回放実験: 実データで任意の期間・本金・積立・戦略（17 本から最大 5 本 + 自分の配分）を回し、毎日の持仓と約定を見る

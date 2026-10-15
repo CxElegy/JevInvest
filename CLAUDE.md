@@ -14,6 +14,7 @@
 - `python -m src.cli stress` 過去の急落・円高を今の配分に当てはめる（値動きと為替に分けて出す）
 - `python tools/papertrade.py run` ペーパートレード（仮想 500 万円・実データ）を進める。結果は `paper/REPORT.md`
 - `python -m src.cli import-csv FILE.csv` 証券会社の取引履歴 CSV を取り込む（SBI・楽天。金額は画面に出さない）
+- 全体マップ: `python tools/build_project_map.py <出力先>`（全プログラム・データの流れ・自動処理を 1 枚に。新しいファイルは META に分類を足す）
 - 出力した `reports/latest.md` を読んで、集中度・相関・目標配分・為替・税制の観点で判断する
 - スラッシュコマンド: `/review` `/add-trade` `/import-csv` `/before-trade` `/harvest` `/independence-mail` `/monthly-check` `/plan` `/compliance` `/taxplan` `/influencers` `/influencers-watch`（定期実行用）
 - 金額を Claude に渡したくないとき: `web/ledger.html`（ブラウザ内だけに保存）で本人が入力し、

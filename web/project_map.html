@@ -1,0 +1,318 @@
+<title>JevInvest 全体マップ</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* 地図のように: 左から「入力 → 計算 → 出力 → 判断」の 4 本の列。その下に毎朝の自動処理、場面ごとの使い方、全プログラムの索引 */
+:root {
+  --bg: #f5f7f6;
+  --surface: #ffffff;
+  --sunk: #eaefec;
+  --fg: #15201b;
+  --muted: #56635d;
+  --line: #d3dbd6;
+  --accent: #19628a;
+  --accent-soft: #e1eef5;
+  --in: #6b5d46;   --in-soft: #f1ebe0;      /* 入力 */
+  --calc: #19628a; --calc-soft: #e1eef5;    /* 計算 */
+  --out: #1a7f4b;  --out-soft: #e2f2e9;     /* 出力 */
+  --you: #9a6400;  --you-soft: #f6ecd9;     /* 判断 */
+  --stop: #b8322a;
+  --f-display: "Noto Serif JP", "Hiragino Mincho ProN", "Yu Mincho", serif;
+  --f-body: "Noto Sans JP", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111614; --surface: #19201d; --sunk: #202825; --fg: #e7ece9; --muted: #a1ada7;
+    --line: #313b37; --accent: #6db7dc; --accent-soft: #1b3442;
+    --in: #d2bf9c; --in-soft: #2c271f; --calc: #6db7dc; --calc-soft: #1b3442;
+    --out: #4cc18a; --out-soft: #17302a; --you: #e2a63b; --you-soft: #33291a; --stop: #f07a70;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111614; --surface: #19201d; --sunk: #202825; --fg: #e7ece9; --muted: #a1ada7;
+  --line: #313b37; --accent: #6db7dc; --accent-soft: #1b3442;
+  --in: #d2bf9c; --in-soft: #2c271f; --calc: #6db7dc; --calc-soft: #1b3442;
+  --out: #4cc18a; --out-soft: #17302a; --you: #e2a63b; --you-soft: #33291a; --stop: #f07a70;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 15px; line-height: 1.75; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 36px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3 { font-family: var(--f-display); line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(30px, 5vw, 44px); font-weight: 800; letter-spacing: .02em; }
+h2 { font-size: 22px; font-weight: 600; margin: 56px 0 6px; }
+h3 { font-size: 16px; font-weight: 600; }
+p { margin: 0; }
+.eyebrow { font-family: var(--f-mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.lede { max-width: 62ch; margin-top: 12px; color: var(--muted); font-size: 16px; }
+.sub { max-width: 70ch; color: var(--muted); font-size: 14px; margin-bottom: 18px; }
+code, .mono { font-family: var(--f-mono); font-size: .88em; }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* 数字の帯 */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin-top: 26px; }
+.stat { background: var(--surface); padding: 12px 14px; }
+.stat .v { font-family: var(--f-mono); font-size: 24px; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.stat .k { font-size: 12.5px; color: var(--muted); }
+
+/* 4 本の列 */
+.lanes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; position: relative; }
+.lane { min-width: 0; display: grid; gap: 10px; align-content: start; position: relative; }
+.lane > header { display: flex; align-items: baseline; gap: 8px; padding-bottom: 6px; border-bottom: 2px solid var(--lc); }
+.lane > header h3 { color: var(--lc); }
+.lane > header span { font-size: 12.5px; color: var(--muted); }
+.lane:not(:last-child)::after { content: "→"; position: absolute; right: -24px; top: 0; width: 24px; text-align: center; color: var(--muted); font-size: 16px; }
+.lane.in { --lc: var(--in); --ls: var(--in-soft); }
+.lane.calc { --lc: var(--calc); --ls: var(--calc-soft); }
+.lane.out { --lc: var(--out); --ls: var(--out-soft); }
+.lane.you { --lc: var(--you); --ls: var(--you-soft); }
+.box { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+.box h4 { margin: 0 0 2px; font-size: 14px; font-weight: 700; }
+.box p { font-size: 13px; color: var(--muted); line-height: 1.6; }
+.box .private { color: var(--stop); font-weight: 500; }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.chip { font-family: var(--f-mono); font-size: 11.5px; padding: 1px 7px; border-radius: 99px; background: var(--ls, var(--sunk)); color: var(--fg); border: 1px solid transparent; cursor: pointer; line-height: 1.7; }
+.chip:hover { border-color: var(--lc, var(--accent)); }
+button.chip { appearance: none; }
+.rails { margin-top: 14px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.rail { background: var(--sunk); padding: 8px 12px; font-size: 13px; }
+.rail b { display: block; font-size: 13px; }
+.rail span { color: var(--muted); font-size: 12.5px; }
+@media (max-width: 860px) {
+  .lanes { grid-template-columns: minmax(0, 1fr); gap: 26px; }
+  .lane:not(:last-child)::after { content: "↓"; right: auto; left: 50%; top: auto; bottom: -24px; }
+  .rails { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}
+
+/* 毎朝の自動処理 */
+.steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; counter-reset: s; }
+.steps li { counter-increment: s; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px 10px 44px; position: relative; font-size: 13.5px; }
+.steps li::before { content: counter(s); position: absolute; left: 12px; top: 9px; font-family: var(--f-mono); font-size: 18px; color: var(--accent); }
+.steps li b { display: block; font-size: 14px; }
+.steps li span { color: var(--muted); }
+.when { font-family: var(--f-mono); font-size: 12px; color: var(--muted); }
+
+/* 場面ごと */
+.scenes { display: grid; gap: 8px; }
+.scene { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 12px; align-items: start; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+.scene .t { font-weight: 700; font-size: 14px; }
+.scene .t small { display: block; font-weight: 400; color: var(--muted); font-size: 12px; }
+.flow { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 13px; }
+.flow .arrow { color: var(--muted); }
+.flow .note { color: var(--muted); font-size: 12.5px; width: 100%; }
+@media (max-width: 600px) { .scene { grid-template-columns: minmax(0, 1fr); gap: 4px; } }
+
+/* 表 */
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 12px; color: var(--muted); font-weight: 500; white-space: nowrap; }
+td.num { text-align: right; font-family: var(--f-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.name { font-family: var(--f-mono); font-size: 12.5px; white-space: nowrap; }
+td .use { color: var(--muted); font-size: 12.5px; display: block; }
+.tag { display: inline-block; font-size: 11.5px; padding: 0 7px; border-radius: 99px; background: var(--sunk); white-space: nowrap; }
+.files { font-family: var(--f-mono); font-size: 11.5px; color: var(--muted); }
+tr.hit td { background: var(--accent-soft); }
+
+/* 索引のフィルタ */
+.filters { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 10px; }
+.filters button { font: 13px var(--f-body); padding: 3px 11px; border: 1px solid var(--line); border-radius: 99px; background: var(--surface); color: var(--fg); cursor: pointer; }
+.filters button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); font-weight: 500; }
+.filters input { font: 14px var(--f-body); padding: 5px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--fg); min-width: 0; flex: 1 1 200px; max-width: 320px; }
+.count { font-size: 12.5px; color: var(--muted); }
+@media (max-width: 700px) {
+  #idx thead { display: none; }
+  #idx tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  #idx td { border: 0; padding: 0; }
+  #idx td.name { white-space: normal; word-break: break-all; }
+  #idx td.doc { grid-column: 1 / -1; }
+  #idx td.files { grid-column: 1 / -1; }
+  #idx td.num { text-align: left; font-size: 12px; color: var(--muted); }
+  #idx td.num::before { content: attr(data-l); font-family: var(--f-body); }
+}
+
+.two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
+@media (max-width: 760px) { .two { grid-template-columns: minmax(0, 1fr); } }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; font-size: 14px; }
+.card h3 { margin-bottom: 4px; }
+.card p { color: var(--muted); font-size: 13.5px; }
+footer { margin-top: 56px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px; }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+html { scroll-behavior: smooth; }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow" id="asof">JevInvest</div>
+    <h1>全体マップ</h1>
+    <p class="lede">持仓の分析・管理ツールの中身を、ぜんぶ 1 枚に。計算は Python がローカルで、読み解きは Claude が、決めるのは本人です。実際の発注はどこもしません。</p>
+    <div class="stats" id="stats"></div>
+  </header>
+
+  <h2>1 枚で見る</h2>
+  <p class="sub">データが左から右へ流れます。四角の中の小さな札（プログラム名）を押すと、下の「全プログラム一覧」のその行に飛びます。</p>
+  <div class="lanes">
+    <section class="lane in" aria-label="入力">
+      <header><h3>入力</h3><span>データの源</span></header>
+      <div class="box"><h4>本人の台帳</h4><p>保有・取引・独立性の確認記録。<span class="private">金額が入るので PC の中だけ（コミットしない）</span></p>
+        <div class="chips"><span class="chip">holdings.yaml</span><span class="chip">transactions.yaml</span><span class="chip">compliance.yaml</span></div></div>
+      <div class="box"><h4>証券会社の CSV</h4><p>SBI・楽天の取引履歴。取り込むと台帳になる。</p><div class="chips" data-p="src/importers.py /import-csv"></div></div>
+      <div class="box"><h4>Yahoo Finance</h4><p>日足・為替・分配金。2008 年から。取れない銘柄は 0 円にせず「評価不能」と出す。</p><div class="chips" data-p="src/marketdata.py tools/export_sim_data.py"></div></div>
+      <div class="box"><h4>SEC EDGAR（13F）</h4><p>著名投資家の四半期ごとの保有。参考情報。</p><div class="chips" data-p="tools/fetch_13f.py tools/figi.py tools/sectors.py"></div></div>
+      <div class="box"><h4>X の投稿</h4><p>注目アカウントの投稿。取り込んだものだけを根拠にする。</p><div class="chips" data-p="tools/influencers.py tools/influencer_history.py"></div></div>
+      <div class="box"><h4>公的な資料</h4><p>国税庁・日銀・金融庁・運用報告書。税や金利の数字はここで確かめる。</p><div class="chips"><span class="chip">docs/FUNDS.md</span><span class="chip">docs/PLAYBOOK.md</span></div></div>
+    </section>
+
+    <section class="lane calc" aria-label="計算">
+      <header><h3>計算</h3><span>src/ と tools/</span></header>
+      <div class="box"><h4>本体: 台帳 → 評価 → 配分・リスク</h4><p>台帳を読み、価格を掛け、配分・集中度・相関・目標とのずれを出す。</p><div class="chips" data-p="src/holdings.py src/marketdata.py src/analytics.py src/report.py src/dashboard.py src/cli.py"></div></div>
+      <div class="box"><h4>計画・積立</h4><p>毎月の積立と NISA 枠の割り当て、今月どこに入れるか、目標配分の健康診断。</p><div class="chips" data-p="src/plan.py src/nextbuy.py src/checkup.py"></div></div>
+      <div class="box"><h4>売買前・独立性</h4><p>やめる理由を先に全部出す。購入可と記録されていない銘柄には配分しない。</p><div class="chips" data-p="src/pretrade.py src/compliance.py"></div></div>
+      <div class="box"><h4>税</h4><p>iDeCo・ふるさと納税の目安と、年末の損出し・益出し。</p><div class="chips" data-p="src/taxplan.py src/harvest.py"></div></div>
+      <div class="box"><h4>振り返り・リスク</h4><p>取引履歴の実績（XIRR）、過去の急落の当てはめ、遊び枠と全世界株の比較。</p><div class="chips" data-p="src/transactions.py src/stress.py src/scoreboard.py"></div></div>
+      <div class="box"><h4>模擬売買エンジン</h4><p>Python 版とブラウザ版が同じ数字を出すことをテストで確かめている。</p><div class="chips" data-p="src/sim.py web/simengine.js tools/papertrade.py"></div></div>
+      <div class="box"><h4>実データの実験</h4><p>17 戦略・再バランス・為替ヘッジ・年初一括・枠待ちを 2008 年以降の実データで比べる。</p><div class="chips" data-p="tools/strategy_lab.py tools/strategy_sensitivity.py tools/rebalance_lab.py tools/hedge_lab.py tools/frontload_lab.py tools/wait_lab.py tools/backtest_habits.py"></div></div>
+    </section>
+
+    <section class="lane out" aria-label="出力">
+      <header><h3>出力</h3><span>見るもの</span></header>
+      <div class="box"><h4>レポート</h4><p><span class="private">reports/ は PC の中だけ。</span>Claude はこれを読んで判断を手伝う。</p><div class="chips"><span class="chip">reports/latest.md</span></div></div>
+      <div class="box"><h4>説明ページ（中国語）</h4><p>何をしたか・節税・ストレステスト・待你决定。毎朝更新。</p><div class="chips" data-p="web/overview.html tools/build_overview.py"></div></div>
+      <div class="box"><h4>シミュレーター（中国語）</h4><p>計画の体検・回放・操作ゲーム・戦略比較・未来・怎么投更划算・実盤進度の 7 タブ。</p><div class="chips" data-p="web/simulator.html web/simengine.js"></div></div>
+      <div class="box"><h4>台帳ページ</h4><p>金額はブラウザの中だけに保存し、比率だけを Claude に渡せる。ファンド分析・市場の参考のタブも。</p><div class="chips" data-p="web/ledger.html"></div></div>
+      <div class="box"><h4>ペーパートレード</h4><p>仮想 500 万円 × 19 口座を 2026-11-12 まで実データで進める。</p><div class="chips"><span class="chip">paper/REPORT.md</span><span class="chip">paper/state.json</span></div></div>
+      <div class="box"><h4>文書</h4><p>計画と決めたこと、調査、戦略の検証結果。</p><div class="chips" id="docs"></div></div>
+    </section>
+
+    <section class="lane you" aria-label="判断">
+      <header><h3>判断</h3><span>人と Claude</span></header>
+      <div class="box"><h4>Claude が読み解く</h4><p>スラッシュコマンドで計算を走らせ、結果を読んで説明する。金額は聞き出さない。</p><div class="chips" id="cmds"></div></div>
+      <div class="box"><h4>本人が決める</h4><p>説明ページの「待你决定」で選ぶと、毎朝の自動処理が docs/PLAN.md に記録する。</p><div class="chips"><span class="chip">docs/PLAN.md</span></div></div>
+      <div class="box"><h4>本人が売買する</h4><p>証券会社で本人が行う。その前に独立性（DESC・事前承認）と /before-trade。</p></div>
+    </section>
+  </div>
+  <div class="rails" aria-label="守っていること">
+    <div class="rail"><b>独立性が最優先</b><span>購入可と記録された銘柄にだけ配分する</span></div>
+    <div class="rail"><b>金額はコミットしない</b><span>台帳・レポートは .gitignore 済み</span></div>
+    <div class="rail"><b>黙って直さない</b><span>取れない価格は 0 円にせず評価不能</span></div>
+    <div class="rail"><b>実発注しない</b><span>分析と判断の手伝いだけ</span></div>
+  </div>
+
+  <h2>毎朝 7:07 の自動処理</h2>
+  <p class="sub">平日の朝（日本時間、火〜土）に、このセッションが自動で起きて順に実行します。期間は 2026-11-12 まで。最後の回で最終結果をまとめます。</p>
+  <ol class="steps">
+    <li><b>最新版を取得</b><span>GitHub のブランチに合わせる</span></li>
+    <li><b>ペーパートレードを進める</b><span>全銘柄の終値がそろった日だけ処理する</span><div class="when">tools/papertrade.py run</div></li>
+    <li><b>火曜だけ: Claude 口座の判断</b><span>判断材料（brief）だけを根拠に、変えるか据え置くか</span><div class="when">papertrade.py brief</div></li>
+    <li><b>シミュレーターの実データを更新</b><span>±25% を超える異常な動きは止める</span><div class="when">tools/export_sim_data.py</div></li>
+    <li><b>本人の選択を読む</b><span>「待你决定」で押したボタンを PLAN.md に記録</span></li>
+    <li><b>コミットしてプッシュ</b><span>paper/ と web/ のデータだけ</span></li>
+    <li><b>ページ 2 枚を更新</b><span>説明ページとシミュレーター</span><div class="when">tools/build_overview.py</div></li>
+    <li><b>スマホに通知</b><span>主な口座の成績を 1 行で</span></li>
+  </ol>
+
+  <h2>場面ごとの使い方</h2>
+  <p class="sub">どのプログラムを、どの順で使うか。札を押すと一覧のその行に飛びます。</p>
+  <div class="scenes" id="scenes"></div>
+
+  <h2>データの受け渡し</h2>
+  <p class="sub">web/ の JSON は、実験や取得の結果をページに渡すための置き場です。どのプログラムが作り、どこが読むか（リポジトリから自動で数えたもの）。</p>
+  <div class="scroll"><table id="dataTable"></table></div>
+
+  <h2 id="index">全プログラム一覧</h2>
+  <p class="sub">各ファイルの先頭に書いてある説明をそのまま載せています。「テスト」はそのファイルを使うテストの数です。</p>
+  <div class="filters" id="filters"></div>
+  <div class="scroll"><table id="idx"></table></div>
+
+  <h2>切り離しているもの・使っていないもの</h2>
+  <div class="two">
+    <div class="card"><h3>Jev（TypeSafe AI）</h3><p>判断エンジンとして接続する案があったが、精度の裏付けが無いので本体から切り離してある。接続する前に docs/REPORT.md の検証項目を先に回す。</p><div class="chips" data-p="src/jev.py src/state_schema.py tools/estimate_cost.py"></div></div>
+    <div class="card"><h3>他の AI 投資ツール 16 個</h3><p>中身を読んで評価しただけで、本体には組み込んでいない。自動売買や短期予測が中心のものは方針（実発注しない・売買を減らす）に合わない。</p><div class="chips" data-p="tools/install_skills.sh tools/install_x_timeline.sh"><span class="chip">docs/TOOLS.md</span></div></div>
+  </div>
+
+  <footer id="foot"></footer>
+</div>
+
+<script>
+const DATA = /*__MAP__*/null;
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const num = n => Number(n).toLocaleString("ja-JP");
+const LANE = { core: "calc", plan: "calc", guard: "calc", tax: "calc", record: "calc", risk: "calc", sim: "calc", lab: "calc", info: "in", page: "out", cmd: "you", jev: "", setup: "" };
+
+const SCENES = [
+  ["毎月", "積立の日", ["/import-csv", "src/nextbuy.py", "/before-trade", "/add-trade"], "今月の積立を目標より少ないクラスに多く入れる（売らない）。買う前に点検し、取引を台帳に記録。"],
+  ["四半期ごと", "1・4・7・10 月", ["/monthly-check", "/review", "/compliance", "src/stress.py"], "目標とのずれ、独立性の期限、最悪の場面を確認。点検は売買のきっかけではない。"],
+  ["年末", "11 月末〜12 月", ["/harvest", "/plan", "/taxplan"], "課税口座の損出し・益出し、今年の NISA 枠の残り、iDeCo・ふるさと納税。"],
+  ["1 月", "年次の振り返り", ["src/transactions.py", "src/scoreboard.py", "/plan"], "実績の年率（XIRR）、遊び枠と全世界株の比較、年間の積立額の見直し。"],
+  ["買う前", "新しい銘柄・ファンド", ["/independence-mail", "/compliance", "/before-trade"], "事前承認の照会メールの下書き → 結果を記録 → 点検。購入可と記録されるまで配分しない。"],
+  ["計画を見直す", "配分・金額を変えたい", ["src/checkup.py", "web/simulator.html", "src/plan.py"], "目標配分の健康診断、シミュレーターの「我的计划体检」「未来模拟」「怎么投更划算」。"],
+  ["情報を集める", "参考として", ["/influencers", "tools/market_view.py", "tools/fund_deepdive.py"], "注目アカウント・著名投資家・候補ファンド。13F の後追いは①税 ②配分 ③売買を減らす、より根拠が弱い。"],
+];
+
+function chipFor(key) {
+  const p = DATA && DATA.programs.find(x => x.path === key || x.name === key);
+  if (!p) return `<span class="chip">${esc(key)}</span>`;
+  const lane = LANE[p.group] || "";
+  const style = lane ? ` style="--ls:var(--${lane}-soft);--lc:var(--${lane})"` : "";
+  return `<button type="button" class="chip" data-go="${esc(p.path)}"${style} title="${esc(p.doc)}">${esc(p.name.replace(/^(src|tools|web)\//, ""))}</button>`;
+}
+
+function render() {
+  if (!DATA) { $("stats").innerHTML = `<div class="stat"><div class="k">データが埋め込まれていません（python tools/build_project_map.py で作る）</div></div>`; return; }
+  const S = DATA.stats;
+  $("asof").textContent = `JevInvest · ${S.last_commit} 時点`;
+  $("stats").innerHTML = [
+    [S.py_files, "Python のプログラム"], [num(S.py_lines), "Python の行数"], [S.cli, "コマンド（src.cli）"],
+    [S.commands, "スラッシュコマンド"], [3, "ページ"], [S.tests, "テスト"], [S.commits, "コミット"], ["7:07", "毎朝の自動処理"],
+  ].map(([v, k]) => `<div class="stat"><div class="v">${v}</div><div class="k">${k}</div></div>`).join("");
+  document.querySelectorAll(".chips[data-p]").forEach(el => { el.innerHTML = el.dataset.p.split(" ").map(chipFor).join("") + el.innerHTML; });
+  $("cmds").innerHTML = DATA.programs.filter(p => p.group === "cmd").map(p => chipFor(p.path)).join("");
+  $("docs").innerHTML = DATA.docs.map(d => `<span class="chip">docs/${esc(d)}</span>`).join("");
+  $("scenes").innerHTML = SCENES.map(([t, s, keys, note]) => `<div class="scene"><div class="t">${t}<small>${s}</small></div><div class="flow">${keys.map(chipFor).join('<span class="arrow">→</span>')}<span class="note">${note}</span></div></div>`).join("");
+  const short = p => esc(p.replace(/^(src|tools|web)\//, ""));
+  $("dataTable").innerHTML = `<thead><tr><th>ファイル</th><th>大きさ</th><th>作るプログラム</th><th>読むところ</th></tr></thead><tbody>` +
+    DATA.data_files.map(f => `<tr><td class="name">${esc(f.name)}</td><td class="num">${f.kb} KB</td><td class="files">${f.made_by.map(short).join("<br>") || "—"}</td><td class="files">${f.read_by.map(short).join("<br>") || "—"}</td></tr>`).join("") + "</tbody>";
+  renderIndex();
+  $("foot").innerHTML = `このページはリポジトリを読んで自動で作っています（<code>python tools/build_project_map.py</code>、${esc(DATA.generated)}）。一覧・行数・説明・テスト数・データの受け渡しは毎回数え直し、分類と「いつ使うか」だけを手で書いています。` +
+    (S.unclassified.length ? ` 未分類: ${S.unclassified.map(esc).join("、")}` : "");
+}
+
+let filt = "all", query = "";
+function renderIndex() {
+  const groups = DATA.groups;
+  const counts = {};
+  for (const p of DATA.programs) counts[p.group] = (counts[p.group] || 0) + 1;
+  $("filters").innerHTML = `<button type="button" data-g="all" aria-pressed="${filt === "all"}">すべて ${DATA.programs.length}</button>` +
+    Object.entries(groups).filter(([g]) => counts[g]).map(([g, l]) => `<button type="button" data-g="${g}" aria-pressed="${filt === g}">${l} ${counts[g]}</button>`).join("") +
+    `<input id="q" type="search" placeholder="名前や説明で探す" aria-label="名前や説明で探す" value="${esc(query)}"><span class="count" id="cnt"></span>`;
+  const rows = DATA.programs
+    .filter(p => filt === "all" || p.group === filt)
+    .filter(p => !query || (p.path + p.doc + p.use).toLowerCase().includes(query.toLowerCase()))
+    .sort((a, b) => Object.keys(groups).indexOf(a.group) - Object.keys(groups).indexOf(b.group) || a.path.localeCompare(b.path));
+  $("idx").innerHTML = `<thead><tr><th>名前</th><th>分類</th><th>何をするか / いつ使うか</th><th>行数</th><th>テスト</th><th>書き出す / 読む</th></tr></thead><tbody>` +
+    rows.map(p => `<tr id="p-${p.path.replace(/[^a-z0-9]/gi, "-")}"><td class="name">${esc(p.name)}</td><td><span class="tag">${esc(groups[p.group] || "未分類")}</span></td>` +
+      `<td class="doc">${esc(p.doc) || "—"}${p.use ? `<span class="use">${esc(p.use)}</span>` : ""}</td><td class="num" data-l="行数 ">${p.lines}</td><td class="num" data-l="テスト ">${p.tests || "—"}</td>` +
+      `<td class="files">${p.writes.length ? "→ " + p.writes.map(esc).join(", ") : ""}${p.writes.length && p.reads.length ? "<br>" : ""}${p.reads.length ? "← " + p.reads.map(esc).join(", ") : ""}</td></tr>`).join("") + "</tbody>";
+  $("cnt").textContent = `${rows.length} 件`;
+  const q = $("q");
+  q.oninput = () => { query = q.value; const pos = q.selectionStart; renderIndex(); const n = $("q"); n.focus(); n.setSelectionRange(pos, pos); };
+}
+
+document.addEventListener("click", e => {
+  const f = e.target.closest("#filters button[data-g]");
+  if (f) { filt = f.dataset.g; renderIndex(); return; }
+  const c = e.target.closest("[data-go]");
+  if (c) {
+    filt = "all"; query = ""; renderIndex();
+    const row = $("p-" + c.dataset.go.replace(/[^a-z0-9]/gi, "-"));
+    if (row) { row.classList.add("hit"); row.scrollIntoView({ block: "center" }); setTimeout(() => row.classList.remove("hit"), 2400); }
+  }
+});
+render();
+</script>
