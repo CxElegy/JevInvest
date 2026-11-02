@@ -97,13 +97,17 @@
     [
      "2026-10-30",
      4833781.18
+    ],
+    [
+     "2026-11-02",
+     4837649.29
     ]
    ],
    "income": [],
    "notes": [],
    "realized": 0.0,
    "fees": 4981.3204470709525,
-   "last_day": "2026-10-30",
+   "last_day": "2026-11-02",
    "last_decision": "2026-10-09",
    "taxable": false,
    "tax_paid": 0.0,
@@ -126,7 +130,15 @@
     "VT": 2733607.0603652108,
     "1348.T": 250180.83390299996
    },
-   "pending": [],
+   "pending": [
+    {
+     "symbol": "AGG",
+     "side": "sell",
+     "qty": 3.0,
+     "decided": "2026-11-02",
+     "reason": "core_satellite"
+    }
+   ],
    "trades": [
     {
      "date": "2026-10-12",
@@ -241,14 +253,18 @@
     [
      "2026-10-30",
      4829836.36
+    ],
+    [
+     "2026-11-02",
+     4821314.32
     ]
    ],
    "income": [],
    "notes": [],
    "realized": 0.0,
    "fees": 4677.311205798334,
-   "last_day": "2026-10-30",
-   "last_decision": "2026-10-09",
+   "last_day": "2026-11-02",
+   "last_decision": "2026-11-02",
    "taxable": false,
    "tax_paid": 0.0,
    "tax_year": null,
@@ -371,14 +387,18 @@
     [
      "2026-10-30",
      4850551.51
+    ],
+    [
+     "2026-11-02",
+     4838130.98
     ]
    ],
    "income": [],
    "notes": [],
    "realized": 0.0,
    "fees": 2932.0443928680247,
-   "last_day": "2026-10-30",
-   "last_decision": "2026-10-09",
+   "last_day": "2026-11-02",
+   "last_decision": "2026-11-02",
    "taxable": false,
    "tax_paid": 0.0,
    "tax_year": null,
@@ -473,14 +493,18 @@
     [
      "2026-10-30",
      4847944.79
+    ],
+    [
+     "2026-11-02",
+     4876131.99
     ]
    ],
    "income": [],
    "notes": [],
    "realized": 0.0,
    "fees": 4982.460164770579,
-   "last_day": "2026-10-30",
-   "last_decision": "2026-10-09",
+   "last_day": "2026-11-02",
+   "last_decision": "2026-11-02",
    "taxable": false,
    "tax_paid": 0.0,
    "tax_year": null,
@@ -575,14 +599,18 @@
     [
      "2026-10-30",
      4822518.97
+    ],
+    [
+     "2026-11-02",
+     4810239.83
     ]
    ],
    "income": [],
    "notes": [],
    "realized": 0.0,
    "fees": 4934.156953998555,
-   "last_day": "2026-10-30",
-   "last_decision": "2026-10-09",
+   "last_day": "2026-11-02",
+   "last_decision": "2026-11-02",
    "taxable": false,
    "tax_paid": 0.0,
    "tax_year": null,
@@ -600,7 +628,22 @@
     "AGG": 1997881.85463119,
     "VT": 2986718.8252138416
    },
-   "pending": [],
+   "pending": [
+    {
+     "symbol": "AGG",
+     "side": "sell",
+     "qty": 4.0,
+     "decided": "2026-11-02",
+     "reason": "sixty_forty"
+    },
+    {
+     "symbol": "VT",
+     "side": "buy",
+     "qty": 2.0,
+     "decided": "2026-11-02",
+     "reason": "sixty_forty"
+    }
+   ],
    "trades": [
     {
      "date": "2026-10-12",
@@ -691,14 +734,18 @@
     [
      "2026-10-30",
      4921300.18
+    ],
+    [
+     "2026-11-02",
+     4923903.5
     ]
    ],
    "income": [],
    "notes": [],
    "realized": 0.0,
    "fees": 4979.621058786246,
-   "last_day": "2026-10-30",
-   "last_decision": "2026-10-09",
+   "last_day": "2026-11-02",
+   "last_decision": "2026-11-02",
    "taxable": false,
    "tax_paid": 0.0,
    "tax_year": null,
@@ -835,13 +882,17 @@
     [
      "2026-10-30",
      4908146.62
+    ],
+    [
+     "2026-11-02",
+     4926063.49
     ]
    ],
    "income": [],
    "notes": [],
    "realized": 0.0,
    "fees": 4942.408702164839,
-   "last_day": "2026-10-30",
+   "last_day": "2026-11-02",
    "last_decision": "2026-10-09",
    "taxable": false,
    "tax_paid": 0.0,
@@ -866,7 +917,22 @@
     "SPY": 1481727.3332857657,
     "TLT": 2006501.9379668785
    },
-   "pending": [],
+   "pending": [
+    {
+     "symbol": "IEF",
+     "side": "sell",
+     "qty": 2.0,
+     "decided": "2026-11-02",
+     "reason": "all_weather"
+    },
+    {
+     "symbol": "TLT",
+     "side": "sell",
+     "qty": 7.0,
+     "decided": "2026-11-02",
+     "reason": "all_weather"
+    }
+   ],
    "trades": [
     {
      "date": "2026-10-12",
@@ -993,14 +1059,18 @@
     [
      "2026-10-30",
      5015300.42
+    ],
+    [
+     "2026-11-02",
+     5007223.26
     ]
    ],
    "income": [],
    "notes": [],
    "realized": 0.0,
    "fees": 4974.807992385342,
-   "last_day": "2026-10-30",
-   "last_decision": "2026-10-09",
+   "last_day": "2026-11-02",
+   "last_decision": "2026-11-02",
    "taxable": false,
    "tax_paid": 0.0,
    "tax_year": null,
@@ -1024,7 +1094,22 @@
     "VEU": 994870.4448689934,
     "VNQ": 1000361.1776695963
    },
-   "pending": [],
+   "pending": [
+    {
+     "symbol": "IEF",
+     "side": "sell",
+     "qty": 2.0,
+     "decided": "2026-11-02",
+     "reason": "ivy"
+    },
+    {
+     "symbol": "VNQ",
+     "side": "sell",
+     "qty": 3.0,
+     "decided": "2026-11-02",
+     "reason": "ivy"
+    }
+   ],
    "trades": [
     {
      "date": "2026-10-12",
@@ -1151,14 +1236,18 @@
     [
      "2026-10-30",
      4974148.1
+    ],
+    [
+     "2026-11-02",
+     4958729.49
     ]
    ],
    "income": [],
    "notes": [],
    "realized": 0.0,
    "fees": 4981.718371772021,
-   "last_day": "2026-10-30",
-   "last_decision": "2026-10-09",
+   "last_day": "2026-11-02",
+   "last_decision": "2026-11-02",
    "taxable": false,
    "tax_paid": 0.0,
    "tax_year": null,
@@ -1178,7 +1267,22 @@
     "SPY": 987818.2221905106,
     "VEU": 994870.4448689934
    },
-   "pending": [],
+   "pending": [
+    {
+     "symbol": "VEU",
+     "side": "sell",
+     "qty": 76.0,
+     "decided": "2026-11-02",
+     "reason": "ivy_timing"
+    },
+    {
+     "symbol": "VNQ",
+     "side": "buy",
+     "qty": 65.0,
+     "decided": "2026-11-02",
+     "reason": "ivy_timing"
+    }
+   ],
    "trades": [
     {
      "date": "2026-10-12",
@@ -1281,14 +1385,18 @@
     [
      "2026-10-30",
      4935137.16
+    ],
+    [
+     "2026-11-02",
+     4905874.87
     ]
    ],
    "income": [],
    "notes": [],
    "realized": 0.0,
    "fees": 2989.928943069708,
-   "last_day": "2026-10-30",
-   "last_decision": "2026-10-09",
+   "last_day": "2026-11-02",
+   "last_decision": "2026-11-02",
    "taxable": false,
    "tax_paid": 0.0,
    "tax_year": null,
@@ -1310,7 +1418,36 @@
     "TLT": 1969344.4946711957,
     "VT": 1366803.5301826054
    },
-   "pending": [],
+   "pending": [
+    {
+     "symbol": "TLT",
+     "side": "sell",
+     "qty": 14.0,
+     "decided": "2026-11-02",
+     "reason": "risk_parity"
+    },
+    {
+     "symbol": "DBC",
+     "side": "buy",
+     "qty": 8.0,
+     "decided": "2026-11-02",
+     "reason": "risk_parity"
+    },
+    {
+     "symbol": "GLD",
+     "side": "buy",
+     "qty": 1.0,
+     "decided": "2026-11-02",
+     "reason": "risk_parity"
+    },
+    {
+     "symbol": "VT",
+     "side": "buy",
+     "qty": 2.0,
+     "decided": "2026-11-02",
+     "reason": "risk_parity"
+    }
+   ],
    "trades": [
     {
      "date": "2026-10-12",
@@ -1425,14 +1562,18 @@
     [
      "2026-10-30",
      4980453.0
+    ],
+    [
+     "2026-11-02",
+     4967227.59
     ]
    ],
    "income": [],
    "notes": [],
    "realized": 0.0,
    "fees": 4952.78793078872,
-   "last_day": "2026-10-30",
-   "last_decision": "2026-10-09",
+   "last_day": "2026-11-02",
+   "last_decision": "2026-11-02",
    "taxable": false,
    "tax_paid": 0.0,
    "tax_year": null,
@@ -1452,7 +1593,29 @@
     "QQQ": 1657455.132793658,
     "1348.T": 1652056.1962905
    },
-   "pending": [],
+   "pending": [
+    {
+     "symbol": "DBC",
+     "side": "sell",
+     "qty": 12.0,
+     "decided": "2026-11-02",
+     "reason": "momentum_top3"
+    },
+    {
+     "symbol": "QQQ",
+     "side": "sell",
+     "qty": 14.0,
+     "decided": "2026-11-02",
+     "reason": "momentum_top3"
+    },
+    {
+     "symbol": "VNQ",
+     "side": "buy",
+     "qty": 104.0,
+     "decided": "2026-11-02",
+     "reason": "momentum_top3"
+    }
+   ],
    "trades": [
     {
      "date": "2026-10-12",
@@ -1555,6 +1718,10 @@
     [
      "2026-10-30",
      4801582.76
+    ],
+    [
+     "2026-11-02",
+     4724667.04
     ]
    ],
    "income": [],
@@ -1563,8 +1730,8 @@
    ],
    "realized": 0.0,
    "fees": 4991.762683573853,
-   "last_day": "2026-10-30",
-   "last_decision": "2026-10-09",
+   "last_day": "2026-11-02",
+   "last_decision": "2026-11-02",
    "taxable": false,
    "tax_paid": 0.0,
    "tax_year": null,
@@ -1659,14 +1826,18 @@
     [
      "2026-10-30",
      4833781.18
+    ],
+    [
+     "2026-11-02",
+     4837649.29
     ]
    ],
    "income": [],
    "notes": [],
    "realized": 0.0,
    "fees": 4981.3204470709525,
-   "last_day": "2026-10-30",
-   "last_decision": "2026-10-09",
+   "last_day": "2026-11-02",
+   "last_decision": "2026-11-02",
    "taxable": false,
    "tax_paid": 0.0,
    "tax_year": null,
@@ -1761,14 +1932,18 @@
     [
      "2026-10-30",
      4822518.97
+    ],
+    [
+     "2026-11-02",
+     4810239.83
     ]
    ],
    "income": [],
    "notes": [],
    "realized": 0.0,
    "fees": 4934.156953998555,
-   "last_day": "2026-10-30",
-   "last_decision": "2026-10-09",
+   "last_day": "2026-11-02",
+   "last_decision": "2026-11-02",
    "taxable": false,
    "tax_paid": 0.0,
    "tax_year": null,
@@ -1846,13 +2021,17 @@
     [
      "2026-10-30",
      5000000
+    ],
+    [
+     "2026-11-02",
+     5000000
     ]
    ],
    "income": [],
    "notes": [],
    "realized": 0.0,
    "fees": 0.0,
-   "last_day": "2026-10-30",
+   "last_day": "2026-11-02",
    "last_decision": null,
    "taxable": false,
    "tax_paid": 0.0,
@@ -1869,7 +2048,22 @@
    "cost": {
     "BIL": 4994950.414028526
    },
-   "pending": [],
+   "pending": [
+    {
+     "symbol": "BIL",
+     "side": "sell",
+     "qty": 344.0,
+     "decided": "2026-11-02",
+     "reason": "sell_in_may"
+    },
+    {
+     "symbol": "VT",
+     "side": "buy",
+     "qty": 202.0,
+     "decided": "2026-11-02",
+     "reason": "sell_in_may"
+    }
+   ],
    "trades": [
     {
      "date": "2026-10-12",
@@ -1948,6 +2142,10 @@
     [
      "2026-10-30",
      4973954.68
+    ],
+    [
+     "2026-11-02",
+     4969246.91
     ]
    ],
    "income": [],
@@ -1956,8 +2154,8 @@
    ],
    "realized": 0.0,
    "fees": 4989.960453574952,
-   "last_day": "2026-10-30",
-   "last_decision": "2026-10-09",
+   "last_day": "2026-11-02",
+   "last_decision": "2026-11-02",
    "taxable": false,
    "tax_paid": 0.0,
    "tax_year": null,
@@ -2066,14 +2264,18 @@
     [
      "2026-10-30",
      4818273.66
+    ],
+    [
+     "2026-11-02",
+     4812063.9
     ]
    ],
    "income": [],
    "notes": [],
    "realized": 0.0,
    "fees": 4981.635461738342,
-   "last_day": "2026-10-30",
-   "last_decision": "2026-10-09",
+   "last_day": "2026-11-02",
+   "last_decision": "2026-11-02",
    "taxable": false,
    "tax_paid": 0.0,
    "tax_year": null,
@@ -2168,14 +2370,18 @@
     [
      "2026-10-30",
      4833781.18
+    ],
+    [
+     "2026-11-02",
+     4837649.29
     ]
    ],
    "income": [],
    "notes": [],
    "realized": 0.0,
    "fees": 4981.3204470709525,
-   "last_day": "2026-10-30",
-   "last_decision": "2026-10-09",
+   "last_day": "2026-11-02",
+   "last_decision": "2026-11-02",
    "taxable": false,
    "tax_paid": 0.0,
    "tax_year": null,
@@ -2312,13 +2518,17 @@
     [
      "2026-10-30",
      4826044.42
+    ],
+    [
+     "2026-11-02",
+     4817380.98
     ]
    ],
    "income": [],
    "notes": [],
    "realized": 0.0,
    "fees": 4677.228921647471,
-   "last_day": "2026-10-30",
+   "last_day": "2026-11-02",
    "last_decision": "2026-10-09",
    "taxable": false,
    "tax_paid": 0.0,
@@ -2327,5 +2537,5 @@
    "year_tax": 0.0
   }
  },
- "updated_at": "2026-10-30T22:08:20+00:00"
+ "updated_at": "2026-11-02T22:09:21+00:00"
 }
